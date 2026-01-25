@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../lib/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Logo } from '../common/Logo'; // 1. Ensure this path is correct
 import {
   Drawer,
   List,
@@ -36,10 +37,6 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
 
   const role = user?.role || 'staff';
 
-  if (!role) {
-    console.error('No role found for user hence taking role as staff', user);
-  }
-
   const adminNavItems = [
     { label: 'Overview', path: '/overview', icon: <Dashboard /> },
     { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
@@ -48,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
     { label: 'Managers', path: '/managers', icon: <People /> },
     { label: 'Settings', path: '/settings', icon: <Settings /> },
   ];
+  
   const staffNavItems = [
     { label: 'Overview', path: '/overview', icon: <Dashboard /> },
     { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
@@ -57,26 +55,44 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   const navItems = role === 'admin' ? adminNavItems : staffNavItems;
 
   const drawerContent = (
-    <>
-      <Toolbar sx={{ flexDirection: 'column', py: 3 }}>
-        <Typography
-          variant='h6'
-          sx={{
-            fontWeight: 900,
-            letterSpacing: '0.3em',
-            color: '#D4AF37',
-          }}
-        >
-          ZAMZAM
-        </Typography>
-        <Typography variant='caption' sx={{ color: 'gray', mt: 1 }}>
-          {`${role.charAt(0).toUpperCase() + role.slice(1)} Panel`}
-        </Typography>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* 2. LOGO SECTION UPDATED */}
+      <Toolbar sx={{ flexDirection: 'column', py: 4, gap: 1 }}>
+        <Box sx={{ mb: 1 }}>
+          <Logo className="w-16 h-16 shadow-2xl" />
+        </Box>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography
+            variant='h6'
+            sx={{
+              fontWeight: 900,
+              letterSpacing: '0.2em',
+              color: '#D4AF37',
+              fontSize: '1.2rem',
+              lineHeight: 1
+            }}
+          >
+            ZAMZAM
+          </Typography>
+          <Typography 
+            variant='caption' 
+            sx={{ 
+              color: 'rgba(255,255,255,0.5)', 
+              fontWeight: 600, 
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              mt: 0.5,
+              display: 'block'
+            }}
+          >
+            {`${role} Panel`}
+          </Typography>
+        </Box>
       </Toolbar>
 
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+      <Divider sx={{ borderColor: 'rgba(212, 175, 55, 0.2)', mx: 3 }} />
 
-      <List sx={{ px: 2, mt: 2 }}>
+      <List sx={{ px: 2, mt: 3, flexGrow: 1 }}>
         {navItems.map((item) => {
           const active = location.pathname.startsWith(item.path);
 
@@ -85,22 +101,24 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
               key={item.path}
               onClick={() => {
                 navigate(item.path);
-                // Close mobile drawer on navigation if open
                 if (mobileOpen) onDrawerToggle();
               }}
               sx={{
-                borderRadius: 2,
+                borderRadius: '16px',
                 mb: 1,
+                py: 1.5,
                 bgcolor: active ? '#D4AF37' : 'transparent',
                 color: active ? '#1F2937' : 'rgba(255,255,255,0.7)',
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   bgcolor: active ? '#D4AF37' : 'rgba(255,255,255,0.08)',
+                  transform: active ? 'none' : 'translateX(4px)',
                 },
               }}
             >
               <ListItemIcon
                 sx={{
-                  color: active ? '#1F2937' : 'rgba(255,255,255,0.7)',
+                  color: active ? '#1F2937' : '#D4AF37', // Gold icons for inactive state
                   minWidth: 40,
                 }}
               >
@@ -109,7 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
               <ListItemText
                 primary={item.label}
                 primaryTypographyProps={{
-                  fontWeight: active ? 700 : 500,
+                  fontWeight: active ? 800 : 500,
                   fontSize: 14,
                 }}
               />
@@ -117,80 +135,62 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
           );
         })}
       </List>
-      <Box sx={{ flexGrow: 1 }} />
-      <List sx={{ px: 2, pb: 2 }}>
+
+      {/* Logout at bottom */}
+      <List sx={{ px: 2, pb: 3 }}>
         <ListItemButton
           onClick={logout}
           sx={{
-            borderRadius: 2,
+            borderRadius: '16px',
             bgcolor: 'rgba(239, 68, 68, 0.1)',
             color: '#ef4444',
             border: '1px solid rgba(239, 68, 68, 0.2)',
-            transition: 'all 0.2s',
             '&:hover': {
               bgcolor: '#ef4444',
               color: 'white',
-              '& .MuiListItemIcon-root': {
-                color: 'white',
-              },
+              '& .MuiListItemIcon-root': { color: 'white' },
             },
           }}
         >
-          <ListItemIcon
-            className='MuiListItemIcon-root'
-            sx={{ color: '#ef4444', minWidth: 40, transition: 'color 0.2s' }}
-          >
+          <ListItemIcon sx={{ color: '#ef4444', minWidth: 40 }}>
             <Logout />
           </ListItemIcon>
-          <ListItemText
-            primary='Logout'
-            primaryTypographyProps={{
-              fontWeight: 600,
-              fontSize: 14,
-            }}
-          />
+          <ListItemText primary='Logout' primaryTypographyProps={{ fontWeight: 700 }} />
         </ListItemButton>
       </List>
-    </>
+    </Box>
   );
 
   return (
     <Box
       component='nav'
       sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      aria-label='mailbox folders'
     >
-      {/* Mobile Drawer */}
       <Drawer
         variant='temporary'
         open={mobileOpen}
         onClose={onDrawerToggle}
-        ModalProps={{
-          keepMounted: true, // Better open performance on mobile.
-        }}
+        ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', sm: 'none' },
           '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
             width: drawerWidth,
             bgcolor: '#1F2937',
-            color: 'white',
+            borderRight: '1px solid rgba(212, 175, 55, 0.1)',
           },
         }}
       >
         {drawerContent}
       </Drawer>
 
-      {/* Desktop Drawer */}
       <Drawer
         variant='permanent'
         sx={{
           display: { xs: 'none', sm: 'block' },
           '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
             width: drawerWidth,
             bgcolor: '#1F2937',
-            color: 'white',
+            borderRight: '2px solid rgba(212, 175, 55, 0.1)',
           },
         }}
         open

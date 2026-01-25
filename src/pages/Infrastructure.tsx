@@ -190,68 +190,75 @@ export default function Infrastructure() {
         open={open}
         onClose={() => setOpen(false)}
         title={editingId ? 'Edit Outlet' : 'Register Outlet'}
+        maxWidth='md'
       >
-        <form onSubmit={handleSubmit} className='space-y-5'>
-          <Input
-            label='Outlet Name'
-            value={newStore.name || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setNewStore({ ...newStore, name: e.target.value })
-            }
-            required
-          />
+        <form onSubmit={handleSubmit} className='flex flex-col gap-8'>
+          {/* Input Grid with 32px spacing (gap-8) to ensure they are never "stuck" */}
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8'>
+            <div className='md:col-span-2'>
+              <Input
+                label='Outlet Name'
+                value={newStore.name || ''}
+                onChange={(e) => setNewStore({ ...newStore, name: e.target.value })}
+                required
+              />
+            </div>
 
-          <Select
-            label='Outlet Type'
-            options={Object.values(StoreCategory)}
-            value={newStore.category || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setNewStore({
-                ...newStore,
-                category: e.target.value as StoreCategory,
-              })
-            }
-          />
+            <Select
+              label='Outlet Type'
+              options={Object.values(StoreCategory)}
+              value={newStore.category || ''}
+              onChange={(e) =>
+                setNewStore({ ...newStore, category: e.target.value as StoreCategory })
+              }
+            />
 
-          <Input
-            label='Address'
-            value={newStore.address || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setNewStore({ ...newStore, address: e.target.value })
-            }
-          />
+            <Input
+              label='Manager Phone'
+              value={newStore.managerPhone || ''}
+              onChange={(e) => setNewStore({ ...newStore, managerPhone: e.target.value })}
+            />
 
-          <Select
-            label='Manager'
-            options={MANAGERS.map((m) => ({ label: m.name, value: m.id }))}
-            value={newStore.managerId || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              const manager = MANAGERS.find((m) => m.id === e.target.value);
-              setNewStore({
-                ...newStore,
-                managerId: manager?.id,
-                managerName: manager?.name,
-                managerPhone: manager?.phone,
-              });
-            }}
-          />
+            <div className='md:col-span-2'>
+              <Input
+                label='Address'
+                value={newStore.address || ''}
+                onChange={(e) => setNewStore({ ...newStore, address: e.target.value })}
+              />
+            </div>
 
-          <Input
-            label='Manager Phone'
-            value={newStore.managerPhone || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setNewStore({
-                ...newStore,
-                managerPhone: e.target.value,
-              })
-            }
-          />
+            <div className='md:col-span-2'>
+              <Select
+                label='Assigned Manager'
+                options={MANAGERS.map((m) => ({ label: m.name, value: m.id }))}
+                value={newStore.managerId || ''}
+                onChange={(e) => {
+                  const manager = MANAGERS.find((m) => m.id === e.target.value);
+                  setNewStore({
+                    ...newStore,
+                    managerId: manager?.id,
+                    managerName: manager?.name,
+                    managerPhone: manager?.phone,
+                  });
+                }}
+              />
+            </div>
+          </div>
 
-          <div className='flex justify-end gap-4 pt-4'>
-            <Button variant='ghost' onClick={() => setOpen(false)}>
+          {/* Footer with a separate border-t for a pro look */}
+          <div className='flex justify-end gap-4 pt-6 border-t border-gray-100'>
+            <Button
+              variant='ghost'
+              onClick={() => setOpen(false)}
+              className='font-bold text-gray-400'
+            >
               Cancel
             </Button>
-            <Button type='submit' variant='admin-primary' className='px-8 rounded-2xl'>
+            <Button
+              type='submit'
+              variant='admin-primary'
+              className='px-10 py-3.5 rounded-2xl font-black'
+            >
               {editingId ? 'Update Outlet' : 'Save Outlet'}
             </Button>
           </div>
