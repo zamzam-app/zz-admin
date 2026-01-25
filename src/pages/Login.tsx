@@ -5,7 +5,7 @@ import { Mail, Lock } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 
 const Login: React.FC = () => {
-  const { login, isLoading, error } = useAuth();
+  const { login, error } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
