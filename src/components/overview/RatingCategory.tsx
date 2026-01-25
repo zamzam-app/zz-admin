@@ -1,20 +1,11 @@
 import { BarChart3 } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import Card from '../common/Card';
 
-const categoryData = [
-  { name: 'Cafe', rating: 4.5 },
-  { name: 'Restaurant', rating: 4.2 },
-  { name: 'Bar', rating: 4.0 },
-];
+// const categoryData = [
+//   { name: 'Cafe', rating: 4.5 },
+//   { name: 'Restaurant', rating: 4.2 },
+//   { name: 'Bar', rating: 4.0 },
+// ];
 
 const branchCount = 5;
 const RatingCategory = () => {
