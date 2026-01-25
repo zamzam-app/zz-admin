@@ -17,6 +17,9 @@ const Reviews = lazy(() => import('../pages/Reviews'));
 const Infrastructure = lazy(() => import('../pages/Infrastructure'));
 const FormBuilder = lazy(() => import('../pages/FormBuilder'));
 const EmployeeManagement = lazy(() => import('../pages/EmployeeManagement'));
+const Orders = lazy(() => import('../pages/Orders'));
+const Studio = lazy(() => import('../pages/Studio'));
+const Validation = lazy(() => import('../pages/Validation'));
 const Settings = lazy(() => import('../pages/Settings'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
@@ -97,6 +100,32 @@ const router = createBrowserRouter([
             element: (
               <RoleGuard allowed={['admin']}>
                 <EmployeeManagement />
+              </RoleGuard>
+            ),
+          },
+
+          /* ===== ADMIN and CAFE only ===== */
+          {
+            path: '/studio',
+            element: (
+              <RoleGuard allowed={['admin']}>
+                <Studio />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: '/orders',
+            element: (
+              <RoleGuard allowed={['admin']}>
+                <Orders />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: '/validations',
+            element: (
+              <RoleGuard allowed={['admin']}>
+                <Validation />
               </RoleGuard>
             ),
           },

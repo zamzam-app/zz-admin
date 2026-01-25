@@ -11,7 +11,6 @@ import {
   Toolbar,
   Box,
   Typography,
-  Divider,
 } from '@mui/material';
 import {
   Dashboard,
@@ -21,9 +20,35 @@ import {
   People,
   Settings,
   Logout,
+  Cake,
+  Computer,
+  Grading,
 } from '@mui/icons-material';
+import { storesList } from '../../__mocks__/managers';
+import { Store } from '../../lib/types/types';
 
 const drawerWidth = 280;
+
+const adminNavItems = [
+  { label: 'Overview', path: '/overview', icon: <Dashboard /> },
+  { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
+  { label: 'Outlet', path: '/infrastructure', icon: <Apartment /> },
+  { label: 'Form Builder', path: '/form-builder', icon: <Build /> },
+  { label: 'Managers', path: '/managers', icon: <People /> },
+  { label: 'Settings', path: '/settings', icon: <Settings /> },
+];
+
+const staffNavItems = [
+  { label: 'Overview', path: '/overview', icon: <Dashboard /> },
+  { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
+  { label: 'Settings', path: '/settings', icon: <Settings /> },
+];
+
+const cafeNavItems = [
+  { label: 'Studio', path: '/studio', icon: <Cake /> },
+  { label: 'Orders', path: '/orders', icon: <Grading /> },
+  { label: 'Validations', path: '/validations', icon: <Computer /> },
+];
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -37,29 +62,43 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
 
   const role = user?.role || 'staff';
 
-  const adminNavItems = [
-    { label: 'Overview', path: '/overview', icon: <Dashboard /> },
-    { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
-    { label: 'Outlet', path: '/infrastructure', icon: <Apartment /> },
-    { label: 'Form Builder', path: '/form-builder', icon: <Build /> },
-    { label: 'Managers', path: '/managers', icon: <People /> },
-    { label: 'Settings', path: '/settings', icon: <Settings /> },
-  ];
-  
-  const staffNavItems = [
-    { label: 'Overview', path: '/overview', icon: <Dashboard /> },
-    { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
-    { label: 'Settings', path: '/settings', icon: <Settings /> },
-  ];
+  /* ================================
+   1. Resolve user outlets safely
+  ================================= */
+  const userStores = React.useMemo<Store[]>(() => {
+    if (role === 'admin') return storesList;
+    const ids = user?.outletId || [];
+    return storesList.filter((store) => ids.includes(store.outletId));
+  }, [role, user?.outletId]);
 
-  const navItems = role === 'admin' ? adminNavItems : staffNavItems;
+  /* ================================
+   2. Detect cafe capability
+  ================================= */
+  const isCafeEnabled = React.useMemo(() => {
+    return userStores.some((store) => store.category?.toLowerCase().includes('cafe'));
+  }, [userStores]);
+
+  /* ================================
+   3. Build navigation (IMMUTABLE)
+  ================================= */
+  const navItems = React.useMemo(() => {
+    const base = role === 'admin' ? adminNavItems : staffNavItems;
+
+    if (!isCafeEnabled) return base;
+
+    // prevent duplicate items
+    const existingPaths = new Set(base.map((i) => i.path));
+    const cafeItems = cafeNavItems.filter((i) => !existingPaths.has(i.path));
+
+    return [...base, ...cafeItems];
+  }, [role, isCafeEnabled]);
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* 2. LOGO SECTION UPDATED */}
       <Toolbar sx={{ flexDirection: 'column', py: 4, gap: 1 }}>
         <Box sx={{ mb: 1 }}>
-          <Logo className="w-16 h-16 shadow-2xl" />
+          <Logo className='w-16 h-16 shadow-2xl' />
         </Box>
         <Box sx={{ textAlign: 'center' }}>
           <Typography
@@ -69,20 +108,20 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
               letterSpacing: '0.2em',
               color: '#D4AF37',
               fontSize: '1.2rem',
-              lineHeight: 1
+              lineHeight: 1,
             }}
           >
             ZAMZAM
           </Typography>
-          <Typography 
-            variant='caption' 
-            sx={{ 
-              color: 'rgba(255,255,255,0.5)', 
-              fontWeight: 600, 
+          <Typography
+            variant='caption'
+            sx={{
+              color: 'rgba(255,255,255,0.5)',
+              fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
               mt: 0.5,
-              display: 'block'
+              display: 'block',
             }}
           >
             {`${role} Panel`}
@@ -90,51 +129,51 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
         </Box>
       </Toolbar>
 
-      <Divider sx={{ borderColor: 'rgba(212, 175, 55, 0.2)', mx: 3 }} />
+      <div style={{ overflow: 'auto' }}>
+        <List sx={{ px: 2, mt: 3, flexGrow: 1 }}>
+          {navItems.map((item) => {
+            const active = location.pathname.startsWith(item.path);
 
-      <List sx={{ px: 2, mt: 3, flexGrow: 1 }}>
-        {navItems.map((item) => {
-          const active = location.pathname.startsWith(item.path);
-
-          return (
-            <ListItemButton
-              key={item.path}
-              onClick={() => {
-                navigate(item.path);
-                if (mobileOpen) onDrawerToggle();
-              }}
-              sx={{
-                borderRadius: '16px',
-                mb: 1,
-                py: 1.5,
-                bgcolor: active ? '#D4AF37' : 'transparent',
-                color: active ? '#1F2937' : 'rgba(255,255,255,0.7)',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  bgcolor: active ? '#D4AF37' : 'rgba(255,255,255,0.08)',
-                  transform: active ? 'none' : 'translateX(4px)',
-                },
-              }}
-            >
-              <ListItemIcon
+            return (
+              <ListItemButton
+                key={item.path}
+                onClick={() => {
+                  navigate(item.path);
+                  if (mobileOpen) onDrawerToggle();
+                }}
                 sx={{
-                  color: active ? '#1F2937' : '#D4AF37', // Gold icons for inactive state
-                  minWidth: 40,
+                  borderRadius: '16px',
+                  mb: 1,
+                  py: 1.5,
+                  bgcolor: active ? '#D4AF37' : 'transparent',
+                  color: active ? '#1F2937' : 'rgba(255,255,255,0.7)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: active ? '#D4AF37' : 'rgba(255,255,255,0.08)',
+                    transform: active ? 'none' : 'translateX(4px)',
+                  },
                 }}
               >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                primaryTypographyProps={{
-                  fontWeight: active ? 800 : 500,
-                  fontSize: 14,
-                }}
-              />
-            </ListItemButton>
-          );
-        })}
-      </List>
+                <ListItemIcon
+                  sx={{
+                    color: active ? '#1F2937' : '#D4AF37', // Gold icons for inactive state
+                    minWidth: 40,
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontWeight: active ? 800 : 500,
+                    fontSize: 14,
+                  }}
+                />
+              </ListItemButton>
+            );
+          })}
+        </List>
+      </div>
 
       {/* Logout at bottom */}
       <List sx={{ px: 2, pb: 3 }}>
@@ -162,10 +201,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   );
 
   return (
-    <Box
-      component='nav'
-      sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-    >
+    <Box component='nav' sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
       <Drawer
         variant='temporary'
         open={mobileOpen}

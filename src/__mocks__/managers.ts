@@ -32,4 +32,17 @@ export const storesList: StoreType[] = [
     managerName: 'Jane Smith',
     qrToken: 'mock-qr-token-2',
   },
+  {
+    id: '3',
+    name: 'Outlet 3',
+    outletId: 'outlet-3',
+    category: StoreCategory.CAFE,
+    address: '789 Oak St',
+    rating: 2,
+    totalFeedback: 3,
+    managerPhone: '123-456-7890',
+    managerId: '3',
+    managerName: 'Johnson Doenial',
+    qrToken: 'mock-qr-token-2',
+  },
 ];
