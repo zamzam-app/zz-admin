@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   const adminNavItems = [
     { label: 'Overview', path: '/overview', icon: <Dashboard /> },
     { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
-    { label: 'Infrastructure', path: '/infrastructure', icon: <Apartment /> },
+    { label: 'Outlet', path: '/infrastructure', icon: <Apartment /> },
     { label: 'Form Builder', path: '/form-builder', icon: <Build /> },
     { label: 'Managers', path: '/managers', icon: <People /> },
     { label: 'Settings', path: '/settings', icon: <Settings /> },
