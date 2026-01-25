@@ -1,40 +1,47 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import { mockLogin, type User } from '../../__mocks__/auth';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: any | null; // Replace 'any' with your User type
-  login: (token: string, userData: any) => void;
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Mock authentication for now. In a real app, check localStorage/cookie on mount.
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const login = (token: string, userData: any) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
-    // Simulate API call/processing
-    setTimeout(() => {
-      localStorage.setItem('token', token);
+    setError(null);
+    try {
+      const userData = await mockLogin({ email, password });
       setIsAuthenticated(true);
       setUser(userData);
+      localStorage.setItem('user_session', JSON.stringify(userData));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+      throw err;
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('user_session');
     setIsAuthenticated(false);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading, error }}>
       {children}
     </AuthContext.Provider>
   );
