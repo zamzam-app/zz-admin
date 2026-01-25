@@ -2,7 +2,9 @@ export const EMPLOYEES = [
   {
     id: '1',
     name: 'Sarah Johnson',
+    username: 'sarah',
     email: 'sarah@zamzam.com',
+    password: 'sarah',
     phone: '987-654-3210',
     role: 'STAFF',
     outletId: 'outlet-1',
@@ -11,7 +13,9 @@ export const EMPLOYEES = [
   {
     id: '2',
     name: 'Mike Chen',
+    username: 'mike',
     email: 'mike@zamzam.com',
+    password: 'mike',
     phone: '987-654-3211',
     role: 'STAFF',
     outletId: 'outlet-2',
@@ -20,7 +24,9 @@ export const EMPLOYEES = [
   {
     id: '3',
     name: 'Emily Davis',
+    username: 'emily',
     email: 'emily@zamzam.com',
+    password: 'emily',
     phone: '987-654-3212',
     role: 'STAFF',
     outletId: 'outlet-1',

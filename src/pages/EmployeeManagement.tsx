@@ -13,7 +13,9 @@ import outletlist from '../__mocks__/outets.json';
 type Employee = {
   id: string;
   name: string;
+  username: string;
   email: string;
+  password: string;
   phone: string;
   role: string;
   outletId: string;
@@ -89,7 +91,7 @@ export default function EmployeeManagement() {
             <Box display='flex' justifyContent='space-between'>
               <Box>
                 <Typography fontWeight={700} color='#1F2937'>
-                  {emp.name}
+                  {emp.name} • {emp.username}
                 </Typography>
                 <Typography variant='caption' color='text.secondary'>
                   {emp.email} • {emp.phone}
@@ -125,10 +127,21 @@ export default function EmployeeManagement() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
           />
+          
+          <Input
+            label='UserName'
+            value={form.username || ''}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+          />
           <Input
             label='Email'
             value={form.email || ''}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+          <Input
+            label='Password'
+            value={form.password || ''}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
           <Input
             label='Phone'

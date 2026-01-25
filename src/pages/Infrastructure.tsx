@@ -1,57 +1,59 @@
 import React, { useState } from 'react';
-import { Plus, Store, Phone, MapPin, QrCode, Trash2 } from 'lucide-react';
+import { Plus, Store, Phone, MapPin, QrCode, Trash2, Edit2, User } from 'lucide-react';
 import { Store as StoreType, StoreCategory } from '../lib/types/types';
 import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
-
-const storesList = [
-  {
-    id: '1',
-    name: 'Outlet 1',
-    category: StoreCategory.SUPERMARKET,
-    address: '123 Main St',
-    rating: 4,
-    totalFeedback: 10,
-    managerPhone: '123-456-7890',
-  },
-  {
-    id: '2',
-    name: 'Outlet 2',
-    category: StoreCategory.FASHION,
-    address: '456 Elm St',
-    rating: 3,
-    totalFeedback: 5,
-    managerPhone: '098-765-4321',
-  },
-];
+import { storesList, MANAGERS } from '../__mocks__/managers';
 
 export default function Infrastructure() {
   const [stores, setStores] = useState(storesList);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newStore, setNewStore] = useState<Partial<StoreType>>({});
+
+  const handleEdit = (store: StoreType) => {
+    setNewStore(store);
+    setEditingId(store.id);
+    setOpen(true);
+  };
+
+  const handleOpenAdd = () => {
+    setNewStore({});
+    setEditingId(null);
+    setOpen(true);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStore.name || !newStore.category) return;
 
-    setStores([
-      ...stores,
-      {
-        id: Date.now().toString(),
-        name: newStore.name || '',
-        category: newStore.category as StoreCategory,
-        address: newStore.address || '',
-        rating: 0,
-        totalFeedback: 0,
-        managerPhone: newStore.managerPhone || '',
-      },
-    ]);
+    if (editingId) {
+      setStores((prev) =>
+        prev.map((s) => (s.id === editingId ? { ...s, ...(newStore as StoreType) } : s)),
+      );
+    } else {
+      setStores([
+        ...stores,
+        {
+          id: Date.now().toString(),
+          name: newStore.name || '',
+          category: newStore.category as StoreCategory,
+          address: newStore.address || '',
+          rating: 0,
+          totalFeedback: 0,
+          managerPhone: newStore.managerPhone || '',
+          managerId: newStore.managerId,
+          managerName: newStore.managerName,
+        },
+      ]);
+    }
 
     setOpen(false);
     setNewStore({});
+    setEditingId(null);
   };
 
   const handleDelete = (id: string) => {
@@ -66,11 +68,7 @@ export default function Infrastructure() {
           <p className='text-gray-500 text-sm'>Manage all physical outlets and QR points</p>
         </div>
 
-        <Button
-          variant='admin-primary'
-          onClick={() => setOpen(true)}
-          className='rounded-2xl px-6 py-4'
-        >
+        <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl px-6 py-4'>
           <Plus size={18} /> Add Outlet
         </Button>
       </div>
@@ -95,12 +93,20 @@ export default function Infrastructure() {
                 </div>
               </div>
 
-              <button
-                onClick={() => handleDelete(store.id)}
-                className='p-2 text-red-500 hover:bg-red-50 rounded-xl'
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className='flex gap-2'>
+                <button
+                  onClick={() => handleEdit(store)}
+                  className='p-2 text-blue-500 hover:bg-blue-50 rounded-xl'
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(store.id)}
+                  className='p-2 text-red-500 hover:bg-red-50 rounded-xl'
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
 
             <div className='space-y-3 text-sm text-gray-600'>
@@ -109,8 +115,12 @@ export default function Infrastructure() {
                 {store.address}
               </div>
               <div className='flex items-center gap-2'>
+                <User size={14} />
+                {store.managerName || 'No Manager Assigned'}
+              </div>
+              <div className='flex items-center gap-2'>
                 <Phone size={14} />
-                {store.managerPhone}
+                {store.managerPhone || 'N/A'}
               </div>
             </div>
 
@@ -118,15 +128,22 @@ export default function Infrastructure() {
               <button className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50'>
                 <QrCode size={16} /> QR Code
               </button>
-              <button className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800'>
-                View
+              <button
+                onClick={() => handleEdit(store)}
+                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800'
+              >
+                Edit
               </button>
             </div>
           </Card>
         ))}
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title='Register Outlet'>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editingId ? 'Edit Outlet' : 'Register Outlet'}
+      >
         <form onSubmit={handleSubmit} className='space-y-5'>
           <Input
             label='Outlet Name'
@@ -140,7 +157,7 @@ export default function Infrastructure() {
           <Select
             label='Outlet Type'
             options={Object.values(StoreCategory)}
-            value={newStore.category}
+            value={newStore.category || ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setNewStore({
                 ...newStore,
@@ -155,6 +172,21 @@ export default function Infrastructure() {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setNewStore({ ...newStore, address: e.target.value })
             }
+          />
+
+          <Select
+            label='Manager'
+            options={MANAGERS.map((m) => ({ label: m.name, value: m.id }))}
+            value={newStore.managerId || ''}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              const manager = MANAGERS.find((m) => m.id === e.target.value);
+              setNewStore({
+                ...newStore,
+                managerId: manager?.id,
+                managerName: manager?.name,
+                managerPhone: manager?.phone,
+              });
+            }}
           />
 
           <Input
@@ -173,7 +205,7 @@ export default function Infrastructure() {
               Cancel
             </Button>
             <Button type='submit' variant='admin-primary' className='px-8 rounded-2xl'>
-              Save Outlet
+              {editingId ? 'Update Outlet' : 'Save Outlet'}
             </Button>
           </div>
         </form>

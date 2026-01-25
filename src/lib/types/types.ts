@@ -1,10 +1,9 @@
-
 export enum StoreCategory {
   SUPERMARKET = 'Supermarket',
   FASHION = 'Fashion',
   ICE_CREAM = 'Ice Cream Parlour',
   CAFE = 'Cafe',
-  RESTAURANT = 'Restaurant'
+  RESTAURANT = 'Restaurant',
 }
 
 export interface Cake {
@@ -40,4 +39,6 @@ export interface Store {
   image?: string;
   address?: string;
   managerPhone?: string;
+  managerId?: string;
+  managerName?: string;
 }
