@@ -141,7 +141,7 @@ export default function Infrastructure() {
             label='Outlet Type'
             options={Object.values(StoreCategory)}
             value={newStore.category}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setNewStore({
                 ...newStore,
                 category: e.target.value as StoreCategory,

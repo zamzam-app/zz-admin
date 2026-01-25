@@ -3,24 +3,28 @@
     "email": "staff1@example.com",
     "password": "password123",
     "name": "Staff 1",
-    "role": "staff"
+    "role": "staff",
+    "outletId": ["outlet-1", "outlet-2"]
   },
   {
     "email": "staff2@example.com",
     "password": "password123",
     "name": "Staff 2",
-    "role": "staff"
+    "role": "staff",
+    "outletId": ["outlet-2"]
   },
   {
     "email": "zamzam@email.com",
     "password": "password123",
     "name": "Zam Zam",
-    "role": "admin"
+    "role": "admin",
+    "outletId": ["outlet-1", "outlet-2", "outlet-3"]
   },
   {
     "email": "ziya@email.com",
     "password": "password123",
     "name": "Ziya",
-    "role": "admin"
+    "role": "admin",
+    "outletId": ["outlet-1", "outlet-2", "outlet-3"]
   }
 ]

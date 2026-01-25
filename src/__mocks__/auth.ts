@@ -4,6 +4,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  outletId?: string[];
 }
 
 export const mockLogin = async (payload: { email: string; password: string }): Promise<User> => {
@@ -16,6 +17,7 @@ export const mockLogin = async (payload: { email: string; password: string }): P
           name: user.name,
           email: user.email,
           role: user.role,
+          outletId: user.outletId,
         });
       } else {
         reject(new Error('Invalid email or password'));
