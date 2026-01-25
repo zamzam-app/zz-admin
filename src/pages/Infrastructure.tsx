@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Store, Phone, MapPin, QrCode, Trash2, Edit2, User } from 'lucide-react';
+import { Plus, Store, Phone, MapPin, QrCode, Trash2, Edit2, User, Download } from 'lucide-react';
+import { nanoid } from 'nanoid';
+import QRCode from 'react-qr-code';
 import { Store as StoreType, StoreCategory } from '../lib/types/types';
 import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
@@ -11,6 +13,8 @@ import { storesList, MANAGERS } from '../__mocks__/managers';
 export default function Infrastructure() {
   const [stores, setStores] = useState(storesList);
   const [open, setOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [selectedQrStore, setSelectedQrStore] = useState<StoreType | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newStore, setNewStore] = useState<Partial<StoreType>>({});
 
@@ -24,6 +28,45 @@ export default function Infrastructure() {
     setNewStore({});
     setEditingId(null);
     setOpen(true);
+  };
+
+  const handleGenerateQr = (store: StoreType) => {
+    if (!store.qrToken) {
+      const updatedStore = { ...store, qrToken: nanoid(10) };
+      setStores((prev) => prev.map((s) => (s.id === store.id ? updatedStore : s)));
+      setSelectedQrStore(updatedStore);
+    } else {
+      setSelectedQrStore(store);
+    }
+    setQrOpen(true);
+  };
+
+  const handleDownloadQr = () => {
+    const svg = document.getElementById('qr-code-svg');
+    if (!svg) return;
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      if (ctx) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        const pngFile = canvas.toDataURL('image/png');
+
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `${selectedQrStore?.name.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
+        downloadLink.href = pngFile;
+        downloadLink.click();
+      }
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -47,6 +90,7 @@ export default function Infrastructure() {
           managerPhone: newStore.managerPhone || '',
           managerId: newStore.managerId,
           managerName: newStore.managerName,
+          qrToken: nanoid(10),
         },
       ]);
     }
@@ -125,7 +169,10 @@ export default function Infrastructure() {
             </div>
 
             <div className='flex gap-3 mt-6'>
-              <button className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50'>
+              <button
+                onClick={() => handleGenerateQr(store)}
+                className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50'
+              >
                 <QrCode size={16} /> QR Code
               </button>
               <button
@@ -209,6 +256,35 @@ export default function Infrastructure() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        title={selectedQrStore?.name || 'Outlet QR Code'}
+        className='text-center'
+      >
+        <div className='flex flex-col items-center justify-center p-4'>
+          <div className='bg-white p-4 rounded-xl border-2 border-dashed border-gray-200 mb-6'>
+            {selectedQrStore?.qrToken && (
+              <QRCode
+                id='qr-code-svg'
+                value={`${window.location.origin}/r/${selectedQrStore.qrToken}`}
+                size={200}
+              />
+            )}
+          </div>
+
+          <p className='text-gray-500 text-sm mb-2'>Scan to access review page</p>
+          <code className='bg-gray-100 px-3 py-1 rounded text-xs text-gray-600 break-all select-all mb-6 block'>
+            {`${window.location.origin}/r/${selectedQrStore?.qrToken}`}
+          </code>
+
+          <Button onClick={handleDownloadQr} variant='admin-primary'>
+            <Download size={16} className='mr-2' /> Download QR Code
+          </Button>
+        </div>
       </Modal>
     </div>
   );

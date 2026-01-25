@@ -41,4 +41,5 @@ export interface Store {
   managerPhone?: string;
   managerId?: string;
   managerName?: string;
+  qrToken?: string;
 }

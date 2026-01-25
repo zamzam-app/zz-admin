@@ -16,6 +16,7 @@ export const storesList: StoreType[] = [
     managerPhone: '123-456-7890',
     managerId: '1',
     managerName: 'John Doe',
+    qrToken: 'mock-qr-token-1',
   },
   {
     id: '2',
@@ -27,5 +28,6 @@ export const storesList: StoreType[] = [
     managerPhone: '098-765-4321',
     managerId: '2',
     managerName: 'Jane Smith',
+    qrToken: 'mock-qr-token-2',
   },
 ];
