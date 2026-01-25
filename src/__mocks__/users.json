@@ -4,7 +4,7 @@
     "password": "password123",
     "name": "Staff 1",
     "role": "staff",
-    "outletId": ["outlet-1", "outlet-2"]
+    "outletId": ["outlet-1"]
   },
   {
     "email": "staff2@example.com",
