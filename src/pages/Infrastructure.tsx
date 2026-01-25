@@ -83,6 +83,7 @@ export default function Infrastructure() {
         {
           id: Date.now().toString(),
           name: newStore.name || '',
+          outletId: newStore.outletId || `outlet-${Date.now().toString()}`,
           category: newStore.category as StoreCategory,
           address: newStore.address || '',
           rating: 0,

@@ -5,14 +5,16 @@ type Props = {
   children: React.ReactNode;
   onClick?: () => void;
   className?: string;
+  style?: React.CSSProperties;
 };
 
-export default function Card({ children, onClick, className }: Props) {
+export default function Card({ children, onClick, className, style }: Props) {
   return (
     <MUICard
       onClick={onClick}
       className={className}
       sx={{
+        ...style,
         borderRadius: 3,
         border: '1px solid #E5E7EB',
         boxShadow: '0 1px 2px rgba(0,0,0,0.04)',

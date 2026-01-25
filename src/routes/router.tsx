@@ -12,6 +12,7 @@ import RoleGuard from './RoleGuard';
 const Login = lazy(() => import('../pages/Login'));
 const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
 const Overview = lazy(() => import('../pages/Overview'));
+const Analytics = lazy(() => import('../pages/Analytics'));
 const Reviews = lazy(() => import('../pages/Reviews'));
 const Infrastructure = lazy(() => import('../pages/Infrastructure'));
 const FormBuilder = lazy(() => import('../pages/FormBuilder'));
@@ -53,13 +54,17 @@ const router = createBrowserRouter([
         children: [
           {
             path: '/',
-            element: <Navigate to="/overview" replace />,
+            element: <Navigate to='/overview' replace />,
           },
 
           /* ===== Common (ADMIN + STAFF) ===== */
           {
             path: '/overview',
             element: <Overview />,
+          },
+          {
+            path: '/analytics/:id',
+            element: <Analytics />,
           },
           {
             path: '/reviews',

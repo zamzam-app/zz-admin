@@ -9,6 +9,7 @@ export const storesList: StoreType[] = [
   {
     id: '1',
     name: 'Outlet 1',
+    outletId: 'outlet-1',
     category: StoreCategory.SUPERMARKET,
     address: '123 Main St',
     rating: 4,
@@ -21,6 +22,7 @@ export const storesList: StoreType[] = [
   {
     id: '2',
     name: 'Outlet 2',
+    outletId: 'outlet-2',
     category: StoreCategory.FASHION,
     address: '456 Elm St',
     rating: 3,

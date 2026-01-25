@@ -33,6 +33,7 @@ export interface Feedback {
 export interface Store {
   id: string;
   name: string;
+  outletId: string;
   category: StoreCategory;
   rating: number;
   totalFeedback: number;
