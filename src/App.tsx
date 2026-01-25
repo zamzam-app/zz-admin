@@ -4,7 +4,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import router from './routes';
 import { AuthProvider } from './lib/context/AuthContext';
 import { ForgotPasswordProvider } from './lib/context/ForgotPasswordContext';
-import { queryClient } from './lib/react-query';
+import { queryClient } from './lib/react-query/react-query';
 
 function App() {
   return (

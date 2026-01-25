@@ -6,7 +6,7 @@ const Sidebar: React.FC = () => {
   const { logout } = useAuth();
 
   const navItems = [
-    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Overviewx', path: '/dashboard' },
     { label: 'University', path: '/university' },
     { label: 'Resources', path: '/resources' },
     { label: 'Finance', path: '/finance' },
