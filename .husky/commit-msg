@@ -5,14 +5,12 @@ print_commit_msg_header() {
   echo "│ Validating commit message format           │"
   echo "└────────────────────────────────────────────┘"
 }
-
 print_commit_passed() {
   echo ""
   echo "┌────────────────────────────────────────────┐"
   echo "│ Commit message is valid.                   │"
   echo "└────────────────────────────────────────────┘"
 }
-
 print_commit_failed() {
   echo ""
   echo "┌────────────────────────────────────────────┐"
@@ -26,10 +24,8 @@ print_commit_failed() {
   echo "│ Example: feature: add login flow           │"
   echo "└────────────────────────────────────────────┘"
 }
-
 # Run commitlint
 print_commit_msg_header
-
 if npx --no-install commitlint --edit "$1"; then
   print_commit_passed
 else

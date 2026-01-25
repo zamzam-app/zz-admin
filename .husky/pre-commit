@@ -6,14 +6,12 @@ print_boxed_message() {
   echo "│  Running TSC, ESLint & Prettier)           │"
   echo "└────────────────────────────────────────────┘"
 }
-
 print_success_box() {
   echo ""
   echo "┌────────────────────────────────────────────┐"
   echo "│ All good! Pre-commit checks passed.        │"
   echo "└────────────────────────────────────────────┘"
 }
-
 print_fail_box() {
   echo ""
   echo "┌────────────────────────────────────────────┐"
@@ -21,12 +19,11 @@ print_fail_box() {
   echo "│  Please fix them before committing.        │"
   echo "└────────────────────────────────────────────┘"
 }
-
 # Start
 echo ""
 print_boxed_message
 echo ""
-
+# Run Lint
 pnpm lint
 LINT_EXIT_CODE=$?
 if [ $LINT_EXIT_CODE -eq 0 ]; then
@@ -35,10 +32,10 @@ else
   print_fail_box
   exit 1
 fi
-
+# Run Type Check
 pnpm check-types
-LINT_EXIT_CODE=$?
-if [ $LINT_EXIT_CODE -eq 0 ]; then
+TYPE_EXIT_CODE=$?
+if [ $TYPE_EXIT_CODE -eq 0 ]; then
   print_success_box
 else
   print_fail_box

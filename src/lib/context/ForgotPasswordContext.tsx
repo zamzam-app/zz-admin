@@ -20,6 +20,7 @@ export const ForgotPasswordProvider: React.FC<{ children: ReactNode }> = ({ chil
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useForgotPassword = (): ForgotPasswordContextType => {
   const context = useContext(ForgotPasswordContext);
   if (!context) {
