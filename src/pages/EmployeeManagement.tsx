@@ -69,7 +69,14 @@ export default function EmployeeManagement() {
   return (
     <Box>
       {/* Header */}
-      <Box display='flex' justifyContent='space-between' mb={4}>
+      <Box
+        display='flex'
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent='space-between'
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        gap={2}
+        mb={4}
+      >
         <Box>
           <Typography variant='h4' fontWeight={800} color='#1F2937'>
             Employees
@@ -127,7 +134,7 @@ export default function EmployeeManagement() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
           />
-          
+
           <Input
             label='UserName'
             value={form.username || ''}
@@ -140,6 +147,7 @@ export default function EmployeeManagement() {
           />
           <Input
             label='Password'
+            type='password'
             value={form.password || ''}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />

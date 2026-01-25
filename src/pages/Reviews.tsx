@@ -55,7 +55,14 @@ export default function Reviews() {
   return (
     <Box>
       {/* Header */}
-      <Box display='flex' justifyContent='space-between' alignItems='center' mb={4}>
+      <Box
+        display='flex'
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent='space-between'
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        gap={2}
+        mb={4}
+      >
         <Box>
           <Typography variant='h4' fontWeight={800} color='#1F2937'>
             Reviews
@@ -72,7 +79,7 @@ export default function Reviews() {
             Let's stick to showing it if there's more than 1 outlet to choose from.
         */}
         {(user?.role === 'admin' || (user?.outletId && user.outletId.length > 1)) && (
-          <Box width={280}>
+          <Box width={{ xs: '100%', sm: 280 }}>
             <Select
               label='Filter by Outlet'
               options={[
