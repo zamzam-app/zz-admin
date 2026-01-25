@@ -16,7 +16,7 @@ export default function Overview() {
   const visibleStores = useMemo(() => {
     if (!user) return [];
     if (user.role === 'admin') return stores;
-    return stores.filter((s) => user.outletId?.includes(s.id) ?? false);
+    return stores.filter((s) => user.outletId?.includes(s.outletId) ?? false);
   }, [stores, user]);
 
   const stats = useMemo(() => {
