@@ -1,60 +1,59 @@
 import { useMemo, useState } from 'react';
-import { Box, Typography, Chip, Stack } from '@mui/material';
+import { Box, Typography, Stack, Avatar } from '@mui/material';
 import { Star } from 'lucide-react';
 import Card from '../components/common/Card';
 import Select from '../components/common/Select';
 import { REVIEWS } from '../__mocks__/reviewsData';
 import { useAuth } from '../lib/context/AuthContext';
 
+// 1. Define the Review interface to fix the TS error
+interface Review {
+  id: string;
+  customer: string;
+  customerImage?: string; // Optional property
+  outletId: string;
+  outletName: string;
+  date: string;
+  rating: number;
+  comment: string;
+}
+
 export default function Reviews() {
   const { user } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState('all');
 
-  /* ============================
-     Filter logic
-  ============================ */
+  // 2. Cast the mock data to our Review type
+  const allReviews = REVIEWS as Review[];
+
   const filteredReviews = useMemo(() => {
-    // If we have no user, shouldn't really happen if protected, but safe fallback
     if (!user) return [];
+    let reviewsToFilter = allReviews;
 
-    let reviewsToFilter = REVIEWS;
-
-    // 1. Filter by User's assigned outlets (if not admin/all)
-    // Assuming 'admin' role sees all, or if outletId is missing/empty they see nothing or all?
-    // Let's assume if role is NOT admin, we restrict.
+    // Filter based on user role/permissions
     if (user.role !== 'admin' && user.outletId && user.outletId.length > 0) {
-      reviewsToFilter = REVIEWS.filter((r) => user.outletId?.includes(r.outletId));
+      reviewsToFilter = allReviews.filter((r) => user.outletId?.includes(r.outletId));
     }
 
-    // 2. Filter by dropdown selection
-    if (selectedOutlet === 'all') {
-      return reviewsToFilter;
-    }
-
+    // Filter based on dropdown selection
+    if (selectedOutlet === 'all') return reviewsToFilter;
     return reviewsToFilter.filter((r) => r.outletId === selectedOutlet);
-  }, [selectedOutlet, user]);
+  }, [selectedOutlet, user, allReviews]);
 
   const outlets = useMemo(() => {
-    // Get unique outlets from reviews, but maybe restrict this list based on user permissions too?
-    // For now, let's show all outlets available in the filtered set (or all globally if admin)
-
-    // Actually, the dropdown options should probably only reflect what the user CAN see.
-    // So let's base options on the initial filtered set (before dropdown filter).
-
-    let baseReviews = REVIEWS;
+    let baseReviews = allReviews;
     if (user?.role !== 'admin' && user?.outletId) {
-      baseReviews = REVIEWS.filter((r) => user.outletId?.includes(r.outletId));
+      baseReviews = allReviews.filter((r) => user.outletId?.includes(r.outletId));
     }
 
     const uniqueOutlets = Array.from(
       new Map(baseReviews.map((r) => [r.outletId, r.outletName])).entries(),
     );
     return uniqueOutlets;
-  }, [user]);
+  }, [user, allReviews]);
 
   return (
     <Box>
-      {/* Header */}
+      {/* Header Section */}
       <Box
         display='flex'
         flexDirection={{ xs: 'column', sm: 'row' }}
@@ -72,12 +71,6 @@ export default function Reviews() {
           </Typography>
         </Box>
 
-        {/* Filter - show for everyone, but options are limited for staff. 
-            Or show only for Admin if staff can't see individual outlet breakdown? 
-            Original request: "ADMIN Filter". 
-            But given staff might have multiple outlets, maybe they want to filter too?
-            Let's stick to showing it if there's more than 1 outlet to choose from.
-        */}
         {(user?.role === 'admin' || (user?.outletId && user.outletId.length > 1)) && (
           <Box width={{ xs: '100%', sm: 280 }}>
             <Select
@@ -93,39 +86,94 @@ export default function Reviews() {
         )}
       </Box>
 
-      {/* Review List */}
-      <Stack spacing={3}>
+      {/* Sentiment Archive Style Review List */}
+      <Stack spacing={2}>
         {filteredReviews.map((review) => (
-          <Card key={review.id}>
-            <Box display='flex' justifyContent='space-between' mb={2}>
-              <Box>
-                <Typography fontWeight={700} color='#1F2937'>
-                  {review.customer}
-                </Typography>
-                <Typography variant='caption' color='text.secondary'>
-                  {review.outletName} • {review.date}
-                </Typography>
+          <Card 
+            key={review.id} 
+            sx={{
+              p: 2.5,
+              border: '2px solid transparent',
+              borderRadius: '20px',
+              transition: 'all 0.2s ease-in-out',
+              cursor: 'default',
+              '&:hover': {
+                borderColor: '#3B82F6', 
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 20px rgba(59, 130, 246, 0.1)'
+              }
+            }}
+          >
+            <Box display='flex' alignItems='center' justifyContent='space-between' mb={1.5}>
+              <Box display='flex' alignItems='center' gap={1.5}>
+                {/* Avatar with fallback to first letter */}
+                <Avatar 
+                  variant="rounded" 
+                  src={review.customerImage}
+                  sx={{ 
+                    width: 48, 
+                    height: 48, 
+                    borderRadius: '12px', 
+                    bgcolor: '#1F2937',
+                    fontWeight: 700,
+                    fontSize: '1.2rem'
+                  }}
+                >
+                  {review.customer?.charAt(0)}
+                </Avatar>
+                
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={800} color='#1F2937' sx={{ lineHeight: 1.1 }}>
+                    {review.customer}
+                  </Typography>
+                  <Typography 
+                    variant='caption' 
+                    sx={{ 
+                      color: '#3B82F6', 
+                      fontWeight: 800, 
+                      textTransform: 'uppercase', 
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.05em' 
+                    }}
+                  >
+                    {review.outletName} • {review.date}
+                  </Typography>
+                </Box>
               </Box>
 
-              <Chip
-                icon={<Star size={14} />}
-                label={review.rating}
-                sx={{
-                  bgcolor: '#F5E6CA',
-                  color: '#1F2937',
-                  fontWeight: 700,
-                }}
-              />
+              {/* Dynamic Star Rating */}
+              <Box display='flex' gap={0.25}>
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    size={16}
+                    fill={i < review.rating ? "#D4AF37" : "none"}
+                    color={i < review.rating ? "#D4AF37" : "#E5E7EB"}
+                  />
+                ))}
+              </Box>
             </Box>
 
-            <Typography color='text.secondary'>{review.comment}</Typography>
+            {/* Compressed Quote Style Comment */}
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontStyle: 'italic', 
+                color: 'text.secondary', 
+                fontSize: '0.95rem',
+                lineHeight: 1.4,
+                pl: 0.5
+              }}
+            >
+              "{review.comment}"
+            </Typography>
           </Card>
         ))}
 
         {filteredReviews.length === 0 && (
-          <Typography textAlign='center' color='text.secondary'>
-            No reviews found
-          </Typography>
+          <Box py={10} textAlign="center">
+            <Typography color='text.secondary'>No reviews found for this selection.</Typography>
+          </Box>
         )}
       </Stack>
     </Box>
