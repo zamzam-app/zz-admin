@@ -13,7 +13,8 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className='min-h-screen bg-[#111827] flex items-center justify-center p-4 px-4 sm:px-6 relative overflow-hidden w-full h-full'>
+      <div className='w-full max-w-md bg-white p-8 rounded-lg shadow-md'>
       <h2 className='text-2xl font-bold mb-6 text-center'>
         {step === 'email' && 'Forgot Password'}
         {step === 'otp' && 'Enter OTP'}
@@ -67,6 +68,7 @@ const ForgotPassword: React.FC = () => {
         <Link to='/login' className='text-sm text-indigo-600 hover:text-indigo-500'>
           Back to Login
         </Link>
+      </div>
       </div>
     </div>
   );

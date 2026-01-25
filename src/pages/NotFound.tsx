@@ -11,10 +11,10 @@ const NotFound: React.FC = () => {
         temporarily unavailable.
       </p>
       <Link
-        to='/dashboard'
+        to='/overview'
         className='px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors'
       >
-        Go to Dashboard
+        Go to Overview
       </Link>
     </div>
   );

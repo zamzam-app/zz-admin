@@ -4,19 +4,28 @@ import AuthLayout from '../components/layout/AuthLayout';
 import MainLayout from '../components/layout/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
+import RoleGuard from './RoleGuard';
 
-// Lazy load pages
+/* ============================
+   Lazy loaded pages
+============================ */
 const Login = lazy(() => import('../pages/Login'));
 const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
-const Dashboard = lazy(() => import('../pages/Dashboard'));
-const Listings = lazy(() => import('../pages/Listings')); // mapped to /university based on Sidebar
+const Overview = lazy(() => import('../pages/Overview'));
+const Reviews = lazy(() => import('../pages/Reviews'));
+const Infrastructure = lazy(() => import('../pages/Infrastructure'));
+const FormBuilder = lazy(() => import('../pages/FormBuilder'));
+const EmployeeManagement = lazy(() => import('../pages/EmployeeManagement'));
+const Settings = lazy(() => import('../pages/Settings'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
-// Placeholder for other pages to avoid crash
-const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
-
+/* ============================
+   Router
+============================ */
 const router = createBrowserRouter([
-  // Public Routes (Auth)
+  /* ============================
+     Public routes
+  ============================ */
   {
     element: <AuthLayout />,
     errorElement: <ErrorBoundary />,
@@ -31,7 +40,10 @@ const router = createBrowserRouter([
       },
     ],
   },
-  // Protected Application Routes
+
+  /* ============================
+     Protected app routes
+  ============================ */
   {
     element: <ProtectedRoute />,
     errorElement: <ErrorBoundary />,
@@ -41,33 +53,56 @@ const router = createBrowserRouter([
         children: [
           {
             path: '/',
-            element: <Navigate to='/dashboard' replace />,
+            element: <Navigate to="/overview" replace />,
+          },
+
+          /* ===== Common (ADMIN + STAFF) ===== */
+          {
+            path: '/overview',
+            element: <Overview />,
           },
           {
-            path: '/dashboard',
-            element: <Dashboard />,
-          },
-          {
-            path: '/university',
-            element: <Listings />,
-          },
-          {
-            path: '/resources',
-            element: <PlaceholderPage title='Resources' />,
-          },
-          {
-            path: '/finance',
-            element: <PlaceholderPage title='Finance' />,
+            path: '/reviews',
+            element: <Reviews />,
           },
           {
             path: '/settings',
-            element: <PlaceholderPage title='Settings' />,
+            element: <Settings />,
+          },
+
+          /* ===== ADMIN only ===== */
+          {
+            path: '/infrastructure',
+            element: (
+              <RoleGuard allowed={['admin']}>
+                <Infrastructure />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: '/form-builder',
+            element: (
+              <RoleGuard allowed={['admin']}>
+                <FormBuilder />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: '/managers',
+            element: (
+              <RoleGuard allowed={['admin']}>
+                <EmployeeManagement />
+              </RoleGuard>
+            ),
           },
         ],
       },
     ],
   },
-  // Catch-all 404
+
+  /* ============================
+     404
+  ============================ */
   {
     path: '*',
     element: <NotFound />,
