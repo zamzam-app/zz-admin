@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Star } from 'lucide-react';
 import { LineChart, Line, XAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { Box, Typography } from '@mui/material';
 import Card from '../components/common/Card';
 import { storesList } from '../__mocks__/managers';
 
@@ -14,15 +15,16 @@ export default function Analytics() {
   if (!store) return <div className='p-8'>Store not found</div>;
 
   const trendData = [
-    { name: 'Jan', val: 3.5 },
-    { name: 'Feb', val: 4.2 },
-    { name: 'Mar', val: 3.8 },
-    { name: 'Apr', val: 4.5 },
+    { name: 'Jan', val: 4.4 },
+    { name: 'Feb', val: 4.6 },
+    { name: 'Mar', val: 4.5 },
+    { name: 'Apr', val: 4.7 },
     { name: 'May', val: 4.8 },
   ];
 
   return (
     <div className='space-y-8 max-w-4xl mx-auto pb-10'>
+      {/* Header Navigation */}
       <div className='flex items-center gap-4 mb-6'>
         <button
           onClick={() => navigate('/overview')}
@@ -33,9 +35,10 @@ export default function Analytics() {
         <h2 className='text-2xl font-bold text-[#1F2937]'>{store.name}</h2>
       </div>
 
+      {/* Overall Satisfaction Section */}
       <section>
         <h3 className='font-bold text-lg mb-4 text-[#1F2937]'>Overall Satisfaction</h3>
-        <div className='flex flex-col md:flex-row gap-8 items-center bg-white p-8 rounded-3xl shadow-sm border border-gray-100'>
+        <div className='flex flex-col md:flex-row gap-8 items-center bg-white p-8 rounded-[32px] shadow-sm border border-gray-100'>
           <div className='text-center md:text-left'>
             <div className='text-6xl font-black text-[#1F2937]'>{store.rating}</div>
             <div className='flex text-[#D4AF37] justify-center md:justify-start my-3 gap-1'>
@@ -51,6 +54,7 @@ export default function Analytics() {
               {store.totalFeedback} total reviews
             </div>
           </div>
+
           <div className='flex-1 w-full space-y-3'>
             {[40, 30, 15, 10, 5].map((val, idx) => (
               <div key={5 - idx} className='flex items-center gap-4 text-xs'>
@@ -68,42 +72,72 @@ export default function Analytics() {
         </div>
       </section>
 
+      {/* Feedback Trends Section - Matches Screenshot */}
       <section>
         <h3 className='font-bold text-lg mb-4 text-[#1F2937]'>Feedback Trends</h3>
-        <Card className='h-80 p-8 rounded-3xl'>
-          <div className='mb-6 flex justify-between items-start'>
-            <div>
-              <div className='text-xs text-gray-400 font-bold uppercase tracking-widest mb-1'>
-                Performance Track
-              </div>
-              <div className='text-3xl font-black text-[#1F2937]'>{store.rating}</div>
-            </div>
+        <Card
+          disablePadding
+          sx={{
+            p: 4,
+            borderRadius: '32px',
+            border: '1px solid #F3F4F6',
+            bgcolor: 'white',
+          }}
+        >
+          <div className='mb-12'>
+            <Typography
+              variant='overline'
+              sx={{ color: '#9CA3AF', fontWeight: 800, letterSpacing: '0.2em' }}
+            >
+              Performance Track
+            </Typography>
+            <Typography variant='h3' sx={{ fontWeight: 900, color: '#1F2937' }}>
+              {store.rating}
+            </Typography>
           </div>
-          <ResponsiveContainer width='100%' height='70%'>
-            <LineChart data={trendData}>
-              <Line
-                type='monotone'
-                dataKey='val'
-                stroke='#D4AF37'
-                strokeWidth={4}
-                dot={{ r: 4, fill: '#1F2937', strokeWidth: 2, stroke: '#fff' }}
-              />
-              <XAxis
-                dataKey='name'
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#1F2937', fontSize: 10, fontWeight: 'bold' }}
-              />
-              <RechartsTooltip />
-            </LineChart>
-          </ResponsiveContainer>
+
+          {/* Wrapper with fixed height to prevent ResponsiveContainer collapse */}
+          <Box sx={{ width: '100%', height: 260 }}>
+            <ResponsiveContainer width='100%' height='100%'>
+              <LineChart data={trendData} margin={{ left: 10, right: 10, bottom: 0 }}>
+                <XAxis
+                  dataKey='name'
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#1F2937', fontSize: 12, fontWeight: 700 }}
+                  padding={{ left: 20, right: 20 }}
+                  dy={10}
+                />
+                <RechartsTooltip
+                  cursor={{ stroke: '#E5E7EB', strokeWidth: 2 }}
+                  contentStyle={{
+                    borderRadius: '12px',
+                    border: 'none',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                  }}
+                />
+                <Line
+                  type='monotone'
+                  dataKey='val'
+                  stroke='#D4AF37'
+                  strokeWidth={4}
+                  dot={{ r: 5, fill: '#1F2937', strokeWidth: 0 }}
+                  activeDot={{ r: 8, fill: '#D4AF37' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
         </Card>
       </section>
 
+      {/* Service Breakdown Section */}
       <section>
         <h3 className='font-bold text-lg mb-4 text-[#1F2937]'>Service Breakdown</h3>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-          <div className='bg-white border border-gray-100 p-8 rounded-3xl shadow-sm'>
+          {/* Ambience Card */}
+          <Card disablePadding sx={{ p: 4, borderRadius: '32px', border: '1px solid #F3F4F6' }}>
             <div className='text-xs text-gray-400 mb-2 font-black uppercase tracking-[0.2em]'>
               Ambience
             </div>
@@ -111,8 +145,10 @@ export default function Analytics() {
             <div className='w-full bg-[#F9FAFB] h-2 rounded-full mt-6 overflow-hidden'>
               <div className='bg-[#10B981] h-full w-[90%]'></div>
             </div>
-          </div>
-          <div className='bg-white border border-gray-100 p-8 rounded-3xl shadow-sm'>
+          </Card>
+
+          {/* Taste Card */}
+          <Card disablePadding sx={{ p: 4, borderRadius: '32px', border: '1px solid #F3F4F6' }}>
             <div className='text-xs text-gray-400 mb-2 font-black uppercase tracking-[0.2em]'>
               Taste & Quality
             </div>
@@ -120,7 +156,7 @@ export default function Analytics() {
             <div className='w-full bg-[#F9FAFB] h-2 rounded-full mt-6 overflow-hidden'>
               <div className='bg-[#10B981] h-full w-[94%]'></div>
             </div>
-          </div>
+          </Card>
         </div>
       </section>
     </div>

@@ -8,6 +8,7 @@ type ViewMode = 'dashboard' | 'builder' | 'viewer' | 'preview';
 
 export default function FormBuilderPage() {
   const [view, setView] = useState<ViewMode>('dashboard');
+
   const [savedForms, setSavedForms] = useState<Form[]>(() => {
     try {
       const stored = localStorage.getItem('saved_forms');
@@ -21,14 +22,21 @@ export default function FormBuilderPage() {
     id: '1',
     title: 'Untitled Form',
     questions: [
-      { id: 'q1', type: 'short_answer', title: 'Untitled Question', hint: '', required: false },
+      {
+        id: 'q1',
+        type: 'short_answer',
+        title: 'Untitled Question',
+        hint: '',
+        required: false,
+      },
     ],
   });
 
-  // Persist savedForms whenever they change
   useEffect(() => {
     localStorage.setItem('saved_forms', JSON.stringify(savedForms));
   }, [savedForms]);
+
+  /* -------------------- Handlers -------------------- */
 
   const handleCreateNew = () => {
     setCurrentForm({
@@ -49,6 +57,10 @@ export default function FormBuilderPage() {
     setView('viewer');
   };
 
+  const handleDelete = (form: Form) => {
+    setSavedForms((prev) => prev.filter((f) => f.id !== form.id));
+  };
+
   const handleSave = () => {
     setSavedForms((prev) => {
       const exists = prev.find((f) => f.id === currentForm.id);
@@ -56,50 +68,41 @@ export default function FormBuilderPage() {
         ? prev.map((f) => (f.id === currentForm.id ? currentForm : f))
         : [...prev, currentForm];
     });
-
     setView('dashboard');
   };
 
-  const handleCancelBuilder = () => {
-    setView('dashboard');
-  };
+  /* -------------------- Render -------------------- */
 
-  const handlePreview = () => {
-    setView('preview');
-  };
-
-  const handleBackToDashboard = () => {
-    setView('dashboard');
-  };
-
-  if (view === 'dashboard') {
-    return (
-      <FormDashboard
-        savedForms={savedForms}
-        onCreateNew={handleCreateNew}
-        onEdit={handleEdit}
-        onOpen={handleOpen}
-      />
-    );
-  }
-
-  if (view === 'viewer' || view === 'preview') {
-    return (
-      <FormViewer
-        form={currentForm}
-        onBack={view === 'preview' ? () => setView('builder') : handleBackToDashboard}
-      />
-    );
-  }
-
-  // Builder
+  // This single div with 'space-y-8' is the exact pattern
+  // used in your working Employee and Infrastructure pages.
   return (
-    <FormEditor
-      currentForm={currentForm}
-      setCurrentForm={setCurrentForm}
-      onSave={handleSave}
-      onCancel={handleCancelBuilder}
-      onPreview={handlePreview}
-    />
+    <div className='space-y-8'>
+      {view === 'dashboard' && (
+        <FormDashboard
+          savedForms={savedForms}
+          onCreateNew={handleCreateNew}
+          onEdit={handleEdit}
+          onOpen={handleOpen}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {(view === 'viewer' || view === 'preview') && (
+        <FormViewer
+          form={currentForm}
+          onBack={() => setView(view === 'preview' ? 'builder' : 'dashboard')}
+        />
+      )}
+
+      {view === 'builder' && (
+        <FormEditor
+          currentForm={currentForm}
+          setCurrentForm={setCurrentForm}
+          onSave={handleSave}
+          onCancel={() => setView('dashboard')}
+          onPreview={() => setView('preview')}
+        />
+      )}
+    </div>
   );
 }
