@@ -13,7 +13,7 @@ const branchCount = 5;
 const RatingCategory = () => {
   return (
     <Card className='lg:col-span-2 p- flex flex-col h-[300px] rounded-3xl'>
-      {/* Header aligned exactly with screenshot */}
+      {/* Header */}
       <div className='flex justify-between items-center'>
         <h4 className='font-bold text-[#1F2937] flex items-center gap-1 text-[14px] mb-2'>
           <BarChart3 size={18} className='text-blue-500' />
@@ -32,27 +32,26 @@ const RatingCategory = () => {
 
           return (
             <div key={item.name} className='flex items-center group relative'>
-             {/* Category label */}
-<div className="w-24 pr-3 text-right shrink-0">
-  <span
-    className="text-[12px] font-bold text-[#1F2937] leading-tight
-               line-clamp-2 break-words block"
-  >
-    {item.name}
-  </span>
-</div>
-
+              {/* Category label */}
+              <div className='w-24 pr-3 text-right shrink-0'>
+                <span
+                  className='text-[12px] font-bold text-[#1F2937] leading-tight
+               line-clamp-2 break-words block'
+                >
+                  {item.name}
+                </span>
+              </div>
 
               {/* Bar Track - Rectangular with uniform thickness */}
               <div className='flex-1 h-8 relative'>
-                {/* The Bar - Sharp Rectangle (No Rounded Corners) */}
+                {/* The Bar - Sharp Rectangle */}
                 <div
                   className={`h-full ${barColor} transition-all duration-1000 ease-out rounded-r-lg`}
                   style={{ width: `${widthPercent}%` }}
                 />
 
-                {/* EXACT WHITE HOVER CARD FROM IMAGE */}
-                <div 
+                {/* EXACT WHITE HOVER CARD */}
+                <div
                   className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
                              opacity-0 group-hover:opacity-100 pointer-events-none 
                              transition-all duration-200 z-50'
@@ -72,5 +71,3 @@ const RatingCategory = () => {
 };
 
 export default RatingCategory;
-     
-    
