@@ -1,0 +1,34 @@
+# Bordered commit message validation
+print_commit_msg_header() {
+  echo ""
+  echo "┌────────────────────────────────────────────┐"
+  echo "│ Validating commit message format           │"
+  echo "└────────────────────────────────────────────┘"
+}
+print_commit_passed() {
+  echo ""
+  echo "┌────────────────────────────────────────────┐"
+  echo "│ Commit message is valid.                   │"
+  echo "└────────────────────────────────────────────┘"
+}
+print_commit_failed() {
+  echo ""
+  echo "┌────────────────────────────────────────────┐"
+  echo "│ Invalid commit message format!             │"
+  echo "│ Use format: type: description              │"
+  echo "│                                            │"
+  echo "│ Allowed types:                             │"
+  echo "│  feature, fix, chore, docs, refactor,      │"
+  echo "│  test, ci, api, ui, style, initial         │"
+  echo "│                                            │"
+  echo "│ Example: feature: add login flow           │"
+  echo "└────────────────────────────────────────────┘"
+}
+# Run commitlint
+print_commit_msg_header
+if npx --no-install commitlint --edit "$1"; then
+  print_commit_passed
+else
+  print_commit_failed
+  exit 1
+fi

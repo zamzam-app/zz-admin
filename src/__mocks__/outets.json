@@ -1,0 +1,34 @@
+{
+    "outlets": [
+        {
+            "id": "outlet-1",
+            "name": "ZamZam Bakery – Calicut",
+            "category": "SUPERMARKET",
+            "rating": 4.5,
+            "totalFeedback": 120,
+            "image": "https://example.com/outlet-1.jpg",
+            "address": "123 Main Street, Calicut",
+            "managerPhone": "123-456-7890"
+        },
+        {
+            "id": "outlet-2",
+            "name": "ZamZam Cafe – Kochi",
+            "category": "CAFÉ",
+            "rating": 4.2,
+            "totalFeedback": 85,
+            "image": "https://example.com/outlet-2.jpg",
+            "address": "456 Market Road, Kochi",
+            "managerPhone": "098-765-4321"
+        },
+        {
+            "id": "outlet-3",
+            "name": "ZamZam Bakery – Malappuram",
+            "category": "SUPERMARKET",
+            "rating": 4.8,
+            "totalFeedback": 150,
+            "image": "https://example.com/outlet-3.jpg",
+            "address": "789 Commercial Street, Malappuram",
+            "managerPhone": "111-222-3333"
+        }
+    ]
+}
