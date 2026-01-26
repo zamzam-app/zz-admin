@@ -40,6 +40,8 @@ export interface Store {
   image?: string;
   address?: string;
   managerPhone?: string;
+  formId?: string;
+  formTitle?: string;
   managerId?: string;
   managerName?: string;
   qrToken?: string;

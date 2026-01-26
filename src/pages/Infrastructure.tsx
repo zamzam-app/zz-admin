@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Store, Phone, MapPin, QrCode, Trash2, Edit2, User, Download } from 'lucide-react';
+import React, { useState} from 'react';
+import { Plus, Store,  MapPin, QrCode, Trash2, User, Download, Captions } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import QRCode from 'react-qr-code';
 import { Store as StoreType, StoreCategory } from '../lib/types/types';
@@ -10,6 +10,8 @@ import Select from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { storesList, MANAGERS } from '../__mocks__/managers';
 
+
+
 export default function Infrastructure() {
   const [stores, setStores] = useState(storesList);
   const [open, setOpen] = useState(false);
@@ -17,6 +19,17 @@ export default function Infrastructure() {
   const [selectedQrStore, setSelectedQrStore] = useState<StoreType | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newStore, setNewStore] = useState<Partial<StoreType>>({});
+  const [availableForms, setAvailableForms] = useState(() => {
+  try {
+    const stored = localStorage.getItem('saved_forms');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+});
+
+
+
 
   const handleEdit = (store: StoreType) => {
     setNewStore(store);
@@ -88,9 +101,10 @@ export default function Infrastructure() {
           address: newStore.address || '',
           rating: 0,
           totalFeedback: 0,
-          managerPhone: newStore.managerPhone || '',
           managerId: newStore.managerId,
           managerName: newStore.managerName,
+          formId: newStore.formId,
+          formTitle: newStore.formTitle,
           qrToken: nanoid(10),
         },
       ]);
@@ -140,12 +154,6 @@ export default function Infrastructure() {
 
               <div className='flex gap-2'>
                 <button
-                  onClick={() => handleEdit(store)}
-                  className='p-2 text-blue-500 hover:bg-blue-50 rounded-xl'
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button
                   onClick={() => handleDelete(store.id)}
                   className='p-2 text-red-500 hover:bg-red-50 rounded-xl'
                 >
@@ -164,8 +172,8 @@ export default function Infrastructure() {
                 {store.managerName || 'No Manager Assigned'}
               </div>
               <div className='flex items-center gap-2'>
-                <Phone size={14} />
-                {store.managerPhone || 'N/A'}
+                <Captions size={14} />
+                {store.formTitle || 'N/A'}
               </div>
             </div>
 
@@ -214,11 +222,23 @@ export default function Infrastructure() {
               }
             />
 
-            <Input
-              label='Manager Phone'
-              value={newStore.managerPhone || ''}
-              onChange={(e) => setNewStore({ ...newStore, managerPhone: e.target.value })}
-            />
+          <Select
+           label='Choose Form'
+           options={availableForms.map((form) => ({
+           label: form.title,
+           value: form.id,
+          }))}
+          value={newStore.formId || ''}
+          onChange={(e) => {
+          const form = availableForms.find((f) => f.id === e.target.value);
+          setNewStore({
+          ...newStore,
+          formId: form?.id,
+          formTitle: form?.title,
+          });
+       }}
+    />
+
 
             <div className='md:col-span-2'>
               <Input
