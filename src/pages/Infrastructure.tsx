@@ -9,6 +9,8 @@ import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { storesList, MANAGERS } from '../__mocks__/managers';
+import { Form } from '../lib/types/forms';
+
 
 
 
@@ -19,14 +21,15 @@ export default function Infrastructure() {
   const [selectedQrStore, setSelectedQrStore] = useState<StoreType | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newStore, setNewStore] = useState<Partial<StoreType>>({});
-  const [availableForms, setAvailableForms] = useState(() => {
+  const [availableForms] = useState<Form[]>(() => {
   try {
     const stored = localStorage.getItem('saved_forms');
-    return stored ? JSON.parse(stored) : [];
+    return stored ? (JSON.parse(stored) as Form[]) : [];
   } catch {
     return [];
   }
 });
+
 
 
 
