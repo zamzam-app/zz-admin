@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, Star } from 'lucide-react';
 import { Form } from '../../lib/types/forms';
+import Card from '../common/Card';
 
 interface Props {
   form: Form;
@@ -8,8 +9,8 @@ interface Props {
 }
 
 const FormViewer: React.FC<Props> = ({ form, onBack }) => {
-  //eslint-disable-next-line
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  // FIXED: Replaced 'any' with a union type that matches your possible inputs
+  const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({});
   const [openHints, setOpenHints] = useState<Record<string, boolean>>({});
 
   const toggleHint = (qId: string) => {
@@ -17,31 +18,41 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
   };
 
   return (
-    <div className='min-h-screen bg-[#FFFCF5] py-10 px-4'>
-      <div className='max-w-2xl mx-auto'>
-        <button
-          onClick={onBack}
-          className='mb-6 flex items-center gap-2 text-[#D4AF37] font-bold hover:underline'
-        >
-          <ArrowLeft size={18} /> Back to Dashboard
-        </button>
-        <div className='bg-white rounded-xl shadow-md border-t-[10px] border-[#D4AF37] p-8 mb-6'>
-          <h1 className='text-4xl font-bold text-gray-900'>{form.title}</h1>
+    <div className='space-y-8'>
+      {/* Header Section */}
+      <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
+        <div className='flex items-center gap-4'>
+          <button
+            onClick={onBack}
+            className='p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition shadow-sm'
+          >
+            <ArrowLeft size={20} className='text-[#1F2937]' />
+          </button>
+          <div>
+            <h1 className='text-3xl font-black text-[#1F2937]'>{form.title}</h1>
+            <p className='text-gray-500 text-sm'>Previewing how users will see this form</p>
+          </div>
         </div>
-        {form.questions.map((q) => (
-          <div key={q.id} className='bg-white p-8 rounded-xl shadow-sm mb-4 border border-gray-200'>
-            <div className='flex items-start justify-between mb-2'>
-              <p className='text-lg font-semibold text-gray-800'>
-                {q.title} {q.required && <span className='text-red-500'>*</span>}
-              </p>
-              {/* Hint Toggle Icon */}
+      </div>
+
+      {/* Main Content Area */}
+      <div className='space-y-6'>
+        {form.questions.map((q, index) => (
+          <Card key={q.id} className='p-8 border border-gray-100 rounded-[28px] bg-white shadow-sm'>
+            {/* Question Header */}
+            <div className='flex justify-between items-start mb-6'>
+              <div>
+                <span className='text-[10px] text-blue-500 uppercase font-black tracking-widest block mb-1'>
+                  Question {index + 1} {q.required && '• Required'}
+                </span>
+                <h3 className='text-xl font-bold text-[#1F2937]'>{q.title}</h3>
+              </div>
+
               {q.hint && (
                 <button
                   onClick={() => toggleHint(q.id)}
-                  className={`p-1 rounded-full transition-colors ${
-                    openHints[q.id]
-                      ? 'bg-[#F5E6CA] text-[#D4AF37]'
-                      : 'text-gray-400 hover:bg-gray-100'
+                  className={`p-2 rounded-xl transition-all ${
+                    openHints[q.id] ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'
                   }`}
                 >
                   <HelpCircle size={20} />
@@ -49,98 +60,105 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
               )}
             </div>
 
-            {/* Conditional Hint Display (Only on click) */}
+            {/* Hint Box */}
             {q.hint && openHints[q.id] && (
-              <div className='mb-6 p-3 bg-blue-50 border-l-4 border-blue-400 rounded text-sm text-blue-800 animate-in fade-in slide-in-from-top-1'>
-                <strong>Hint:</strong> {q.hint}
+              <div className='mb-6 p-4 bg-blue-50/50 border-l-4 border-blue-400 rounded-r-xl text-sm text-blue-700'>
+                <span className='font-black uppercase text-[10px] block mb-1'>Hint</span>
+                {q.hint}
               </div>
             )}
 
+            {/* Answer Input Area */}
             <div className='mt-4'>
               {q.type === 'short_answer' && (
                 <input
                   type='text'
-                  placeholder='Short answer text'
-                  className='w-full border-b-2 border-gray-100 focus:border-[#D4AF37] outline-none py-2 transition-colors'
-                  value={answers[q.id] || ''}
+                  placeholder='Type your response...'
+                  className='w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 outline-none transition-all font-medium text-[#1F2937]'
+                  value={(answers[q.id] as string) || ''}
                   onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
                 />
               )}
               {q.type === 'paragraph' && (
                 <textarea
-                  placeholder='Long answer text'
-                  className='w-full border-b-2 border-gray-100 focus:border-[#D4AF37] outline-none py-2 resize-none'
-                  rows={3}
-                  value={answers[q.id] || ''}
+                  rows={4}
+                  placeholder='Type your detailed response...'
+                  className='w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 outline-none transition-all font-medium text-[#1F2937] resize-none'
+                  value={(answers[q.id] as string) || ''}
                   onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
                 />
               )}
-
               {q.type === 'rating' && (
-                <div className='flex flex-col gap-2'>
-                  <div className='flex gap-3'>
-                    {[...Array(q.maxRating || 5)].map((_, i) => {
-                      const starValue = i + 1;
-                      const isActive = starValue <= (answers[q.id] || 0);
-                      return (
-                        <button
-                          key={i}
-                          type='button'
-                          onClick={() => setAnswers({ ...answers, [q.id]: starValue })}
-                          className='transition-transform hover:scale-125 focus:outline-none'
-                        >
-                          <Star
-                            size={40}
-                            className={`${
-                              isActive ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'
-                            } transition-colors`}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className='flex gap-4 mt-2'>
+                  {[...Array(q.maxRating || 5)].map((_, i) => {
+                    const value = i + 1;
+                    const active = value <= ((answers[q.id] as number) || 0);
+
+                    return (
+                      <button
+                        key={i}
+                        type='button'
+                        onClick={() => setAnswers({ ...answers, [q.id]: value })}
+                        className='transform hover:scale-125 transition-all duration-200'
+                      >
+                        <Star
+                          size={42}
+                          className={active ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-
+              
               {['multiple_choice', 'checkbox'].includes(q.type) && (
-                <div className='space-y-4'>
-                  {q.options?.map((o) => (
-                    <label
-                      key={o.id}
-                      className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer'
-                    >
-                      <input
-                        type={q.type === 'checkbox' ? 'checkbox' : 'radio'}
-                        name={q.id}
-                        className='w-5 h-5 accent-[#D4AF37]'
-                        onChange={(e) => {
-                          if (q.type === 'checkbox') {
-                            const current = answers[q.id] || [];
-                            if (e.target.checked) {
-                              setAnswers({ ...answers, [q.id]: [...current, o.id] });
-                            } else {
+                <div className='flex flex-col gap-3 mt-2'>
+                  {q.options?.map((o) => {
+                    const isChecked =
+                      q.type === 'checkbox'
+                        ? ((answers[q.id] as string[]) || []).includes(o.id)
+                        : answers[q.id] === o.id;
+
+                    return (
+                      <label
+                        key={o.id}
+                        className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer w-full ${
+                          isChecked
+                            ? 'border-blue-500 bg-blue-50/30'
+                            : 'border-gray-50 bg-gray-50 hover:border-gray-200'
+                        }`}
+                      >
+                        <input
+                          type={q.type === 'checkbox' ? 'checkbox' : 'radio'}
+                          name={q.id}
+                          className='w-5 h-5 accent-blue-600 shrink-0'
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (q.type === 'checkbox') {
+                              const current = (answers[q.id] as string[]) || [];
                               setAnswers({
                                 ...answers,
-                                [q.id]: current.filter((id: string) => id !== o.id),
+                                [q.id]: e.target.checked
+                                  ? [...current, o.id]
+                                  : current.filter((id) => id !== o.id),
                               });
+                            } else {
+                              setAnswers({ ...answers, [q.id]: o.id });
                             }
-                          } else {
-                            setAnswers({ ...answers, [q.id]: o.id });
-                          }
-                        }}
-                        checked={
-                          q.type === 'checkbox'
-                            ? (answers[q.id] || []).includes(o.id)
-                            : answers[q.id] === o.id
-                        }
-                      />
-                      <span className='text-gray-700'>{o.text}</span>
-                    </label>
-                  ))}
+                          }}
+                        />
+                        <span
+                          className={`font-bold ${isChecked ? 'text-blue-700' : 'text-[#1F2937]'}`}
+                        >
+                          {o.text}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>
