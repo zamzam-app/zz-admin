@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEffect } from 'react';
 import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus } from 'lucide-react';
 import { Form, Question, QuestionType } from '../../lib/types/forms';
 import { Button } from '../common/Button';
@@ -19,6 +20,26 @@ const FormEditor: React.FC<Props> = ({
   onCancel,
   onPreview,
 }) => {
+
+
+useEffect(() => {
+  if (currentForm.questions.length === 0) {
+    const ratingQuestion: Question = {
+      id: "delTest",
+      type: 'rating',
+      title: 'Overall Rating',
+      hint: 'Please rate your experience',
+      required: true,
+      maxRating: 5,
+    };
+
+    setCurrentForm({
+      ...currentForm,
+      questions: [ratingQuestion],
+    });
+  }
+}, [currentForm, setCurrentForm]);
+
   const addQuestion = () => {
     const newId = Math.random().toString(36).substr(2, 9);
     setCurrentForm({
@@ -37,22 +58,66 @@ const FormEditor: React.FC<Props> = ({
     });
   };
 
-  const addOption = (qId: string) => {
-    setCurrentForm({
-      ...currentForm,
-      questions: currentForm.questions.map((q) =>
-        q.id === qId
-          ? {
-              ...q,
-              options: [
-                ...(q.options || []),
-                { id: Date.now().toString(), text: `Option ${(q.options?.length || 0) + 1}` },
-              ],
-            }
-          : q,
-      ),
-    });
-  };
+  // const addOption = (qId: string) => {
+  //   setCurrentForm({
+  //     ...currentForm,
+  //     questions: currentForm.questions.map((q) =>
+  //       q.id === qId
+  //         ? {
+  //             ...q,
+  //             options: [
+  //               ...(q.options || []),
+  //               { id: Date.now().toString(), text: `Option ${(q.options?.length || 0) + 1}` },
+  //             ],
+  //           }
+  //         : q,
+  //     ),
+  //   });
+  // };
+  const addNormalOption = (qId: string) => {
+  setCurrentForm({
+    ...currentForm,
+    questions: currentForm.questions.map((q) =>
+      q.id === qId
+        ? {
+            ...q,
+            options: [
+              ...(q.options || []),
+              {
+                id: Date.now().toString(),
+                text: `Option ${(q.options?.length || 0) + 1}`,
+              },
+            ],
+          }
+        : q
+    ),
+  });
+};
+
+const addOtherOption = (qId: string) => {
+  setCurrentForm({
+    ...currentForm,
+    questions: currentForm.questions.map((q) => {
+      if (q.id !== qId) return q;
+
+      // prevent duplicate "Other"
+      if (q.options?.some((o) => o.isOther)) return q;
+
+      return {
+        ...q,
+        options: [
+          ...(q.options || []),
+          {
+            id: 'other',
+            text: 'Other:',
+            isOther: true,
+          },
+        ],
+      };
+    }),
+  });
+};
+
 
   return (
     <div className='space-y-8'>
@@ -128,7 +193,14 @@ const FormEditor: React.FC<Props> = ({
               </div>
 
               <select
-                className='h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer'
+                disabled={q.id === "delTest"}
+                className={`h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer
+                  ${
+                    q.id === "delTest"
+                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
+                     }
+                  `}
                 value={q.type}
                 onChange={(e) => updateQuestion(q.id, { type: e.target.value as QuestionType })}
               >
@@ -149,6 +221,18 @@ const FormEditor: React.FC<Props> = ({
                       <div
                         className={`w-4 h-4 rounded-full border-2 ${q.type === 'checkbox' ? 'rounded-md' : 'rounded-full'} border-gray-200`}
                       />
+                      {o.isOther ? (
+                       <div className="flex items-center gap-2 flex-1">
+                      <span className="font-medium text-gray-600 whitespace-nowrap">
+                      Other:
+                      </span>
+                       <input
+                        disabled
+                        placeholder="User input"
+                        className="flex-1 border-b border-dashed border-gray-200 bg-transparent outline-none text-gray-400"
+                         />
+                    </div>
+                ) : (
                       <input
                         className='flex-1 border-b border-gray-100 outline-none py-1 focus:border-blue-400 text-[#1F2937] font-medium'
                         value={o.text}
@@ -160,6 +244,7 @@ const FormEditor: React.FC<Props> = ({
                           })
                         }
                       />
+                )}
                       <button
                         onClick={() =>
                           updateQuestion(q.id, {
@@ -170,14 +255,25 @@ const FormEditor: React.FC<Props> = ({
                       >
                         <X size={16} />
                       </button>
+
+
+
                     </div>
                   ))}
+                  <div className="flex items-center gap-2 mt-4 text-sm font-black">
                   <button
-                    onClick={() => addOption(q.id)}
+                    onClick={() => addNormalOption(q.id)}
                     className='text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4'
                   >
                     <Plus size={14} /> Add Option
                   </button>
+                  <button
+                   onClick={() => addOtherOption(q.id)}
+                    className="text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4"
+                  >
+                  | Add Other
+                </button>
+                </div>
                 </div>
               ) : q.type === 'rating' ? (
                 <div className='flex items-center gap-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 w-fit'>
@@ -206,15 +302,24 @@ const FormEditor: React.FC<Props> = ({
             {/* Question Footer */}
             <div className='mt-8 pt-6 border-t border-gray-50 flex justify-between items-center'>
               <button
-                onClick={() =>
+                disabled={q.id === "delTest"}
+                onClick={() =>{
+                  if (q.id === "delTest") return;
                   setCurrentForm({
                     ...currentForm,
                     questions: currentForm.questions.filter((item) => item.id !== q.id),
                   })
                 }
-                className='flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold transition-colors'
-              >
-                <Trash2 size={18} /> Delete Question
+              }
+                className={`flex items-center gap-2 text-gray-400 font-bold transition-colors
+                          ${
+                        q.id === 'delTest'
+                        ? 'text-gray-300 cursor-not-allowed'
+                       : 'text-gray-400 hover:text-red-500 cursor-pointer'
+                     }
+                  `}>
+                <Trash2 size={18} 
+                className={q.id === 'delTest' ? 'text-gray-300' : '' }/> Delete Question
               </button>
 
               <label className='flex items-center gap-3 cursor-pointer group'>
