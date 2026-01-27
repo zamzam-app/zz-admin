@@ -22,10 +22,8 @@ const FormEditor: React.FC<Props> = ({
 }) => {
 
 
-   useEffect(() => {
-  const hasRating = currentForm.questions.some(q => q.id === 'delTest');
-
-  if (!hasRating) {
+useEffect(() => {
+  if (currentForm.questions.length === 0) {
     const ratingQuestion: Question = {
       id: "delTest",
       type: 'rating',
@@ -37,18 +35,12 @@ const FormEditor: React.FC<Props> = ({
 
     setCurrentForm({
       ...currentForm,
-      questions: [ratingQuestion, ...currentForm.questions],
+      questions: [ratingQuestion],
     });
   }
-}, []);
-
-
-
+}, [currentForm, setCurrentForm]);
 
   const addQuestion = () => {
-
-   
-
     const newId = Math.random().toString(36).substr(2, 9);
     setCurrentForm({
       ...currentForm,
@@ -159,12 +151,12 @@ const FormEditor: React.FC<Props> = ({
               <select
                 disabled={q.id === "delTest"}
                 className={`h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer
-                      ${
-                          q.id === "delTest"
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
-                        }
-                      `}
+                  ${
+                    q.id === "delTest"
+                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
+                     }
+                  `}
                 value={q.type}
                 onChange={(e) => updateQuestion(q.id, { type: e.target.value as QuestionType })}
               >
@@ -242,15 +234,24 @@ const FormEditor: React.FC<Props> = ({
             {/* Question Footer */}
             <div className='mt-8 pt-6 border-t border-gray-50 flex justify-between items-center'>
               <button
-                onClick={() =>
+                disabled={q.id === "delTest"}
+                onClick={() =>{
+                  if (q.id === "delTest") return;
                   setCurrentForm({
                     ...currentForm,
                     questions: currentForm.questions.filter((item) => item.id !== q.id),
                   })
                 }
-                className='flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold transition-colors'
-              >
-                <Trash2 size={18} /> Delete Question
+              }
+                className={`flex items-center gap-2 text-gray-400 font-bold transition-colors
+                          ${
+                        q.id === 'delTest'
+                        ? 'text-gray-300 cursor-not-allowed'
+                       : 'text-gray-400 hover:text-red-500 cursor-pointer'
+                     }
+                  `}>
+                <Trash2 size={18} 
+                className={q.id === 'delTest' ? 'text-gray-300' : '' }/> Delete Question
               </button>
 
               <label className='flex items-center gap-3 cursor-pointer group'>
