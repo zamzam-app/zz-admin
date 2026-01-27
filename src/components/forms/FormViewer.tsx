@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, HelpCircle, Star } from 'lucide-react';
+import { ArrowLeft,  Star } from 'lucide-react';
 import { Form } from '../../lib/types/forms';
 import Card from '../common/Card';
 
@@ -11,11 +11,7 @@ interface Props {
 const FormViewer: React.FC<Props> = ({ form, onBack }) => {
   // FIXED: Replaced 'any' with a union type that matches your possible inputs
   const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({});
-  const [openHints, setOpenHints] = useState<Record<string, boolean>>({});
 
-  const toggleHint = (qId: string) => {
-    setOpenHints((prev) => ({ ...prev, [qId]: !prev[qId] }));
-  };
 
   return (
     <div className='space-y-8'>
@@ -47,27 +43,13 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                 </span>
                 <h3 className='text-xl font-bold text-[#1F2937]'>{q.title}</h3>
               </div>
-
-              {q.hint && (
-                <button
-                  onClick={() => toggleHint(q.id)}
-                  className={`p-2 rounded-xl transition-all ${
-                    openHints[q.id] ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'
-                  }`}
-                >
-                  <HelpCircle size={20} />
-                </button>
-              )}
-            </div>
-
-            {/* Hint Box */}
-            {q.hint && openHints[q.id] && (
-              <div className='mb-6 p-4 bg-blue-50/50 border-l-4 border-blue-400 rounded-r-xl text-sm text-blue-700'>
-                <span className='font-black uppercase text-[10px] block mb-1'>Hint</span>
-                {q.hint}
-              </div>
-            )}
-
+            </div> 
+       {q.hint && (
+      <div className='mb-6 p-4 bg-blue-50/50 border-l-4 border-blue-400 rounded-r-xl text-sm text-blue-700'>
+      <span className='font-black uppercase text-[10px] block mb-1'>Hint</span>
+      {q.hint}
+      </div>
+     )}
             {/* Answer Input Area */}
             <div className='mt-4'>
               {q.type === 'linear_scale' && (() => {
@@ -151,6 +133,7 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                     );
                   })}
                 </div>
+
               )}
               
             {['multiple_choice', 'checkbox'].includes(q.type) && (
