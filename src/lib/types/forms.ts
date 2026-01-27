@@ -3,6 +3,7 @@ export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'c
 export interface Option {
   id: string;
   text: string;
+  isOther?: boolean;
 }
 
 export interface Question {

@@ -111,52 +111,101 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                 </div>
               )}
               
-              {['multiple_choice', 'checkbox'].includes(q.type) && (
-                <div className='flex flex-col gap-3 mt-2'>
-                  {q.options?.map((o) => {
-                    const isChecked =
-                      q.type === 'checkbox'
-                        ? ((answers[q.id] as string[]) || []).includes(o.id)
-                        : answers[q.id] === o.id;
+            {['multiple_choice', 'checkbox'].includes(q.type) && (
+             <div className='flex flex-col gap-3 mt-2'>
+            {q.options?.map((o) => {
+             const isOther = o.isOther;
 
-                    return (
-                      <label
-                        key={o.id}
-                        className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer w-full ${
-                          isChecked
-                            ? 'border-blue-500 bg-blue-50/30'
-                            : 'border-gray-50 bg-gray-50 hover:border-gray-200'
-                        }`}
-                      >
-                        <input
-                          type={q.type === 'checkbox' ? 'checkbox' : 'radio'}
-                          name={q.id}
-                          className='w-5 h-5 accent-blue-600 shrink-0'
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (q.type === 'checkbox') {
-                              const current = (answers[q.id] as string[]) || [];
-                              setAnswers({
-                                ...answers,
-                                [q.id]: e.target.checked
-                                  ? [...current, o.id]
-                                  : current.filter((id) => id !== o.id),
-                              });
-                            } else {
-                              setAnswers({ ...answers, [q.id]: o.id });
-                            }
-                          }}
-                        />
-                        <span
-                          className={`font-bold ${isChecked ? 'text-blue-700' : 'text-[#1F2937]'}`}
-                        >
-                          {o.text}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
+             const isChecked =
+                q.type === 'checkbox'
+              ? ((answers[q.id] as string[]) || []).some((v) => v.startsWith(o.id))
+             : typeof answers[q.id] === 'string' && (answers[q.id] as string).startsWith(o.id);
+
+        const getOtherValue = (value?: string) => {
+         if (!value) return '';
+           const idx = value.indexOf(':');
+           return idx === -1 ? '' : value.slice(idx + 1);
+        };
+
+      return (
+        <label
+          key={o.id}
+          className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all w-full cursor-pointer
+            ${
+              isChecked
+                ? 'border-blue-500 bg-blue-50/30'
+                : 'border-gray-50 bg-gray-50 hover:border-gray-200'
+            }
+          `}
+        >
+          <input
+            type={q.type === 'checkbox' ? 'checkbox' : 'radio'}
+            name={q.id}
+            className='w-5 h-5 accent-blue-600 shrink-0'
+            checked={isChecked}
+            onChange={(e) => {
+              if (q.type === 'checkbox') {
+                const current = (answers[q.id] as string[]) || [];
+                if (e.target.checked) {
+                  setAnswers({ ...answers, [q.id]: [...current, o.id] });
+                } else {
+                  setAnswers({
+                    ...answers,
+                    [q.id]: current.filter((v) => !v.startsWith(o.id)),
+                  });
+                }
+              } else {
+                setAnswers({ ...answers, [q.id]: o.id });
+              }
+            }}
+          />
+
+          {isOther ? (
+            <div className='flex items-center gap-2 flex-1'>
+              <span className='font-bold'>Other:</span>
+              <input
+                type='text'
+                placeholder='Please specify'
+                className='flex-1 border-b border-gray-300 outline-none focus:border-blue-500 bg-transparent'
+                value={
+                  typeof answers[q.id] === 'string'
+                 ? getOtherValue(answers[q.id] as string)
+                  : ''
+                }
+                onChange={(e) => {
+                  const value = `${o.id}:${e.target.value}`;
+                  if (q.type === 'checkbox') {
+                    const current = (answers[q.id] as string[]) || [];
+                    const filtered = current.filter((v) => !v.startsWith(o.id));
+                    setAnswers({ ...answers, [q.id]: [...filtered, value] });
+                  } else {
+                    setAnswers({ ...answers, [q.id]: value });
+                  }
+                }}
+                onFocus={() => {
+                  // auto-select Other when typing
+                  if (!isChecked) {
+                    if (q.type === 'checkbox') {
+                      const current = (answers[q.id] as string[]) || [];
+                      setAnswers({ ...answers, [q.id]: [...current, o.id] });
+                    } else {
+                      setAnswers({ ...answers, [q.id]: o.id });
+                    }
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <span className={`font-bold ${isChecked ? 'text-blue-700' : 'text-[#1F2937]'}`}>
+              {o.text}
+            </span>
+                    )}
+                  </label>
+                  );
+                })}
+               </div>
               )}
+
             </div>
           </Card>
         ))}
