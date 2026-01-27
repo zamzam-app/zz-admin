@@ -58,22 +58,66 @@ useEffect(() => {
     });
   };
 
-  const addOption = (qId: string) => {
-    setCurrentForm({
-      ...currentForm,
-      questions: currentForm.questions.map((q) =>
-        q.id === qId
-          ? {
-              ...q,
-              options: [
-                ...(q.options || []),
-                { id: Date.now().toString(), text: `Option ${(q.options?.length || 0) + 1}` },
-              ],
-            }
-          : q,
-      ),
-    });
-  };
+  // const addOption = (qId: string) => {
+  //   setCurrentForm({
+  //     ...currentForm,
+  //     questions: currentForm.questions.map((q) =>
+  //       q.id === qId
+  //         ? {
+  //             ...q,
+  //             options: [
+  //               ...(q.options || []),
+  //               { id: Date.now().toString(), text: `Option ${(q.options?.length || 0) + 1}` },
+  //             ],
+  //           }
+  //         : q,
+  //     ),
+  //   });
+  // };
+  const addNormalOption = (qId: string) => {
+  setCurrentForm({
+    ...currentForm,
+    questions: currentForm.questions.map((q) =>
+      q.id === qId
+        ? {
+            ...q,
+            options: [
+              ...(q.options || []),
+              {
+                id: Date.now().toString(),
+                text: `Option ${(q.options?.length || 0) + 1}`,
+              },
+            ],
+          }
+        : q
+    ),
+  });
+};
+
+const addOtherOption = (qId: string) => {
+  setCurrentForm({
+    ...currentForm,
+    questions: currentForm.questions.map((q) => {
+      if (q.id !== qId) return q;
+
+      // prevent duplicate "Other"
+      if (q.options?.some((o) => o.isOther)) return q;
+
+      return {
+        ...q,
+        options: [
+          ...(q.options || []),
+          {
+            id: 'other',
+            text: 'Other:',
+            isOther: true,
+          },
+        ],
+      };
+    }),
+  });
+};
+
 
   return (
     <div className='space-y-8'>
@@ -177,6 +221,18 @@ useEffect(() => {
                       <div
                         className={`w-4 h-4 rounded-full border-2 ${q.type === 'checkbox' ? 'rounded-md' : 'rounded-full'} border-gray-200`}
                       />
+                      {o.isOther ? (
+                       <div className="flex items-center gap-2 flex-1">
+                      <span className="font-medium text-gray-600 whitespace-nowrap">
+                      Other:
+                      </span>
+                       <input
+                        disabled
+                        placeholder="User input"
+                        className="flex-1 border-b border-dashed border-gray-200 bg-transparent outline-none text-gray-400"
+                         />
+                    </div>
+                ) : (
                       <input
                         className='flex-1 border-b border-gray-100 outline-none py-1 focus:border-blue-400 text-[#1F2937] font-medium'
                         value={o.text}
@@ -188,6 +244,7 @@ useEffect(() => {
                           })
                         }
                       />
+                )}
                       <button
                         onClick={() =>
                           updateQuestion(q.id, {
@@ -198,14 +255,25 @@ useEffect(() => {
                       >
                         <X size={16} />
                       </button>
+
+
+
                     </div>
                   ))}
+                  <div className="flex items-center gap-2 mt-4 text-sm font-black">
                   <button
-                    onClick={() => addOption(q.id)}
+                    onClick={() => addNormalOption(q.id)}
                     className='text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4'
                   >
                     <Plus size={14} /> Add Option
                   </button>
+                  <button
+                   onClick={() => addOtherOption(q.id)}
+                    className="text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4"
+                  >
+                  | Add Other
+                </button>
+                </div>
                 </div>
               ) : q.type === 'rating' ? (
                 <div className='flex items-center gap-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 w-fit'>
