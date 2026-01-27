@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEffect } from 'react';
 import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus } from 'lucide-react';
 import { Form, Question, QuestionType } from '../../lib/types/forms';
 import { Button } from '../common/Button';
@@ -19,7 +20,35 @@ const FormEditor: React.FC<Props> = ({
   onCancel,
   onPreview,
 }) => {
+
+
+   useEffect(() => {
+  const hasRating = currentForm.questions.some(q => q.id === 'delTest');
+
+  if (!hasRating) {
+    const ratingQuestion: Question = {
+      id: "delTest",
+      type: 'rating',
+      title: 'Overall Rating',
+      hint: 'Please rate your experience',
+      required: true,
+      maxRating: 5,
+    };
+
+    setCurrentForm({
+      ...currentForm,
+      questions: [ratingQuestion, ...currentForm.questions],
+    });
+  }
+}, []);
+
+
+
+
   const addQuestion = () => {
+
+   
+
     const newId = Math.random().toString(36).substr(2, 9);
     setCurrentForm({
       ...currentForm,
@@ -128,7 +157,14 @@ const FormEditor: React.FC<Props> = ({
               </div>
 
               <select
-                className='h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer'
+                disabled={q.id === "delTest"}
+                className={`h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer
+                      ${
+                          q.id === "delTest"
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
+                        }
+                      `}
                 value={q.type}
                 onChange={(e) => updateQuestion(q.id, { type: e.target.value as QuestionType })}
               >
