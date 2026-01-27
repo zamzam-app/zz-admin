@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, HelpCircle, Star } from 'lucide-react';
+import { ArrowLeft,  Star } from 'lucide-react';
 import { Form } from '../../lib/types/forms';
 import Card from '../common/Card';
 
@@ -11,11 +11,7 @@ interface Props {
 const FormViewer: React.FC<Props> = ({ form, onBack }) => {
   // FIXED: Replaced 'any' with a union type that matches your possible inputs
   const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({});
-  const [openHints, setOpenHints] = useState<Record<string, boolean>>({});
 
-  const toggleHint = (qId: string) => {
-    setOpenHints((prev) => ({ ...prev, [qId]: !prev[qId] }));
-  };
 
   return (
     <div className='space-y-8'>
@@ -47,29 +43,57 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                 </span>
                 <h3 className='text-xl font-bold text-[#1F2937]'>{q.title}</h3>
               </div>
-
-              {q.hint && (
-                <button
-                  onClick={() => toggleHint(q.id)}
-                  className={`p-2 rounded-xl transition-all ${
-                    openHints[q.id] ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'
-                  }`}
-                >
-                  <HelpCircle size={20} />
-                </button>
-              )}
-            </div>
-
-            {/* Hint Box */}
-            {q.hint && openHints[q.id] && (
-              <div className='mb-6 p-4 bg-blue-50/50 border-l-4 border-blue-400 rounded-r-xl text-sm text-blue-700'>
-                <span className='font-black uppercase text-[10px] block mb-1'>Hint</span>
-                {q.hint}
-              </div>
-            )}
-
+            </div> 
+       {q.hint && (
+      <div className='mb-6 p-4 bg-blue-50/50 border-l-4 border-blue-400 rounded-r-xl text-sm text-blue-700'>
+      <span className='font-black uppercase text-[10px] block mb-1'>Hint</span>
+      {q.hint}
+      </div>
+     )}
             {/* Answer Input Area */}
             <div className='mt-4'>
+              {q.type === 'linear_scale' && (() => {
+  const scale = q.scale ?? {
+    min: 1,
+    max: 5,
+    minLabel: '',
+    maxLabel: '',
+  };
+
+  const value = (answers[q.id] as number) ?? null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between text-sm font-medium text-gray-500">
+        <span>{scale.minLabel}</span>
+        <span>{scale.maxLabel}</span>
+      </div>
+
+      <div className="flex justify-between gap-2">
+        {Array.from(
+          { length: scale.max - scale.min + 1 },
+          (_, i) => scale.min + i
+        ).map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setAnswers({ ...answers, [q.id]: n })}
+            className={`w-12 h-12 rounded-full font-bold transition-all
+              ${
+                value === n
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }
+            `}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+})()}
+
               {q.type === 'short_answer' && (
                 <input
                   type='text'
@@ -109,6 +133,7 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                     );
                   })}
                 </div>
+
               )}
               
             {['multiple_choice', 'checkbox'].includes(q.type) && (

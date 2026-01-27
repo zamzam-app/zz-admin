@@ -51,29 +51,45 @@ useEffect(() => {
     });
   };
 
-  const updateQuestion = (id: string, updates: Partial<Question>) => {
-    setCurrentForm({
-      ...currentForm,
-      questions: currentForm.questions.map((q) => (q.id === id ? { ...q, ...updates } : q)),
-    });
-  };
+const updateQuestion = (id: string, updates: Partial<Question>) => {
+  setCurrentForm({
+    ...currentForm,
+    questions: currentForm.questions.map((q) => {
+      if (q.id !== id) return q;
 
-  // const addOption = (qId: string) => {
-  //   setCurrentForm({
-  //     ...currentForm,
-  //     questions: currentForm.questions.map((q) =>
-  //       q.id === qId
-  //         ? {
-  //             ...q,
-  //             options: [
-  //               ...(q.options || []),
-  //               { id: Date.now().toString(), text: `Option ${(q.options?.length || 0) + 1}` },
-  //             ],
-  //           }
-  //         : q,
-  //     ),
-  //   });
-  // };
+      if (updates.type === 'linear_scale' && q.type !== 'linear_scale') {
+        return {
+          ...q,
+          ...updates,
+          scale: {
+            min: 1,
+            max: 5,
+            minLabel: '',
+            maxLabel: '',
+          },
+        };
+      }
+
+      if (updates.type === 'rating' && q.type !== 'rating') {
+        return {
+          ...q,
+          ...updates,
+          maxRating: 5,
+        };
+      }
+
+      if (q.type === 'linear_scale' && updates.type && updates.type !== 'linear_scale') {
+        const rest = { ...q };
+        delete rest.scale;
+        return { ...rest, ...updates };
+      }
+
+      return { ...q, ...updates };
+    }),
+  });
+};
+
+
   const addNormalOption = (qId: string) => {
   setCurrentForm({
     ...currentForm,
@@ -209,6 +225,7 @@ const addOtherOption = (qId: string) => {
                 <option value='multiple_choice'>Multiple Choice</option>
                 <option value='checkbox'>Checkboxes</option>
                 <option value='rating'>Star Rating</option>
+                <option value='linear_scale'>Linear Scale</option>
               </select>
             </div>
 
@@ -292,11 +309,81 @@ const addOtherOption = (qId: string) => {
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : q.type === 'linear_scale' ? (
+                null
+              )  : (
                 <div className='py-3 border-b-2 border-dashed border-gray-100 text-gray-300 font-medium italic'>
                   User input field...
                 </div>
               )}
+
+              {q.type === 'linear_scale' && q.scale && (
+  <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-4 w-fit">
+    <div className="flex items-center gap-4">
+      <span className="font-bold text-sm text-gray-600">Scale</span>
+
+      <select
+        value={q.scale.min}
+        onChange={(e) =>
+          updateQuestion(q.id, {
+            scale: { ...q.scale!, min: Number(e.target.value) },
+          })
+        }
+        className="border rounded-lg px-2 py-1 font-bold"
+      >
+        {[0, 1].map((v) => (
+          <option key={v} value={v}>{v}</option>
+        ))}
+      </select>
+
+      <span>to</span>
+
+      <select
+        value={q.scale.max}
+        onChange={(e) =>
+          updateQuestion(q.id, {
+            scale: { ...q.scale!, max: Number(e.target.value) },
+          })
+        }
+        className="border rounded-lg px-2 py-1 font-bold"
+      >
+        {[3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
+          <option key={v} value={v}>{v}</option>
+        ))}
+      </select>
+    </div>
+
+    <div className="flex gap-4">
+      <input
+        placeholder="Label for lowest value"
+        value={q.scale.minLabel || ''}
+        onChange={(e) =>
+          updateQuestion(q.id, {
+            scale: { ...q.scale!, minLabel: e.target.value },
+          })
+        }
+        className="border rounded-lg px-3 py-2 w-48"
+      />
+
+      <input
+        placeholder="Label for highest value"
+        value={q.scale.maxLabel || ''}
+        onChange={(e) =>
+          updateQuestion(q.id, {
+            scale: { ...q.scale!, maxLabel: e.target.value },
+          })
+        }
+        className="border rounded-lg px-3 py-2 w-48"
+      />
+    </div>
+
+    <div className="flex justify-between text-sm font-bold text-gray-500">
+      <span>{q.scale.minLabel || q.scale.min}</span>
+      <span>{q.scale.maxLabel || q.scale.max}</span>
+    </div>
+  </div>
+)}
+
             </div>
 
             {/* Question Footer */}
