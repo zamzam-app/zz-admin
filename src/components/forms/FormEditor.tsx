@@ -134,6 +134,66 @@ const addOtherOption = (qId: string) => {
   });
 };
 
+  // const addOption = (qId: string) => {
+  //   setCurrentForm({
+  //     ...currentForm,
+  //     questions: currentForm.questions.map((q) =>
+  //       q.id === qId
+  //         ? {
+  //             ...q,
+  //             options: [
+  //               ...(q.options || []),
+  //               { id: Date.now().toString(), text: `Option ${(q.options?.length || 0) + 1}` },
+  //             ],
+  //           }
+  //         : q,
+  //     ),
+  //   });
+  // };
+  const addNormalOption = (qId: string) => {
+  setCurrentForm({
+    ...currentForm,
+    questions: currentForm.questions.map((q) =>
+      q.id === qId
+        ? {
+            ...q,
+            options: [
+              ...(q.options || []),
+              {
+                id: Date.now().toString(),
+                text: `Option ${(q.options?.length || 0) + 1}`,
+              },
+            ],
+          }
+        : q
+    ),
+  });
+};
+
+const addOtherOption = (qId: string) => {
+  setCurrentForm({
+    ...currentForm,
+    questions: currentForm.questions.map((q) => {
+      if (q.id !== qId) return q;
+
+      // prevent duplicate "Other"
+      if (q.options?.some((o) => o.isOther)) return q;
+
+      return {
+        ...q,
+        options: [
+          ...(q.options || []),
+          {
+            id: 'other',
+            text: 'Other:',
+            isOther: true,
+          },
+        ],
+      };
+    }),
+  });
+};
+
 
   return (
     <div className='space-y-8'>
