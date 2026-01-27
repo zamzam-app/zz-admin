@@ -70,6 +70,48 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
 
             {/* Answer Input Area */}
             <div className='mt-4'>
+              {q.type === 'linear_scale' && (() => {
+  const scale = q.scale ?? {
+    min: 1,
+    max: 5,
+    minLabel: '',
+    maxLabel: '',
+  };
+
+  const value = (answers[q.id] as number) ?? null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between text-sm font-medium text-gray-500">
+        <span>{scale.minLabel}</span>
+        <span>{scale.maxLabel}</span>
+      </div>
+
+      <div className="flex justify-between gap-2">
+        {Array.from(
+          { length: scale.max - scale.min + 1 },
+          (_, i) => scale.min + i
+        ).map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setAnswers({ ...answers, [q.id]: n })}
+            className={`w-12 h-12 rounded-full font-bold transition-all
+              ${
+                value === n
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }
+            `}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+})()}
+
               {q.type === 'short_answer' && (
                 <input
                   type='text'
