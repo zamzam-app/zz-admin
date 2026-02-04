@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Box, Grid, Typography} from '@mui/material';
+import { Box, Grid, Typography } from '@mui/material';
 import { useAuth } from '../lib/context/AuthContext';
 import { storesList } from '../__mocks__/managers';
 import AggregateRating from '../components/overview/AggregateRating';
@@ -77,7 +77,7 @@ export default function Overview() {
       {/* Store List */}
       <Grid container spacing={3}>
         {visibleStores.map((store) => (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={store.id}>
+          <Grid size={{ xs: 12, md: 6, lg: 4 }} key={store.id}>
             <StoreCard store={store} />
           </Grid>
         ))}

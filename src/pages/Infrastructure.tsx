@@ -1,5 +1,5 @@
-import React, { useState} from 'react';
-import { Plus, Store,  MapPin, QrCode, Trash2, User, Download, Captions } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Store, MapPin, QrCode, Trash2, User, Download, Captions } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import QRCode from 'react-qr-code';
 import { Store as StoreType, StoreCategory } from '../lib/types/types';
@@ -11,9 +11,6 @@ import { Modal } from '../components/common/Modal';
 import { storesList, MANAGERS } from '../__mocks__/managers';
 import { Form } from '../lib/types/forms';
 
-
-
-
 export default function Infrastructure() {
   const [stores, setStores] = useState(storesList);
   const [open, setOpen] = useState(false);
@@ -22,17 +19,13 @@ export default function Infrastructure() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newStore, setNewStore] = useState<Partial<StoreType>>({});
   const [availableForms] = useState<Form[]>(() => {
-  try {
-    const stored = localStorage.getItem('saved_forms');
-    return stored ? (JSON.parse(stored) as Form[]) : [];
-  } catch {
-    return [];
-  }
-});
-
-
-
-
+    try {
+      const stored = localStorage.getItem('saved_forms');
+      return stored ? (JSON.parse(stored) as Form[]) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const handleEdit = (store: StoreType) => {
     setNewStore(store);
@@ -225,23 +218,22 @@ export default function Infrastructure() {
               }
             />
 
-          <Select
-           label='Choose Form'
-           options={availableForms.map((form) => ({
-           label: form.title,
-           value: form.id,
-          }))}
-          value={newStore.formId || ''}
-          onChange={(e) => {
-          const form = availableForms.find((f) => f.id === e.target.value);
-          setNewStore({
-          ...newStore,
-          formId: form?.id,
-          formTitle: form?.title,
-          });
-       }}
-    />
-
+            <Select
+              label='Choose Form'
+              options={availableForms.map((form) => ({
+                label: form.title,
+                value: form.id,
+              }))}
+              value={newStore.formId || ''}
+              onChange={(e) => {
+                const form = availableForms.find((f) => f.id === e.target.value);
+                setNewStore({
+                  ...newStore,
+                  formId: form?.id,
+                  formTitle: form?.title,
+                });
+              }}
+            />
 
             <div className='md:col-span-2'>
               <Input

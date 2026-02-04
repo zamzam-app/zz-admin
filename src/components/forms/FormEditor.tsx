@@ -20,25 +20,23 @@ const FormEditor: React.FC<Props> = ({
   onCancel,
   onPreview,
 }) => {
+  useEffect(() => {
+    if (currentForm.questions.length === 0) {
+      const ratingQuestion: Question = {
+        id: 'delTest',
+        type: 'rating',
+        title: 'Overall Rating',
+        hint: 'Please rate your experience',
+        required: true,
+        maxRating: 5,
+      };
 
-
-useEffect(() => {
-  if (currentForm.questions.length === 0) {
-    const ratingQuestion: Question = {
-      id: "delTest",
-      type: 'rating',
-      title: 'Overall Rating',
-      hint: 'Please rate your experience',
-      required: true,
-      maxRating: 5,
-    };
-
-    setCurrentForm({
-      ...currentForm,
-      questions: [ratingQuestion],
-    });
-  }
-}, [currentForm, setCurrentForm]);
+      setCurrentForm({
+        ...currentForm,
+        questions: [ratingQuestion],
+      });
+    }
+  }, [currentForm, setCurrentForm]);
 
   const addQuestion = () => {
     const newId = Math.random().toString(36).substr(2, 9);
@@ -54,70 +52,84 @@ useEffect(() => {
   const updateQuestion = (id: string, updates: Partial<Question>) => {
     setCurrentForm({
       ...currentForm,
-      questions: currentForm.questions.map((q) => (q.id === id ? { ...q, ...updates } : q)),
+      questions: currentForm.questions.map((q) => {
+        if (q.id !== id) return q;
+
+        if (updates.type === 'linear_scale' && q.type !== 'linear_scale') {
+          return {
+            ...q,
+            ...updates,
+            scale: {
+              min: 1,
+              max: 5,
+              minLabel: '',
+              maxLabel: '',
+            },
+          };
+        }
+
+        if (updates.type === 'rating' && q.type !== 'rating') {
+          return {
+            ...q,
+            ...updates,
+            maxRating: 5,
+          };
+        }
+
+        if (q.type === 'linear_scale' && updates.type && updates.type !== 'linear_scale') {
+          const rest = { ...q };
+          delete rest.scale;
+          return { ...rest, ...updates };
+        }
+
+        return { ...q, ...updates };
+      }),
     });
   };
 
-  // const addOption = (qId: string) => {
-  //   setCurrentForm({
-  //     ...currentForm,
-  //     questions: currentForm.questions.map((q) =>
-  //       q.id === qId
-  //         ? {
-  //             ...q,
-  //             options: [
-  //               ...(q.options || []),
-  //               { id: Date.now().toString(), text: `Option ${(q.options?.length || 0) + 1}` },
-  //             ],
-  //           }
-  //         : q,
-  //     ),
-  //   });
-  // };
   const addNormalOption = (qId: string) => {
-  setCurrentForm({
-    ...currentForm,
-    questions: currentForm.questions.map((q) =>
-      q.id === qId
-        ? {
-            ...q,
-            options: [
-              ...(q.options || []),
-              {
-                id: Date.now().toString(),
-                text: `Option ${(q.options?.length || 0) + 1}`,
-              },
-            ],
-          }
-        : q
-    ),
-  });
-};
+    setCurrentForm({
+      ...currentForm,
+      questions: currentForm.questions.map((q) =>
+        q.id === qId
+          ? {
+              ...q,
+              options: [
+                ...(q.options || []),
+                {
+                  id: Date.now().toString(),
+                  text: `Option ${(q.options?.length || 0) + 1}`,
+                },
+              ],
+            }
+          : q,
+      ),
+    });
+  };
 
-const addOtherOption = (qId: string) => {
-  setCurrentForm({
-    ...currentForm,
-    questions: currentForm.questions.map((q) => {
-      if (q.id !== qId) return q;
+  const addOtherOption = (qId: string) => {
+    setCurrentForm({
+      ...currentForm,
+      questions: currentForm.questions.map((q) => {
+        if (q.id !== qId) return q;
 
-      // prevent duplicate "Other"
-      if (q.options?.some((o) => o.isOther)) return q;
+        // prevent duplicate "Other"
+        if (q.options?.some((o) => o.isOther)) return q;
 
-      return {
-        ...q,
-        options: [
-          ...(q.options || []),
-          {
-            id: 'other',
-            text: 'Other:',
-            isOther: true,
-          },
-        ],
-      };
-    }),
-  });
-};
-
+        return {
+          ...q,
+          options: [
+            ...(q.options || []),
+            {
+              id: 'other',
+              text: 'Other:',
+              isOther: true,
+            },
+          ],
+        };
+      }),
+    });
+  };
 
   return (
     <div className='space-y-8'>
@@ -193,13 +205,13 @@ const addOtherOption = (qId: string) => {
               </div>
 
               <select
-                disabled={q.id === "delTest"}
+                disabled={q.id === 'delTest'}
                 className={`h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer
                   ${
-                    q.id === "delTest"
-                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
-                     }
+                    q.id === 'delTest'
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
+                  }
                   `}
                 value={q.type}
                 onChange={(e) => updateQuestion(q.id, { type: e.target.value as QuestionType })}
@@ -209,6 +221,7 @@ const addOtherOption = (qId: string) => {
                 <option value='multiple_choice'>Multiple Choice</option>
                 <option value='checkbox'>Checkboxes</option>
                 <option value='rating'>Star Rating</option>
+                <option value='linear_scale'>Linear Scale</option>
               </select>
             </div>
 
@@ -222,29 +235,29 @@ const addOtherOption = (qId: string) => {
                         className={`w-4 h-4 rounded-full border-2 ${q.type === 'checkbox' ? 'rounded-md' : 'rounded-full'} border-gray-200`}
                       />
                       {o.isOther ? (
-                       <div className="flex items-center gap-2 flex-1">
-                      <span className="font-medium text-gray-600 whitespace-nowrap">
-                      Other:
-                      </span>
-                       <input
-                        disabled
-                        placeholder="User input"
-                        className="flex-1 border-b border-dashed border-gray-200 bg-transparent outline-none text-gray-400"
-                         />
-                    </div>
-                ) : (
-                      <input
-                        className='flex-1 border-b border-gray-100 outline-none py-1 focus:border-blue-400 text-[#1F2937] font-medium'
-                        value={o.text}
-                        onChange={(e) =>
-                          updateQuestion(q.id, {
-                            options: q.options?.map((opt) =>
-                              opt.id === o.id ? { ...opt, text: e.target.value } : opt,
-                            ),
-                          })
-                        }
-                      />
-                )}
+                        <div className='flex items-center gap-2 flex-1'>
+                          <span className='font-medium text-gray-600 whitespace-nowrap'>
+                            Other:
+                          </span>
+                          <input
+                            disabled
+                            placeholder='User input'
+                            className='flex-1 border-b border-dashed border-gray-200 bg-transparent outline-none text-gray-400'
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          className='flex-1 border-b border-gray-100 outline-none py-1 focus:border-blue-400 text-[#1F2937] font-medium'
+                          value={o.text}
+                          onChange={(e) =>
+                            updateQuestion(q.id, {
+                              options: q.options?.map((opt) =>
+                                opt.id === o.id ? { ...opt, text: e.target.value } : opt,
+                              ),
+                            })
+                          }
+                        />
+                      )}
                       <button
                         onClick={() =>
                           updateQuestion(q.id, {
@@ -255,25 +268,22 @@ const addOtherOption = (qId: string) => {
                       >
                         <X size={16} />
                       </button>
-
-
-
                     </div>
                   ))}
-                  <div className="flex items-center gap-2 mt-4 text-sm font-black">
-                  <button
-                    onClick={() => addNormalOption(q.id)}
-                    className='text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4'
-                  >
-                    <Plus size={14} /> Add Option
-                  </button>
-                  <button
-                   onClick={() => addOtherOption(q.id)}
-                    className="text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4"
-                  >
-                  | Add Other
-                </button>
-                </div>
+                  <div className='flex items-center gap-2 mt-4 text-sm font-black'>
+                    <button
+                      onClick={() => addNormalOption(q.id)}
+                      className='text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4'
+                    >
+                      <Plus size={14} /> Add Option
+                    </button>
+                    <button
+                      onClick={() => addOtherOption(q.id)}
+                      className='text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4'
+                    >
+                      | Add Other
+                    </button>
+                  </div>
                 </div>
               ) : q.type === 'rating' ? (
                 <div className='flex items-center gap-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 w-fit'>
@@ -292,9 +302,80 @@ const addOtherOption = (qId: string) => {
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : q.type === 'linear_scale' ? null : (
                 <div className='py-3 border-b-2 border-dashed border-gray-100 text-gray-300 font-medium italic'>
                   User input field...
+                </div>
+              )}
+
+              {q.type === 'linear_scale' && q.scale && (
+                <div className='bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-4 w-fit'>
+                  <div className='flex items-center gap-4'>
+                    <span className='font-bold text-sm text-gray-600'>Scale</span>
+
+                    <select
+                      value={q.scale.min}
+                      onChange={(e) =>
+                        updateQuestion(q.id, {
+                          scale: { ...q.scale!, min: Number(e.target.value) },
+                        })
+                      }
+                      className='border rounded-lg px-2 py-1 font-bold'
+                    >
+                      {[0, 1].map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+
+                    <span>to</span>
+
+                    <select
+                      value={q.scale.max}
+                      onChange={(e) =>
+                        updateQuestion(q.id, {
+                          scale: { ...q.scale!, max: Number(e.target.value) },
+                        })
+                      }
+                      className='border rounded-lg px-2 py-1 font-bold'
+                    >
+                      {[3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className='flex gap-4'>
+                    <input
+                      placeholder='Label for lowest value'
+                      value={q.scale.minLabel || ''}
+                      onChange={(e) =>
+                        updateQuestion(q.id, {
+                          scale: { ...q.scale!, minLabel: e.target.value },
+                        })
+                      }
+                      className='border rounded-lg px-3 py-2 w-48'
+                    />
+
+                    <input
+                      placeholder='Label for highest value'
+                      value={q.scale.maxLabel || ''}
+                      onChange={(e) =>
+                        updateQuestion(q.id, {
+                          scale: { ...q.scale!, maxLabel: e.target.value },
+                        })
+                      }
+                      className='border rounded-lg px-3 py-2 w-48'
+                    />
+                  </div>
+
+                  <div className='flex justify-between text-sm font-bold text-gray-500'>
+                    <span>{q.scale.minLabel || q.scale.min}</span>
+                    <span>{q.scale.maxLabel || q.scale.max}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -302,24 +383,24 @@ const addOtherOption = (qId: string) => {
             {/* Question Footer */}
             <div className='mt-8 pt-6 border-t border-gray-50 flex justify-between items-center'>
               <button
-                disabled={q.id === "delTest"}
-                onClick={() =>{
-                  if (q.id === "delTest") return;
+                disabled={q.id === 'delTest'}
+                onClick={() => {
+                  if (q.id === 'delTest') return;
                   setCurrentForm({
                     ...currentForm,
                     questions: currentForm.questions.filter((item) => item.id !== q.id),
-                  })
-                }
-              }
+                  });
+                }}
                 className={`flex items-center gap-2 text-gray-400 font-bold transition-colors
                           ${
-                        q.id === 'delTest'
-                        ? 'text-gray-300 cursor-not-allowed'
-                       : 'text-gray-400 hover:text-red-500 cursor-pointer'
-                     }
-                  `}>
-                <Trash2 size={18} 
-                className={q.id === 'delTest' ? 'text-gray-300' : '' }/> Delete Question
+                            q.id === 'delTest'
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-400 hover:text-red-500 cursor-pointer'
+                          }
+                  `}
+              >
+                <Trash2 size={18} className={q.id === 'delTest' ? 'text-gray-300' : ''} /> Delete
+                Question
               </button>
 
               <label className='flex items-center gap-3 cursor-pointer group'>

@@ -11,13 +11,13 @@ type ModalProps = {
   className?: string;
 };
 
-export const Modal: React.FC<ModalProps> = ({ 
-  open, 
-  onClose, 
-  title, 
-  children, 
+export const Modal: React.FC<ModalProps> = ({
+  open,
+  onClose,
+  title,
+  children,
   maxWidth = 'sm', // Default to a standard size
-  className = '' 
+  className = '',
 }) => {
   // Mapping maxWidth to pixel values for the reusable container
   const widthMap = {
@@ -25,7 +25,7 @@ export const Modal: React.FC<ModalProps> = ({
     sm: 448,
     md: 576,
     lg: 800,
-    xl: 1000
+    xl: 1000,
   };
 
   return (
@@ -65,24 +65,18 @@ export const Modal: React.FC<ModalProps> = ({
           className={className}
         >
           {/* Header Section */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-50">
-            {title && (
-              <h3 className="text-xl font-black text-[#1F2937] tracking-tight">
-                {title}
-              </h3>
-            )}
-            <button 
+          <div className='flex items-center justify-between p-6 border-b border-gray-50'>
+            {title && <h3 className='text-xl font-black text-[#1F2937] tracking-tight'>{title}</h3>}
+            <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+              className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400'
             >
               <X size={20} />
             </button>
           </div>
 
           {/* Content Section */}
-          <div className="p-8">
-            {children}
-          </div>
+          <div className='p-8'>{children}</div>
         </Box>
       </Fade>
     </MUIModal>

@@ -89,8 +89,8 @@ export default function Reviews() {
       {/* Sentiment Archive Style Review List */}
       <Stack spacing={2}>
         {filteredReviews.map((review) => (
-          <Card 
-            key={review.id} 
+          <Card
+            key={review.id}
             sx={{
               p: 2.5,
               border: '2px solid transparent',
@@ -98,42 +98,47 @@ export default function Reviews() {
               transition: 'all 0.2s ease-in-out',
               cursor: 'default',
               '&:hover': {
-                borderColor: '#3B82F6', 
+                borderColor: '#3B82F6',
                 transform: 'translateY(-2px)',
-                boxShadow: '0 4px 20px rgba(59, 130, 246, 0.1)'
-              }
+                boxShadow: '0 4px 20px rgba(59, 130, 246, 0.1)',
+              },
             }}
           >
             <Box display='flex' alignItems='center' justifyContent='space-between' mb={1.5}>
               <Box display='flex' alignItems='center' gap={1.5}>
                 {/* Avatar with fallback to first letter */}
-                <Avatar 
-                  variant="rounded" 
+                <Avatar
+                  variant='rounded'
                   src={review.customerImage}
-                  sx={{ 
-                    width: 48, 
-                    height: 48, 
-                    borderRadius: '12px', 
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '12px',
                     bgcolor: '#1F2937',
                     fontWeight: 700,
-                    fontSize: '1.2rem'
+                    fontSize: '1.2rem',
                   }}
                 >
                   {review.customer?.charAt(0)}
                 </Avatar>
-                
+
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={800} color='#1F2937' sx={{ lineHeight: 1.1 }}>
+                  <Typography
+                    variant='subtitle1'
+                    fontWeight={800}
+                    color='#1F2937'
+                    sx={{ lineHeight: 1.1 }}
+                  >
                     {review.customer}
                   </Typography>
-                  <Typography 
-                    variant='caption' 
-                    sx={{ 
-                      color: '#3B82F6', 
-                      fontWeight: 800, 
-                      textTransform: 'uppercase', 
+                  <Typography
+                    variant='caption'
+                    sx={{
+                      color: '#3B82F6',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
                       fontSize: '0.65rem',
-                      letterSpacing: '0.05em' 
+                      letterSpacing: '0.05em',
                     }}
                   >
                     {review.outletName} • {review.date}
@@ -147,22 +152,22 @@ export default function Reviews() {
                   <Star
                     key={i}
                     size={16}
-                    fill={i < review.rating ? "#D4AF37" : "none"}
-                    color={i < review.rating ? "#D4AF37" : "#E5E7EB"}
+                    fill={i < review.rating ? '#D4AF37' : 'none'}
+                    color={i < review.rating ? '#D4AF37' : '#E5E7EB'}
                   />
                 ))}
               </Box>
             </Box>
 
             {/* Compressed Quote Style Comment */}
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontStyle: 'italic', 
-                color: 'text.secondary', 
+            <Typography
+              variant='body2'
+              sx={{
+                fontStyle: 'italic',
+                color: 'text.secondary',
                 fontSize: '0.95rem',
                 lineHeight: 1.4,
-                pl: 0.5
+                pl: 0.5,
               }}
             >
               "{review.comment}"
@@ -171,7 +176,7 @@ export default function Reviews() {
         ))}
 
         {filteredReviews.length === 0 && (
-          <Box py={10} textAlign="center">
+          <Box py={10} textAlign='center'>
             <Typography color='text.secondary'>No reviews found for this selection.</Typography>
           </Box>
         )}
