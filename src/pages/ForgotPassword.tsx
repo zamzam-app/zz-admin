@@ -15,60 +15,60 @@ const ForgotPassword: React.FC = () => {
   return (
     <div className='min-h-screen bg-[#111827] flex items-center justify-center p-4 px-4 sm:px-6 relative overflow-hidden w-full h-full'>
       <div className='w-full max-w-md bg-white p-8 rounded-lg shadow-md'>
-      <h2 className='text-2xl font-bold mb-6 text-center'>
-        {step === 'email' && 'Forgot Password'}
-        {step === 'otp' && 'Enter OTP'}
-        {step === 'reset' && 'Reset Password'}
-      </h2>
-      <form onSubmit={handleSubmit} className='space-y-4'>
-        {step === 'email' && (
-          <div>
-            <label className='block text-sm font-medium text-gray-700'>Email Address</label>
-            <input
-              type='email'
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border'
-            />
-          </div>
-        )}
+        <h2 className='text-2xl font-bold mb-6 text-center'>
+          {step === 'email' && 'Forgot Password'}
+          {step === 'otp' && 'Enter OTP'}
+          {step === 'reset' && 'Reset Password'}
+        </h2>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          {step === 'email' && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700'>Email Address</label>
+              <input
+                type='email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border'
+              />
+            </div>
+          )}
 
-        {step === 'otp' && (
-          <div>
-            <label className='block text-sm font-medium text-gray-700'>OTP Code</label>
-            <input
-              type='text'
-              required
-              className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border'
-              placeholder='123456'
-            />
-          </div>
-        )}
+          {step === 'otp' && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700'>OTP Code</label>
+              <input
+                type='text'
+                required
+                className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border'
+                placeholder='123456'
+              />
+            </div>
+          )}
 
-        {step === 'reset' && (
-          <div>
-            <label className='block text-sm font-medium text-gray-700'>New Password</label>
-            <input
-              type='password'
-              required
-              className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border'
-            />
-          </div>
-        )}
+          {step === 'reset' && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700'>New Password</label>
+              <input
+                type='password'
+                required
+                className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border'
+              />
+            </div>
+          )}
 
-        <button
-          type='submit'
-          className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700'
-        >
-          {step === 'email' ? 'Send OTP' : step === 'otp' ? 'Verify OTP' : 'Reset Password'}
-        </button>
-      </form>
-      <div className='mt-4 text-center'>
-        <Link to='/login' className='text-sm text-indigo-600 hover:text-indigo-500'>
-          Back to Login
-        </Link>
-      </div>
+          <button
+            type='submit'
+            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700'
+          >
+            {step === 'email' ? 'Send OTP' : step === 'otp' ? 'Verify OTP' : 'Reset Password'}
+          </button>
+        </form>
+        <div className='mt-4 text-center'>
+          <Link to='/login' className='text-sm text-indigo-600 hover:text-indigo-500'>
+            Back to Login
+          </Link>
+        </div>
       </div>
     </div>
   );

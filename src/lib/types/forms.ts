@@ -1,4 +1,10 @@
-export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'checkbox' | 'rating' | 'linear_scale';
+export type QuestionType =
+  | 'short_answer'
+  | 'paragraph'
+  | 'multiple_choice'
+  | 'checkbox'
+  | 'rating'
+  | 'linear_scale';
 
 export interface Option {
   id: string;
@@ -15,10 +21,9 @@ export interface Question {
   required: boolean;
   maxRating?: number;
 
-
   scale?: {
-    min: number;      // e.g. 1
-    max: number;      // e.g. 5
+    min: number; // e.g. 1
+    max: number; // e.g. 5
     minLabel?: string;
     maxLabel?: string;
   };
