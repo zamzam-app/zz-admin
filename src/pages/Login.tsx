@@ -79,7 +79,10 @@ const Login: React.FC = () => {
         </form>
 
         <div className='mt-6 sm:mt-8 text-center'>
-          <button className='text-[10px] sm:text-xs text-gray-400 hover:text-gray-200 transition-colors uppercase tracking-widest cursor-pointer' onClick={() => navigate('/forgot-password')}>
+          <button
+            className='text-[10px] sm:text-xs text-gray-400 hover:text-gray-200 transition-colors uppercase tracking-widest cursor-pointer'
+            onClick={() => navigate('/forgot-password')}
+          >
             Forgot password?
           </button>
         </div>
