@@ -96,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* 2. LOGO SECTION UPDATED */}
-      <Toolbar sx={{ flexDirection: 'column', py: 4, gap: 1 }}>
+      <Toolbar sx={{ flexDirection: 'column', py: 4, gap: 1, flexShrink: 0 }}>
         <Box sx={{ mb: 1 }}>
           <Logo className='w-16 h-16 shadow-2xl' />
         </Box>
@@ -129,8 +129,16 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
         </Box>
       </Toolbar>
 
-      <div style={{ overflow: 'auto' }}>
-        <List sx={{ px: 2, mt: 3, flexGrow: 1 }}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          overflowY: 'scroll',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          msOverflowStyle: 'none',
+        }}
+      >
+        <List sx={{ px: 2, mt: 2 }}>
           {navItems.map((item) => {
             const active = location.pathname.startsWith(item.path);
 
@@ -173,7 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
             );
           })}
         </List>
-      </div>
+      </Box>
 
       {/* Logout at bottom */}
       <List sx={{ px: 2, pb: 3 }}>
