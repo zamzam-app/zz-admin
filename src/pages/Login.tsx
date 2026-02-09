@@ -14,7 +14,7 @@ const Login: React.FC = () => {
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
-
+  //  console.log('Login submit clicked');
   if (!email) {
     message.error('Please enter your email');
     return;
@@ -38,6 +38,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   } catch {
     message.error('Login failed. Please check your credentials.');
   }
+  
 };
 
   return (

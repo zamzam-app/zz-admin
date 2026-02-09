@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
-import { mockLogin, type User } from '../../__mocks__/auth';
+import { authApi } from '../services/api/auth';
+import type { User } from '../types/user';
+
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -29,10 +31,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     setError(null);
     try {
-      const userData = await mockLogin({ email, password });
+      const userData = await authApi.login({ email, password });
       setIsAuthenticated(true);
       setUser(userData);
       localStorage.setItem('user_session', JSON.stringify(userData));
+      console.log("userData:",userData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
@@ -41,11 +44,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+  try {
+    await authApi.logout(); 
+  } catch {
+    // even if backend fails, still logout locally
+  } finally {
     localStorage.removeItem('user_session');
-    setIsAuthenticated(false);
+    localStorage.removeItem('token');
     setUser(null);
-  };
+    setIsAuthenticated(false);
+  }
+};
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading, error }}>

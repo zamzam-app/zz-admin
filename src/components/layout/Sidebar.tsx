@@ -186,7 +186,10 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
       {/* Logout at bottom */}
       <List sx={{ px: 2, pb: 3 }}>
         <ListItemButton
-          onClick={logout}
+    onClick={() => {
+      console.log('Logout clicked');
+      logout();
+    }}
           sx={{
             borderRadius: '16px',
             bgcolor: 'rgba(239, 68, 68, 0.1)',
