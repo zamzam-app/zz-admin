@@ -30,12 +30,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     setError(null);
+
     try {
       const userData = await authApi.login({ email, password });
+
+      // ✅ NORMALIZE BACKEND → FRONTEND USER
+      const normalizedUser: User = {
+        id: userData.user._id,
+        name: userData.user.name,
+        email: userData.user.email,
+        role: userData.user.role,
+        outletId: userData.user.outlets || [],
+        token: userData.access_token,
+      };
+
+      setUser(normalizedUser);
       setIsAuthenticated(true);
-      setUser(userData);
-      localStorage.setItem('user_session', JSON.stringify(userData));
-      console.log("userData:",userData);
+      localStorage.setItem('user_session', JSON.stringify(normalizedUser));
+
+      console.log('Normalized user:', normalizedUser);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;

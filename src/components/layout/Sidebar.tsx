@@ -82,16 +82,20 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
    3. Build navigation (IMMUTABLE)
   ================================= */
   const navItems = React.useMemo(() => {
-    const base = role === 'admin' ? adminNavItems : staffNavItems;
+  if (role === 'admin') {
+    return [...adminNavItems, ...cafeNavItems];
+  }
 
-    if (!isCafeEnabled) return base;
+  const base = staffNavItems;
 
-    // prevent duplicate items
-    const existingPaths = new Set(base.map((i) => i.path));
-    const cafeItems = cafeNavItems.filter((i) => !existingPaths.has(i.path));
+  if (!isCafeEnabled) return base;
 
-    return [...base, ...cafeItems];
-  }, [role, isCafeEnabled]);
+  const existingPaths = new Set(base.map((i) => i.path));
+  const cafeItems = cafeNavItems.filter((i) => !existingPaths.has(i.path));
+
+  return [...base, ...cafeItems];
+}, [role, isCafeEnabled]);
+
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

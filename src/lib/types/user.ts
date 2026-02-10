@@ -29,3 +29,19 @@ export interface LoginPayload {
   email: string;
   password: string;
 }
+export interface LoginResponse {
+  access_token: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    outlets: string[];
+    isActive: boolean;
+    isDeleted: boolean;
+    phoneNumber?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
