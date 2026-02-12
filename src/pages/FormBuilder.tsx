@@ -1,80 +1,87 @@
 import { useState, useEffect } from 'react';
 import { Form } from '../lib/types/forms';
+import { formsApi } from '../lib/services/api/forms.api';
+import { message } from 'antd';
 import FormDashboard from '../components/forms/FormDashboard';
 import FormEditor from '../components/forms/FormEditor';
 import FormViewer from '../components/forms/FormViewer';
 
 type ViewMode = 'dashboard' | 'builder' | 'viewer' | 'preview';
-
 export default function FormBuilderPage() {
   const [view, setView] = useState<ViewMode>('dashboard');
+  const [savedForms, setSavedForms] = useState<Form[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [currentForm, setCurrentForm] = useState<Form | null>(null);
 
-  const [savedForms, setSavedForms] = useState<Form[]>(() => {
-    try {
-      const stored = localStorage.getItem('saved_forms');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [currentForm, setCurrentForm] = useState<Form>({
-    id: '1',
-    title: 'Untitled Form',
-    questions: [
-      {
-        id: 'q1',
-        type: 'short_answer',
-        title: 'Untitled Question',
-        hint: '',
-        required: false,
-      },
-    ],
-  });
-
+  // Load Forms on Mount
   useEffect(() => {
-    localStorage.setItem('saved_forms', JSON.stringify(savedForms));
-  }, [savedForms]);
+    const fetchForms = async () => {
+      setLoading(true);
+      try {
+        const data = await formsApi.getForms();
+        setSavedForms(data);
+      } catch {
+        message.error('Could not load forms');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchForms();
+  }, []);
 
-  /* -------------------- Handlers -------------------- */
-
-  const handleCreateNew = () => {
-    setCurrentForm({
-      id: Date.now().toString(),
-      title: 'New Form',
-      questions: [],
-    });
-    setView('builder');
+  const handleCreateNew = async () => {
+    try {
+      const newForm = await formsApi.createForm();
+      // Ensure we use the ID returned by MongoDB (_id)
+      setCurrentForm(newForm);
+      setSavedForms((prev) => [...prev, newForm]);
+      setView('builder');
+    } catch {
+      message.error('Failed to create form');
+    }
   };
 
-  const handleEdit = (form: Form) => {
-    setCurrentForm(form);
-    setView('builder');
+  const handleEdit = async (form: Form) => {
+    try {
+      const fullForm = await formsApi.getForm(form._id);
+      setCurrentForm(fullForm);
+      setView('builder');
+    } catch {
+      message.error('Failed to load form details');
+    }
   };
 
-  const handleOpen = (form: Form) => {
-    setCurrentForm(form);
-    setView('viewer');
+  const handleSave = async () => {
+    if (!currentForm) return;
+
+    try {
+      const updated = await formsApi.updateForm(currentForm._id, {
+        title: currentForm.title,
+        questions: currentForm.questions,
+      });
+
+      setSavedForms((prev) => prev.map((f) => (f._id === updated._id ? updated : f)));
+
+      message.success('Form saved successfully');
+      setView('dashboard');
+    } catch {
+      message.error('Update failed');
+    }
   };
 
-  const handleDelete = (form: Form) => {
-    setSavedForms((prev) => prev.filter((f) => f.id !== form.id));
+  const handleDelete = async (form: Form) => {
+    try {
+      await formsApi.deleteForm(form._id);
+      setSavedForms((prev) => prev.filter((f) => f._id !== form._id));
+      message.success('Form deleted');
+    } catch {
+      message.error('Delete failed');
+    }
   };
 
-  const handleSave = () => {
-    setSavedForms((prev) => {
-      const exists = prev.find((f) => f.id === currentForm.id);
-      return exists
-        ? prev.map((f) => (f.id === currentForm.id ? currentForm : f))
-        : [...prev, currentForm];
-    });
-    setView('dashboard');
-  };
+  // Prevent crashes if currentForm is null during builder mode
+  if (loading && view === 'dashboard') return <div>Loading...</div>;
 
-  /* -------------------- Render -------------------- */
-
-  // This single div with 'space-y-8' is the exact pattern
-  // used in your working Employee and Infrastructure pages.
   return (
     <div className='space-y-8'>
       {view === 'dashboard' && (
@@ -82,22 +89,25 @@ export default function FormBuilderPage() {
           savedForms={savedForms}
           onCreateNew={handleCreateNew}
           onEdit={handleEdit}
-          onOpen={handleOpen}
+          onOpen={(f) => {
+            setCurrentForm(f);
+            setView('viewer');
+          }}
           onDelete={handleDelete}
         />
       )}
 
-      {(view === 'viewer' || view === 'preview') && (
+      {currentForm && (view === 'viewer' || view === 'preview') && (
         <FormViewer
           form={currentForm}
           onBack={() => setView(view === 'preview' ? 'builder' : 'dashboard')}
         />
       )}
 
-      {view === 'builder' && (
+      {currentForm && view === 'builder' && (
         <FormEditor
           currentForm={currentForm}
-          setCurrentForm={setCurrentForm}
+          setCurrentForm={setCurrentForm as React.Dispatch<React.SetStateAction<Form | null>>}
           onSave={handleSave}
           onCancel={() => setView('dashboard')}
           onPreview={() => setView('preview')}
