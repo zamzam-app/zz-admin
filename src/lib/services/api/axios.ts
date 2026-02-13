@@ -13,7 +13,7 @@ api.interceptors.response.use(
   (err) => {
     console.error('API ERROR:', err.response || err);
     return Promise.reject(err);
-  }
+  },
 );
 
 export default api;
