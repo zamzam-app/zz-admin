@@ -26,7 +26,6 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-
     const tokenString = localStorage.getItem('token');
 
     if (!tokenString || error?.status === 401 || error?.response?.status === 401) {
