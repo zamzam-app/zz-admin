@@ -13,6 +13,7 @@ import { UpdateUserPayload, CreateUserPayload } from '../lib/types/user';
 
 type Employee = {
   id?: string;
+  _id?: string;
   name: string;
   userName?: string;
   email: string;
@@ -66,15 +67,17 @@ export default function EmployeeManagement() {
     e.preventDefault();
     if (!form.name || !form.email || !form.userName || !form.role) return;
 
-    if (editing && editing.id) {
+    const id = editing?._id || editing?.id;
+    if (editing && id) {
       updateMutation.mutate({
-        id: editing.id,
+        id,
         payload: {
           name: form.name,
           userName: form.userName,
           email: form.email,
           role: form.role,
           phoneNumber: form.phoneNumber,
+          password: form.password,
         },
       });
     } else {
@@ -89,8 +92,9 @@ export default function EmployeeManagement() {
     }
   };
 
-  const handleDelete = (id: string | undefined) => {
-    if (id && window.confirm('Are you sure you want to delete this employee?')) {
+  const handleDelete = (emp: Employee) => {
+    const id = emp._id || emp.id;
+    if (id && window.confirm(`Are you sure you want to delete ${emp.name}?`)) {
       deleteMutation.mutate(id);
     }
   };
@@ -268,8 +272,10 @@ export default function EmployeeManagement() {
                     <Edit2 size={16} />
                   </IconButton>
                   <IconButton
-                    disabled={deleteMutation.isPending && deleteMutation.variables === emp.id}
-                    onClick={() => handleDelete(emp.id)}
+                    disabled={
+                      deleteMutation.isPending && deleteMutation.variables === (emp._id || emp.id)
+                    }
+                    onClick={() => handleDelete(emp)}
                     size='small'
                     sx={{
                       bgcolor: '#FFFFFF',
@@ -278,7 +284,8 @@ export default function EmployeeManagement() {
                       '&:hover': { bgcolor: '#F3F4F6' },
                     }}
                   >
-                    {deleteMutation.isPending && deleteMutation.variables === emp.id ? (
+                    {deleteMutation.isPending &&
+                    deleteMutation.variables === (emp._id || emp.id) ? (
                       <CircularProgress size={16} color='inherit' />
                     ) : (
                       <Trash2 size={16} />

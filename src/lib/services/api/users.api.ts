@@ -1,10 +1,6 @@
 import api from './axios';
 import { USERS } from './endpoints';
-import {
-  User,
-  CreateUserPayload,
-  UpdateUserPayload,
-} from '../../types/user';
+import { User, CreateUserPayload, UpdateUserPayload } from '../../types/user';
 
 export const usersApi = {
   getAll: async (): Promise<User[]> => {
@@ -22,11 +18,8 @@ export const usersApi = {
     return res.data;
   },
 
-  update: async (
-    id: string,
-    data: UpdateUserPayload
-  ): Promise<User> => {
-    const res = await api.put<User>(USERS.BY_ID(id), data);
+  update: async (id: string, data: UpdateUserPayload): Promise<User> => {
+    const res = await api.patch<User>(USERS.BY_ID(id), data);
     return res.data;
   },
 

@@ -1,5 +1,6 @@
 export interface User {
   id?: string;
+  _id?: string;
   name: string;
   userName?: string;
   email: string;
@@ -27,6 +28,7 @@ export interface UpdateUserPayload {
   email?: string;
   role?: string;
   phoneNumber?: string;
+  password?: string;
   outletId?: string[];
   isActive?: boolean;
 }
