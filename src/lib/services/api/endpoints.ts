@@ -8,4 +8,5 @@ export const AUTH = {
 export const USERS = {
   BASE: '/users',
   BY_ID: (id: string) => `/users/${id}`,
+  CHANGE_PASSWORD: (id: string) => `/users/change-password/${id}`,
 };

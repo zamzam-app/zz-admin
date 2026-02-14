@@ -1,6 +1,11 @@
 import api from './axios';
 import { USERS } from './endpoints';
-import { User, CreateUserPayload, UpdateUserPayload } from '../../types/user';
+import {
+  User,
+  CreateUserPayload,
+  UpdateUserPayload,
+  ChangePasswordPayload,
+} from '../../types/user';
 
 export const usersApi = {
   getAll: async (): Promise<User[]> => {
@@ -25,5 +30,9 @@ export const usersApi = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(USERS.BY_ID(id));
+  },
+
+  changePassword: async (id: string, data: ChangePasswordPayload): Promise<void> => {
+    await api.post(USERS.CHANGE_PASSWORD(id), data);
   },
 };

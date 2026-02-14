@@ -52,3 +52,8 @@ export interface LoginResponse {
     updatedAt: string;
   };
 }
+
+export interface ChangePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+}
