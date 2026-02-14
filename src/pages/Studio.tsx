@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import Input from '../components/common/Input';
 import Select from '../components/common/Select';
+import { productApi } from '../lib/services/api/product.api';
+import type { Product } from '../lib/types/product';
 
+// This is what your UI uses
 interface Cake {
   id: string;
   name: string;
@@ -12,63 +15,80 @@ interface Cake {
   image: string;
 }
 
-const initialCakes: Cake[] = [
-  {
-    id: '1',
-    name: 'Vanilla Dream',
-    price: 45,
-    category: 'Birthday',
-    image:
-      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop',
-  },
-  {
-    id: '2',
-    name: 'Chocolate Bliss',
-    price: 55,
-    category: 'Anniversary',
-    image:
-      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop',
-  },
-  {
-    id: '3',
-    name: 'Red Velvet',
-    price: 50,
-    category: 'Wedding',
-    image:
-      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop',
-  },
-];
-
 const Studio = () => {
-  const [cakes, setCakes] = useState<Cake[]>(initialCakes);
+  // 1. Restore the missing state hooks
+  const [cakes, setCakes] = useState<Cake[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [newCake, setNewCake] = useState<Partial<Cake>>({
     name: '',
-    price: 0,
+    price: undefined,
     category: '',
   });
 
-  const handleDelete = (id: string) => {
-    setCakes(cakes.filter((cake) => cake.id !== id));
-  };
+  // MAPPER: Translates API (Product) to UI (Cake)
+  const mapProductToCake = (apiData: Product): Cake => ({
+    id: apiData._id,
+    name: apiData.name,
+    price: apiData.price,
+    category: apiData.description || 'General',
+    image: apiData.images?.[0] || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587',
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCake.name || !newCake.price || !newCake.category) return;
-
-    const cake: Cake = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newCake.name,
-      price: newCake.price,
-      category: newCake.category,
-      image:
-        'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=200&auto=format&fit=crop', // generic placeholder
+  // 1. Load data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await productApi.getAll();
+        // Transform the array of Products into an array of Cakes
+        const mappedCakes = data.map(mapProductToCake);
+        setCakes(mappedCakes);
+      } catch (error) {
+        console.error('Failed to load products', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
+    loadData();
+  }, []);
 
-    setCakes([...cakes, cake]);
-    setIsModalOpen(false);
-    setNewCake({ name: '', price: 0, category: '' });
+  // 2. Delete logic
+  const handleDelete = async (id: string) => {
+    try {
+      await productApi.delete(id);
+      setCakes((prev) => prev.filter((cake) => cake.id !== id));
+    } catch {
+      alert('Could not delete product');
+    }
   };
+
+  // 3. Submit logic
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!newCake.name || !newCake.price || !newCake.category) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    try {
+      const savedProduct = await productApi.create({
+        name: newCake.name,
+        price: Number(newCake.price),
+        description: newCake.category,
+        images: ['https://images.unsplash.com/photo-1578985545062-69928b1d9587'],
+        type: 'premade',
+      });
+
+      setCakes((prev) => [...prev, mapProductToCake(savedProduct)]);
+      setIsModalOpen(false);
+      setNewCake({ name: '', price: 0, category: '' });
+    } catch (error) {
+      console.error('Save failed', error);
+    }
+  };
+
+  if (isLoading) return <div className='p-10 text-center font-bold'>Loading Catalog...</div>;
 
   return (
     <div>
@@ -134,8 +154,8 @@ const Studio = () => {
       {/* Add Modal */}
       {isModalOpen && (
         <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
-          <div className='bg-white rounded-[32px] w-full max-w-lg p-10 max-h-[90vh] overflow-y-auto shadow-2xl'>
-            <h3 className='text-2xl font-black mb-2 text-[#1F2937]'>New Inventory Item</h3>
+          <div className='bg-white rounded-[32px] w-full max-w-lg px-12 py-12 max-h-[90vh] overflow-y-auto shadow-2xl'>
+            <h3 className='text-2xl font-black mb-6 text-[#1F2937]'>New Inventory Item</h3>
             <form onSubmit={handleSubmit} className='space-y-6'>
               <Input
                 label='Product Title'
@@ -143,11 +163,11 @@ const Studio = () => {
                 onChange={(e) => setNewCake({ ...newCake, name: e.target.value })}
                 required
               />
-              <div className='grid grid-cols-2 gap-6'>
+              <div className='grid grid-cols-2 gap-8'>
                 <Input
                   label='Price ($)'
                   type='number'
-                  value={newCake.price || ''}
+                  value={newCake.price ?? ''}
                   onChange={(e) => setNewCake({ ...newCake, price: Number(e.target.value) })}
                   required
                 />
@@ -158,7 +178,7 @@ const Studio = () => {
                   onChange={(e) => setNewCake({ ...newCake, category: e.target.value })}
                 />
               </div>
-              <div className='flex justify-end gap-4 pt-4'>
+              <div className='flex justify-end gap-6 pt-8'>
                 <Button type='button' variant='ghost' onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
