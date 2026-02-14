@@ -30,7 +30,7 @@ export interface Question {
 }
 
 export interface Form {
-  id: string;
+  _id: string;
   title: string;
   questions: Question[];
 }

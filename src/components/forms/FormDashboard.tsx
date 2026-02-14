@@ -51,7 +51,7 @@ const FormDashboard: React.FC<Props> = ({ savedForms, onCreateNew, onEdit, onOpe
             </thead>
             <tbody className='divide-y divide-gray-50'>
               {savedForms.map((form) => (
-                <tr key={form.id} className='hover:bg-gray-50/50 transition-colors group'>
+                <tr key={form._id} className='hover:bg-gray-50/50 transition-colors group'>
                   <td className='px-6 py-4'>
                     <div className='flex items-center gap-4'>
                       <div className='w-10 h-10 rounded-xl bg-[#1F2937] text-[#D4AF37] flex items-center justify-center shrink-0'>
