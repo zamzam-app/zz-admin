@@ -222,14 +222,14 @@ export default function Infrastructure() {
               label='Choose Form'
               options={availableForms.map((form) => ({
                 label: form.title,
-                value: form.id,
+                value: form._id,
               }))}
               value={newStore.formId || ''}
               onChange={(e) => {
-                const form = availableForms.find((f) => f.id === e.target.value);
+                const form = availableForms.find((f) => f._id === e.target.value);
                 setNewStore({
                   ...newStore,
-                  formId: form?.id,
+                  formId: form?._id,
                   formTitle: form?.title,
                 });
               }}

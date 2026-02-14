@@ -3,22 +3,43 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/context/AuthContext';
 import { Mail, Lock } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
+import { message } from 'antd';
+
 
 const Login: React.FC = () => {
-  const { login, error } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await login(email, password);
-      navigate('/overview');
-    } catch {
-      // Error is handled in context and displayed
-    }
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  //  console.log('Login submit clicked');
+  if (!email) {
+    message.error('Please enter your email');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    message.error('Enter a valid email');
+    return;
+  }
+
+  if (!password) {
+    message.error('Please enter your password');
+    return;
+  }
+
+  try {
+    await login(email, password);
+    message.success('Login successful'); 
+    navigate('/overview');
+  } catch {
+    message.error('Login failed. Please check your credentials.');
+  }
+  
+};
 
   return (
     <div className='min-h-screen bg-[#111827] flex items-center justify-center p-4 px-4 sm:px-6 relative overflow-hidden w-full h-full'>
@@ -39,7 +60,7 @@ const Login: React.FC = () => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className='space-y-5 sm:space-y-6'>
+        <form onSubmit={handleSubmit} className='space-y-5 sm:space-y-6' noValidate>
           <div className='relative'>
             <Mail size={18} className='absolute left-4 top-1/2 -translate-y-1/2 text-gray-400' />
             <input
@@ -48,7 +69,6 @@ const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className='w-full pl-12 pr-4 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-sm sm:text-base'
-              required
             />
           </div>
 
@@ -60,15 +80,8 @@ const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className='w-full pl-12 pr-4 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-sm sm:text-base'
-              required
             />
           </div>
-
-          {error && (
-            <div className='bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-xl text-center'>
-              {error}
-            </div>
-          )}
 
           <button
             type='submit'
