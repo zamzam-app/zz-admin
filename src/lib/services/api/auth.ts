@@ -4,9 +4,14 @@ import { User, LoginPayload,LoginResponse } from '../../types/user';
 
 export const authApi = {
   login: async (payload: LoginPayload): Promise<LoginResponse> => {
-  const res = await api.post('/auth/login', payload);
-  return res.data;
-},
+    const res = await api.post(AUTH.LOGIN, payload);
+    return res.data;
+  },
+
+  refresh: async (): Promise<{ access_token: string }> => {
+    const res = await api.post(AUTH.REFRESH);
+    return res.data;
+  },
 
   logout: async (): Promise<void> => {
     await api.post(AUTH.LOGOUT);

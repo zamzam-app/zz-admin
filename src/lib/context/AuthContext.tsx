@@ -41,12 +41,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: userData.user.email,
         role: userData.user.role,
         outletId: userData.user.outlets || [],
+      };
+
+      const normalizedToken = {
         token: userData.access_token,
       };
 
       setUser(normalizedUser);
       setIsAuthenticated(true);
-      localStorage.setItem('user_session', JSON.stringify(normalizedUser));
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      localStorage.setItem('token',JSON.stringify(normalizedToken));
 
       console.log('Normalized user:', normalizedUser);
     } catch (err) {

@@ -1,4 +1,5 @@
-import axios from "axios";
+import axios from 'axios';
+import { AUTH } from './endpoints';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -7,7 +8,7 @@ const api = axios.create({
 
 /* ---------------- REQUEST INTERCEPTOR ---------------- */
 api.interceptors.request.use((config) => {
-  const sessionString = localStorage.getItem("user_session");
+  const sessionString = localStorage.getItem('token');
 
   if (sessionString) {
     const sessionData = JSON.parse(sessionString);
@@ -15,7 +16,7 @@ api.interceptors.request.use((config) => {
 
     if (token) {
       // Axios v1+ safe way
-      config.headers.set("Authorization", `Bearer ${token}`);
+      config.headers.set('Authorization', `Bearer ${token}`);
     }
   }
 
@@ -28,33 +29,32 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const tokenString = localStorage.getItem('token');
+
+    if (!tokenString || error?.status === 401 || error?.response?.status === 401) {
       originalRequest._retry = true;
-
       try {
-        const res = await api.post("/auth/refresh");
-
-        const newToken = res.data?.token;
+        const response = await api.post(AUTH.REFRESH);
+        const newToken = response.data?.access_token;
         if (newToken) {
           // Update localStorage
-          const sessionString = localStorage.getItem("user_session");
-          const sessionData = sessionString ? JSON.parse(sessionString) : {};
-          sessionData.token = newToken;
-          localStorage.setItem("user_session", JSON.stringify(sessionData));
+          localStorage.setItem('token', JSON.stringify({ token: newToken }));
 
           // Update retry request header
-          originalRequest.headers.set("Authorization", `Bearer ${newToken}`);
+          originalRequest.headers.set('Authorization', `Bearer ${newToken}`);
 
           return api(originalRequest);
         }
       } catch {
+        console.log('refresh token failed');
         localStorage.clear();
-        window.location.href = "/login";
+        window.location.href = '/login';
       }
     }
 
-    return Promise.reject(error);
-  }
+    // return Promise.reject(error);
+    console.log(error);
+  },
 );
 
 export default api;
