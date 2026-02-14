@@ -1,26 +1,32 @@
 export interface User {
-  id?: string;          
+  id?: string;
   name: string;
+  userName?: string;
   email: string;
   role: string;
+  phoneNumber?: string;
   outletId?: string[];
-  token?: string;      
+  token?: string;
 }
 
 /* Payloads */
 
 export interface CreateUserPayload {
   name: string;
+  userName: string;
   email: string;
   role: string;
-  outletId?: string[];
+  phoneNumber: string;
   password?: string;
+  outletId?: string[];
 }
 
 export interface UpdateUserPayload {
   name?: string;
+  userName?: string;
   email?: string;
   role?: string;
+  phoneNumber?: string;
   outletId?: string[];
   isActive?: boolean;
 }
@@ -44,4 +50,3 @@ export interface LoginResponse {
     updatedAt: string;
   };
 }
-

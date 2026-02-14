@@ -17,7 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const stored = localStorage.getItem('user_session');
+      const stored = localStorage.getItem('user');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
@@ -51,8 +51,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       localStorage.setItem('token',JSON.stringify(normalizedToken));
-
-      console.log('Normalized user:', normalizedUser);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
@@ -67,7 +65,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   } catch {
     // even if backend fails, still logout locally
   } finally {
-    localStorage.removeItem('user_session');
+    localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);

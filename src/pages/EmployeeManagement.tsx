@@ -1,32 +1,54 @@
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Stack, Avatar } from '@mui/material';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Box, Typography, IconButton, Avatar, CircularProgress } from '@mui/material';
+import { Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
-import { EMPLOYEES } from '../__mocks__/employeesData';
-import outletlist from '../__mocks__/outets.json';
+import { usersApi } from '../lib/services/api/users.api';
+import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
+import { UpdateUserPayload, CreateUserPayload } from '../lib/types/user';
 
 type Employee = {
-  id: string;
+  id?: string;
   name: string;
-  username: string;
+  userName?: string;
   email: string;
-  password: string;
-  phone: string;
+  password?: string;
+  phoneNumber?: string;
   role: string;
-  outletId: string;
-  outletName: string;
 };
 
+const EMPLOYEE_KEYS = ['employees'];
+
 export default function EmployeeManagement() {
-  const [employees, setEmployees] = useState<Employee[]>(EMPLOYEES);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<Partial<Employee>>({});
+
+  // 1. Fetching Data
+  const { data: employees = [], isLoading } = useApiQuery(EMPLOYEE_KEYS, usersApi.getAll);
+
+  // 2. Mutations
+  const createMutation = useApiMutation(
+    (data: CreateUserPayload) => usersApi.create(data),
+    [EMPLOYEE_KEYS],
+    {
+      onSuccess: () => setOpen(false),
+    },
+  );
+
+  const updateMutation = useApiMutation(
+    (data: { id: string; payload: UpdateUserPayload }) => usersApi.update(data.id, data.payload),
+    [EMPLOYEE_KEYS],
+    {
+      onSuccess: () => setOpen(false),
+    },
+  );
+
+  const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [EMPLOYEE_KEYS]);
 
   const openAdd = () => {
     setForm({});
@@ -42,30 +64,35 @@ export default function EmployeeManagement() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.outletName) return;
+    if (!form.name || !form.email || !form.userName || !form.role) return;
 
-    if (editing) {
-      setEmployees((prev) =>
-        prev.map((emp) => (emp.id === editing.id ? { ...editing, ...form } : emp)),
-      );
-    } else {
-      const selectedOutlet = outletlist.outlets.find((o) => o.name === form.outletName);
-      setEmployees((prev) => [
-        ...prev,
-        {
-          ...(form as Employee),
-          id: Date.now().toString(),
-          role: 'STAFF',
-          outletId: selectedOutlet?.id || '',
-          outletName: form.outletName || '',
+    if (editing && editing.id) {
+      updateMutation.mutate({
+        id: editing.id,
+        payload: {
+          name: form.name,
+          userName: form.userName,
+          email: form.email,
+          role: form.role,
+          phoneNumber: form.phoneNumber,
         },
-      ]);
+      });
+    } else {
+      createMutation.mutate({
+        name: form.name!,
+        userName: form.userName!,
+        email: form.email!,
+        role: form.role!,
+        phoneNumber: form.phoneNumber!,
+        password: form.password,
+      });
     }
-    setOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setEmployees((prev) => prev.filter((e) => e.id !== id));
+  const handleDelete = (id: string | undefined) => {
+    if (id && window.confirm('Are you sure you want to delete this employee?')) {
+      deleteMutation.mutate(id);
+    }
   };
 
   return (
@@ -93,91 +120,176 @@ export default function EmployeeManagement() {
         </Button>
       </Box>
 
-      {/* Employee List - Matching Reviews Style */}
-      <Stack spacing={2}>
-        {employees.map((emp) => (
-          <Card
-            key={emp.id}
+      {/* Employee Grid */}
+      <Box sx={{ flexGrow: 1, minHeight: '400px', position: 'relative' }}>
+        {isLoading ? (
+          <Box display='flex' justifyContent='center' alignItems='center' py={12}>
+            <CircularProgress size={48} sx={{ color: '#3B82F6' }} />
+          </Box>
+        ) : employees.length === 0 ? (
+          <Box
+            textAlign='center'
+            py={12}
             sx={{
-              p: 2.5,
-              border: '2px solid transparent',
-              borderRadius: '20px',
-              transition: 'all 0.2s ease-in-out',
-              cursor: 'default',
-              '&:hover': {
-                borderColor: '#3B82F6',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 20px rgba(59, 130, 246, 0.1)',
-              },
+              bgcolor: 'rgba(249, 250, 251, 0.7)',
+              borderRadius: '32px',
+              border: '2px dashed #E5E7EB',
             }}
           >
-            <Box display='flex' alignItems='center' justifyContent='space-between'>
-              <Box display='flex' alignItems='center' gap={1.5}>
-                {/* Profile Avatar */}
-                <Avatar
-                  variant='rounded'
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    bgcolor: '#1F2937',
-                    fontWeight: 700,
-                  }}
-                >
-                  {emp.name.charAt(0)}
-                </Avatar>
-
-                <Box>
-                  <Typography
-                    variant='subtitle1'
-                    fontWeight={800}
-                    color='#1F2937'
-                    sx={{ lineHeight: 1.1 }}
-                  >
-                    {emp.name}{' '}
-                    <span style={{ color: '#9CA3AF', fontWeight: 400, fontSize: '0.85rem' }}>
-                      @{emp.username}
-                    </span>
-                  </Typography>
-                  <Typography
-                    variant='caption'
+            <Typography variant='h6' fontWeight={600} color='text.secondary'>
+              No employees found
+            </Typography>
+            <Typography variant='body2' color='text.disabled'>
+              Try adding a new member to your team
+            </Typography>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: 'repeat(2, 1fr)',
+                lg: 'repeat(3, 1fr)',
+              },
+              gap: 3,
+            }}
+          >
+            {employees.map((emp) => (
+              <Card
+                key={emp.id}
+                sx={{
+                  p: 3,
+                  position: 'relative',
+                  overflow: 'visible',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(229, 231, 235, 0.5)',
+                  background: '#FFFFFF',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  opacity:
+                    deleteMutation.isPending && deleteMutation.variables === emp.id ? 0.6 : 1,
+                  '&:hover': {
+                    transform: 'translateY(-10px)',
+                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.06)',
+                    borderColor: '#3B82F6',
+                    '& .action-buttons': {
+                      opacity: 1,
+                      transform: 'translateY(0)',
+                    },
+                  },
+                }}
+              >
+                {/* Header Info */}
+                <Box display='flex' flexDirection='column' alignItems='center' textAlign='center'>
+                  <Avatar
                     sx={{
-                      color: '#3B82F6',
+                      width: 80,
+                      height: 80,
+                      mb: 2,
+                      fontSize: '1.5rem',
                       fontWeight: 800,
-                      textTransform: 'uppercase',
-                      fontSize: '0.65rem',
-                      display: 'block',
+                      borderRadius: '24px',
+                      background: 'linear-gradient(135deg, #1F2937 0%, #374151 100%)',
+                      boxShadow: '0 8px 16px rgba(31, 41, 55, 0.15)',
                     }}
                   >
-                    {emp.outletName}
-                  </Typography>
-                  <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.75rem' }}>
-                    {emp.email} • {emp.phone}
-                  </Typography>
-                </Box>
-              </Box>
+                    {emp.name?.charAt(0) || '?'}
+                  </Avatar>
 
-              {/* Actions */}
-              <Box display='flex' gap={0.5}>
-                <IconButton
-                  onClick={() => openEdit(emp)}
-                  size='small'
-                  sx={{ color: '#3B82F6', bgcolor: '#EFF6FF', '&:hover': { bgcolor: '#DBEAFE' } }}
+                  <Typography variant='h6' fontWeight={800} color='#111827' sx={{ mb: 0.5 }}>
+                    {emp.name || 'Anonymous'}
+                  </Typography>
+                  <Typography variant='body2' sx={{ color: '#6B7280', mb: 1.5 }}>
+                    @{emp.userName || 'unknown'}
+                  </Typography>
+
+                  {/* Role Badge */}
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 0.5,
+                      borderRadius: '100px',
+                      fontSize: '0.65rem',
+                      fontWeight: 900,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      mb: 3,
+                      ...(emp.role.toLowerCase() === 'manager'
+                        ? { bgcolor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #DBEAFE' }
+                        : emp.role.toLowerCase() === 'admin'
+                          ? { bgcolor: '#F5F3FF', color: '#6D28D9', border: '1px solid #EDE9FE' }
+                          : { bgcolor: '#F9FAFB', color: '#374151', border: '1px solid #F3F4F6' }),
+                    }}
+                  >
+                    {emp.role}
+                  </Box>
+
+                  {/* Contact Details */}
+                  <Box sx={{ width: '100%', pt: 2, borderTop: '1px solid #F3F4F6', mt: 'auto' }}>
+                    <Typography
+                      variant='caption'
+                      display='block'
+                      color='text.secondary'
+                      sx={{ mb: 0.5 }}
+                    >
+                      {emp.email}
+                    </Typography>
+                    <Typography variant='caption' fontWeight={600} color='text.secondary'>
+                      {emp.phoneNumber}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Floating Action Buttons */}
+                <Box
+                  className='action-buttons'
+                  sx={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    display: 'flex',
+                    gap: 1,
+                    opacity: 0,
+                    transform: 'translateY(-10px)',
+                    transition: 'all 0.3s ease',
+                  }}
                 >
-                  <Edit2 size={16} />
-                </IconButton>
-                <IconButton
-                  onClick={() => handleDelete(emp.id)}
-                  size='small'
-                  sx={{ color: '#EF4444', bgcolor: '#FEF2F2', '&:hover': { bgcolor: '#FEE2E2' } }}
-                >
-                  <Trash2 size={16} />
-                </IconButton>
-              </Box>
-            </Box>
-          </Card>
-        ))}
-      </Stack>
+                  <IconButton
+                    disabled={deleteMutation.isPending}
+                    onClick={() => openEdit(emp)}
+                    size='small'
+                    sx={{
+                      bgcolor: '#FFFFFF',
+                      color: '#3B82F6',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                      '&:hover': { bgcolor: '#F3F4F6' },
+                    }}
+                  >
+                    <Edit2 size={16} />
+                  </IconButton>
+                  <IconButton
+                    disabled={deleteMutation.isPending && deleteMutation.variables === emp.id}
+                    onClick={() => handleDelete(emp.id)}
+                    size='small'
+                    sx={{
+                      bgcolor: '#FFFFFF',
+                      color: '#EF4444',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                      '&:hover': { bgcolor: '#F3F4F6' },
+                    }}
+                  >
+                    {deleteMutation.isPending && deleteMutation.variables === emp.id ? (
+                      <CircularProgress size={16} color='inherit' />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </IconButton>
+                </Box>
+              </Card>
+            ))}
+          </Box>
+        )}
+      </Box>
 
       {/* Modal */}
       <Modal
@@ -197,42 +309,43 @@ export default function EmployeeManagement() {
             />
             <Input
               label='Username'
-              placeholder='unique_username'
-              value={form.username || ''}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              placeholder='test-manager-01'
+              value={form.userName || ''}
+              onChange={(e) => setForm({ ...form, userName: e.target.value })}
+              required
             />
             <Input
               label='Email'
               type='email'
-              placeholder='email@zamzam.com'
+              placeholder='testmanager01@zamzam.com'
               value={form.email || ''}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
             />
             <Input
-              label='Phone'
-              placeholder='+91...'
-              value={form.phone || ''}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              label='Phone Number'
+              placeholder='+1234567890'
+              value={form.phoneNumber || ''}
+              onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
+              required
+            />
+            <Select
+              label='Role'
+              options={[
+                { label: 'Manager', value: 'manager' },
+                { label: 'Staff', value: 'staff' },
+                { label: 'Admin', value: 'admin' },
+              ]}
+              value={form.role || ''}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
             />
             <Input
               label='Password'
               type='password'
-              placeholder='••••••••'
+              placeholder='password123'
               value={form.password || ''}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-            <Select
-              label='Assigned Outlet'
-              options={outletlist.outlets.map((o) => ({ label: o.name, value: o.name }))}
-              value={form.outletName || ''}
-              onChange={(e) => {
-                const outlet = outletlist.outlets.find((o) => o.name === e.target.value);
-                setForm({
-                  ...form,
-                  outletId: outlet?.id,
-                  outletName: outlet?.name,
-                });
-              }}
+              required={!editing}
             />
           </div>
 
@@ -248,9 +361,19 @@ export default function EmployeeManagement() {
             <Button
               type='submit'
               variant='admin-primary'
-              className='px-12 py-3.5 rounded-2xl font-black shadow-lg'
+              disabled={createMutation.isPending || updateMutation.isPending}
+              className='px-12 py-3.5 rounded-2xl font-black shadow-lg flex items-center justify-center gap-2'
             >
-              {editing ? 'Update Employee' : 'Save Employee'}
+              {createMutation.isPending || updateMutation.isPending ? (
+                <>
+                  <Loader2 size={18} className='animate-spin' />
+                  Processing...
+                </>
+              ) : editing ? (
+                'Update Employee'
+              ) : (
+                'Save Employee'
+              )}
             </Button>
           </div>
         </form>
