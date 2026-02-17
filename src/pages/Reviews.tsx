@@ -1,42 +1,44 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Box, Typography, Stack, Avatar } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Avatar,
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
 import { Star } from 'lucide-react';
-import Card from '../components/common/Card';
-import Select from '../components/common/Select';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
-import type { ApiReview } from '../lib/types/review'; // ✅ IMPORT TYPE
-
-/* ================= UI TYPE ================= */
+import type { ApiReview } from '../lib/types/review';
 
 interface Review {
   id: string;
   customer: string;
   outletId: string;
   outletName: string;
-  date: string;
   rating: number;
   comment: string;
+  date: string;
 }
 
-/* ================= COMPONENT ================= */
-
-export default function Reviews() {
+export default function ReviewsDemo() {
   const { user } = useAuth();
-  const [selectedOutlet, setSelectedOutlet] = useState('all');
   const [allReviews, setAllReviews] = useState<Review[]>([]);
+  const [selectedOutlet, setSelectedOutlet] = useState('all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(false);
 
-  /* ================= LOAD REVIEWS ================= */
-
+  /*  LOAD API DATA  */
   useEffect(() => {
     const loadReviews = async () => {
       try {
         setLoading(true);
+        const data: ApiReview[] = await reviewsApi.getAll();
 
-        const data = await reviewsApi.getAll(); // already typed in API
-
-        const mapped: Review[] = data.map((r: ApiReview) => {
+        const mapped: Review[] = data.map((r) => {
           const questionMap = new Map(
             r.formId?.questions?.map((q) => [q._id, q.type]) ?? []
           );
@@ -79,7 +81,6 @@ export default function Reviews() {
   }, []);
 
   /* ================= FILTER LOGIC ================= */
-
   const filteredReviews = useMemo(() => {
     if (!user) return [];
 
@@ -96,26 +97,18 @@ export default function Reviews() {
     }
 
     if (selectedOutlet !== 'all') {
-      reviews = reviews.filter(
-        (r) => r.outletId === selectedOutlet
-      );
+      reviews = reviews.filter((r) => r.outletId === selectedOutlet);
     }
 
     return reviews;
   }, [selectedOutlet, user, allReviews]);
 
-  /* ================= OUTLET LIST ================= */
-
+  /*  OUTLET LIST  */
   const outlets = useMemo(() => {
     let base = allReviews;
 
-    if (
-      user?.role !== 'admin' &&
-      Array.isArray(user?.outletId)
-    ) {
-      base = base.filter((r) =>
-        user.outletId!.includes(r.outletId)
-      );
+    if (user?.role !== 'admin' && Array.isArray(user?.outletId)) {
+      base = base.filter((r) => user.outletId!.includes(r.outletId));
     }
 
     return Array.from(
@@ -123,16 +116,28 @@ export default function Reviews() {
     );
   }, [user, allReviews]);
 
-  /* ================= RENDER ================= */
+  /*  SORT + GROUP  */
+  const groupedReviews = useMemo(() => {
+    const sorted = [...filteredReviews].sort((a, b) =>
+      sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating
+    );
+
+    const groups: Record<number, Review[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    sorted.forEach((review) => groups[review.rating].push(review));
+
+    return groups;
+  }, [filteredReviews, sortOrder]);
+
+  const ratingOrder = sortOrder === 'asc' ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
 
   return (
-    <Box>
-      <Box
-        display="flex"
-        flexDirection={{ xs: 'column', sm: 'row' }}
+    <Box p={4}>
+      {/* HEADER */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
         alignItems={{ xs: 'flex-start', sm: 'center' }}
-        gap={2}
+        spacing={2}
         mb={4}
       >
         <Box>
@@ -140,98 +145,128 @@ export default function Reviews() {
             Reviews
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Customer feedback across outlets
+            Customer feedback grouped by rating
           </Typography>
         </Box>
 
-        {(user?.role === 'admin' ||
-          (Array.isArray(user?.outletId) &&
-            user.outletId.length > 1)) && (
-          <Box width={{ xs: '100%', sm: 280 }}>
-            <Select
-              label="Filter by Outlet"
-              options={[
-                { label: 'All Outlets', value: 'all' },
-                ...outlets.map(([id, name]) => ({
-                  label: name || id,
-                  value: id,
-                })),
-              ]}
-              value={selectedOutlet}
-              onChange={(e) =>
-                setSelectedOutlet(e.target.value)
-              }
-            />
-          </Box>
-        )}
-      </Box>
-
-      {loading && (
-        <Typography>Loading reviews...</Typography>
-      )}
-
-      <Stack spacing={2}>
-        {filteredReviews.map((review) => (
-          <Card key={review.id} sx={{ p: 2.5, borderRadius: '20px' }}>
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              mb={1.5}
-            >
-              <Box display="flex" alignItems="center" gap={1.5}>
-                <Avatar
-                  variant="rounded"
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    bgcolor: '#1F2937',
-                  }}
-                >
-                  {review.customer?.charAt(0)}
-                </Avatar>
-
-                <Box>
-                  <Typography fontWeight={800}>
-                    {review.customer}
-                  </Typography>
-                  <Typography variant="caption">
-                    {review.outletName} • {review.date}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box display="flex" gap={0.5}>
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    size={16}
-                    fill={i < review.rating ? '#D4AF37' : 'none'}
-                    color={
-                      i < review.rating
-                        ? '#D4AF37'
-                        : '#E5E7EB'
-                    }
-                  />
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          width={{ xs: '100%', sm: 'auto' }}
+        >
+          {/* Outlet Filter */}
+          {(user?.role === 'admin' || (Array.isArray(user?.outletId) && user.outletId.length > 1)) && (
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Filter by Outlet</InputLabel>
+              <Select
+                value={selectedOutlet}
+                label="Filter by Outlet"
+                onChange={(e) => setSelectedOutlet(e.target.value)}
+              >
+                <MenuItem value="all">All Outlets</MenuItem>
+                {outlets.map(([id, name]) => (
+                  <MenuItem key={id} value={id}>
+                    {name}
+                  </MenuItem>
                 ))}
-              </Box>
+              </Select>
+            </FormControl>
+          )}
+
+          {/* Sort Filter */}
+          <FormControl size="small" sx={{ minWidth: 220 }}>
+            <InputLabel>Sort by Rating</InputLabel>
+            <Select
+              value={sortOrder}
+              label="Sort by Rating"
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+            >
+              <MenuItem value="desc">Highest to Lowest</MenuItem>
+              <MenuItem value="asc">Lowest to Highest</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
+      </Stack>
+
+      {/* Loading */}
+      {loading && <Typography>Loading reviews...</Typography>}
+
+      {/* RATING SECTIONS */}
+      {ratingOrder.map((rating) =>
+        groupedReviews[rating].length > 0 ? (
+          <Box key={rating} mb={5}>
+            {/* Rating Header */}
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              {[...Array(rating)].map((_, i) => (
+                <Star key={i} size={18} fill="#D4AF37" color="#D4AF37" />
+              ))}
+              <Typography fontWeight={700}>({groupedReviews[rating].length})</Typography>
             </Box>
 
-            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-              "{review.comment}"
-            </Typography>
-          </Card>
-        ))}
+            {/* Cards Grid */}
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+                lg: 'repeat(4, 1fr)',
+              }}
+              gap={2}
+            >
+              {groupedReviews[rating].map((review) => (
+                <Box
+                  key={review.id}
+                  sx={{
+                    width: 280,
+                    p: 2.5,
+                    borderRadius: '16px',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
+                    backgroundColor: '#fff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                  }}
+                >
+                  <Box display="flex" justifyContent="space-between">
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Avatar sx={{ width: 32, height: 32 }}>
+                        {review.customer.charAt(0)}
+                      </Avatar>
+                      <Typography fontWeight={700} fontSize={14}>
+                        {review.customer}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {review.date}
+                    </Typography>
+                  </Box>
 
-        {!loading && filteredReviews.length === 0 && (
-          <Box py={10} textAlign="center">
-            <Typography color="text.secondary">
-              No reviews found for this selection.
-            </Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#6B7280' }}>
+                    {review.outletName}
+                  </Typography>
+
+                  <Box display="flex" gap={0.5}>
+                    {[...Array(review.rating)].map((_, i) => (
+                      <Star key={i} size={16} fill="#D4AF37" color="#D4AF37" />
+                    ))}
+                  </Box>
+
+                  <Typography variant="body2" sx={{ fontSize: 14, color: '#374151' }}>
+                    {review.comment}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           </Box>
-        )}
-      </Stack>
+        ) : null
+      )}
+
+      {!loading && filteredReviews.length === 0 && (
+        <Box py={10} textAlign="center">
+          <Typography color="text.secondary">No reviews found for this selection.</Typography>
+        </Box>
+      )}
     </Box>
   );
 }
