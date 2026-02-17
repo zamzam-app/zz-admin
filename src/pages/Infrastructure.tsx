@@ -18,6 +18,7 @@ export default function Infrastructure() {
   const [selectedQrStore, setSelectedQrStore] = useState<StoreType | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newStore, setNewStore] = useState<Partial<StoreType>>({});
+  const [outletToDelete, setOutletToDelete] = useState<StoreType | null>(null);
   const [availableForms] = useState<Form[]>(() => {
     try {
       const stored = localStorage.getItem('saved_forms');
@@ -111,9 +112,6 @@ export default function Infrastructure() {
     setEditingId(null);
   };
 
-  const handleDelete = (id: string) => {
-    setStores(stores.filter((store) => store.id !== id));
-  };
   return (
     <div className='space-y-8'>
       {/* Header */}
@@ -150,7 +148,7 @@ export default function Infrastructure() {
 
               <div className='flex gap-2'>
                 <button
-                  onClick={() => handleDelete(store.id)}
+                  onClick={() => setOutletToDelete(store)}
                   className='p-2 text-red-500 hover:bg-red-50 rounded-xl'
                 >
                   <Trash2 size={16} />
@@ -307,6 +305,35 @@ export default function Infrastructure() {
           <Button onClick={handleDownloadQr} variant='admin-primary'>
             <Download size={16} className='mr-2' /> Download QR Code
           </Button>
+        </div>
+      </Modal>
+      <Modal open={!!outletToDelete} onClose={() => setOutletToDelete(null)} title='Delete Outlet?'>
+        <div className='flex flex-col items-center text-center -mt-2'>
+          <p className='text-gray-500 text-sm leading-relaxed mb-8'>
+            Are you sure you want to delete{' '}
+            <span className='font-bold text-[#1F2937]'>"{outletToDelete?.name}"</span>? <br />
+          </p>
+
+          <div className='flex gap-3 w-full'>
+            <button
+              onClick={() => setOutletToDelete(null)}
+              className='flex-1 py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all'
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={() => {
+                if (outletToDelete) {
+                  setStores((prev) => prev.filter((s) => s.id !== outletToDelete.id));
+                  setOutletToDelete(null);
+                }
+              }}
+              className='flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-100 transition-all active:scale-95'
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
