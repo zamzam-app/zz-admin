@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { storesList } from '../../__mocks__/managers';
 import { Store } from '../../lib/types/types';
+import { Modal } from '../common/Modal';
 
 const drawerWidth = 280;
 
@@ -59,6 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
+  const [logoutOpen, setLogoutOpen] = React.useState(false);
 
   const role = user?.role || 'staff';
 
@@ -82,20 +84,19 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
    3. Build navigation (IMMUTABLE)
   ================================= */
   const navItems = React.useMemo(() => {
-  if (role === 'admin') {
-    return [...adminNavItems, ...cafeNavItems];
-  }
+    if (role === 'admin') {
+      return [...adminNavItems, ...cafeNavItems];
+    }
 
-  const base = staffNavItems;
+    const base = staffNavItems;
 
-  if (!isCafeEnabled) return base;
+    if (!isCafeEnabled) return base;
 
-  const existingPaths = new Set(base.map((i) => i.path));
-  const cafeItems = cafeNavItems.filter((i) => !existingPaths.has(i.path));
+    const existingPaths = new Set(base.map((i) => i.path));
+    const cafeItems = cafeNavItems.filter((i) => !existingPaths.has(i.path));
 
-  return [...base, ...cafeItems];
-}, [role, isCafeEnabled]);
-
+    return [...base, ...cafeItems];
+  }, [role, isCafeEnabled]);
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -190,10 +191,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
       {/* Logout at bottom */}
       <List sx={{ px: 2, pb: 3 }}>
         <ListItemButton
-    onClick={() => {
-      console.log('Logout clicked');
-      logout();
-    }}
+          onClick={() => setLogoutOpen(true)}
           sx={{
             borderRadius: '16px',
             bgcolor: 'rgba(239, 68, 68, 0.1)',
@@ -212,6 +210,31 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
           <ListItemText primary='Logout' primaryTypographyProps={{ fontWeight: 700 }} />
         </ListItemButton>
       </List>
+      <Modal open={logoutOpen} onClose={() => setLogoutOpen(false)} title='Logout?'>
+        <div className='flex flex-col items-center text-center -mt-2'>
+          <p className='text-gray-500 leading-relaxed mb-8'>Are you sure you want to logout?</p>
+
+          <div className='flex gap-3 w-full'>
+            <button
+              onClick={() => setLogoutOpen(false)}
+              className='flex-1 py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all'
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={() => {
+                logout();
+                setLogoutOpen(false);
+                navigate('/login');
+              }}
+              className='flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-100 transition-all active:scale-95'
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </Modal>
     </Box>
   );
 
