@@ -23,12 +23,12 @@ const FormEditor: React.FC<Props> = ({
   useEffect(() => {
     if (currentForm.questions.length === 0) {
       const ratingQuestion: Question = {
-        id: 'delTest',
+        _id: 'delTest',
         type: 'rating',
         title: 'Overall Rating',
         hint: 'Please rate your experience',
-        required: true,
-        maxRating: 5,
+        isRequired: true,
+        maxRatings: 5,
       };
 
       setCurrentForm({
@@ -44,42 +44,23 @@ const FormEditor: React.FC<Props> = ({
       ...currentForm,
       questions: [
         ...currentForm.questions,
-        { id: newId, type: 'short_answer', title: '', hint: '', required: false },
+        { _id: newId, type: 'short_answer', title: '', hint: '', isRequired: false },
       ],
     });
   };
 
-  const updateQuestion = (id: string, updates: Partial<Question>) => {
+  const updateQuestion = (_id: string, updates: Partial<Question>) => {
     setCurrentForm({
       ...currentForm,
       questions: currentForm.questions.map((q) => {
-        if (q.id !== id) return q;
-
-        if (updates.type === 'linear_scale' && q.type !== 'linear_scale') {
-          return {
-            ...q,
-            ...updates,
-            scale: {
-              min: 1,
-              max: 5,
-              minLabel: '',
-              maxLabel: '',
-            },
-          };
-        }
+        if (q._id !== _id) return q;
 
         if (updates.type === 'rating' && q.type !== 'rating') {
           return {
             ...q,
             ...updates,
-            maxRating: 5,
+            maxRatings: 5,
           };
-        }
-
-        if (q.type === 'linear_scale' && updates.type && updates.type !== 'linear_scale') {
-          const rest = { ...q };
-          delete rest.scale;
-          return { ...rest, ...updates };
         }
 
         return { ...q, ...updates };
@@ -91,13 +72,13 @@ const FormEditor: React.FC<Props> = ({
     setCurrentForm({
       ...currentForm,
       questions: currentForm.questions.map((q) =>
-        q.id === qId
+        q._id === qId
           ? {
               ...q,
               options: [
                 ...(q.options || []),
                 {
-                  id: Date.now().toString(),
+                  _id: Date.now().toString(),
                   text: `Option ${(q.options?.length || 0) + 1}`,
                 },
               ],
@@ -111,7 +92,7 @@ const FormEditor: React.FC<Props> = ({
     setCurrentForm({
       ...currentForm,
       questions: currentForm.questions.map((q) => {
-        if (q.id !== qId) return q;
+        if (q._id !== qId) return q;
 
         // prevent duplicate "Other"
         if (q.options?.some((o) => o.isOther)) return q;
@@ -121,7 +102,7 @@ const FormEditor: React.FC<Props> = ({
           options: [
             ...(q.options || []),
             {
-              id: 'other',
+              _id: 'other',
               text: 'Other:',
               isOther: true,
             },
@@ -176,7 +157,7 @@ const FormEditor: React.FC<Props> = ({
       <div className='space-y-6'>
         {currentForm.questions.map((q, idx) => (
           <Card
-            key={q.id}
+            key={q._id}
             className='p-8 border border-gray-100 rounded-[28px] bg-white shadow-sm hover:border-blue-200 transition-all'
           >
             <div className='flex flex-col md:flex-row gap-6 mb-6'>
@@ -189,7 +170,7 @@ const FormEditor: React.FC<Props> = ({
                     className='w-full text-lg font-black text-[#1F2937] bg-transparent outline-none border-b-2 border-gray-50 focus:border-blue-500 py-1 transition-all'
                     placeholder='Enter your question here...'
                     value={q.title}
-                    onChange={(e) => updateQuestion(q.id, { title: e.target.value })}
+                    onChange={(e) => updateQuestion(q._id, { title: e.target.value })}
                   />
                 </div>
 
@@ -199,29 +180,28 @@ const FormEditor: React.FC<Props> = ({
                     className='w-full text-sm bg-transparent outline-none border-b border-dashed border-gray-200 focus:border-gray-400 italic'
                     placeholder='Add a helpful hint for users'
                     value={q.hint}
-                    onChange={(e) => updateQuestion(q.id, { hint: e.target.value })}
+                    onChange={(e) => updateQuestion(q._id, { hint: e.target.value })}
                   />
                 </div>
               </div>
 
               <select
-                disabled={q.id === 'delTest'}
+                disabled={q._id === 'delTest'}
                 className={`h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer
                   ${
-                    q.id === 'delTest'
+                    q._id === 'delTest'
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
                   }
                   `}
                 value={q.type}
-                onChange={(e) => updateQuestion(q.id, { type: e.target.value as QuestionType })}
+                onChange={(e) => updateQuestion(q._id, { type: e.target.value as QuestionType })}
               >
                 <option value='short_answer'>Short Answer</option>
                 <option value='paragraph'>Paragraph</option>
                 <option value='multiple_choice'>Multiple Choice</option>
                 <option value='checkbox'>Checkboxes</option>
                 <option value='rating'>Star Rating</option>
-                <option value='linear_scale'>Linear Scale</option>
               </select>
             </div>
 
@@ -230,7 +210,7 @@ const FormEditor: React.FC<Props> = ({
               {['multiple_choice', 'checkbox'].includes(q.type) ? (
                 <div className='space-y-3'>
                   {q.options?.map((o) => (
-                    <div key={o.id} className='flex items-center gap-3 group'>
+                    <div key={o._id} className='flex items-center gap-3 group'>
                       <div
                         className={`w-4 h-4 rounded-full border-2 ${q.type === 'checkbox' ? 'rounded-md' : 'rounded-full'} border-gray-200`}
                       />
@@ -250,9 +230,9 @@ const FormEditor: React.FC<Props> = ({
                           className='flex-1 border-b border-gray-100 outline-none py-1 focus:border-blue-400 text-[#1F2937] font-medium'
                           value={o.text}
                           onChange={(e) =>
-                            updateQuestion(q.id, {
+                            updateQuestion(q._id, {
                               options: q.options?.map((opt) =>
-                                opt.id === o.id ? { ...opt, text: e.target.value } : opt,
+                                opt._id === o._id ? { ...opt, text: e.target.value } : opt,
                               ),
                             })
                           }
@@ -260,8 +240,8 @@ const FormEditor: React.FC<Props> = ({
                       )}
                       <button
                         onClick={() =>
-                          updateQuestion(q.id, {
-                            options: q.options?.filter((opt) => opt.id !== o.id),
+                          updateQuestion(q._id, {
+                            options: q.options?.filter((opt) => opt._id !== o._id),
                           })
                         }
                         className='p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition'
@@ -272,13 +252,13 @@ const FormEditor: React.FC<Props> = ({
                   ))}
                   <div className='flex items-center gap-2 mt-4 text-sm font-black'>
                     <button
-                      onClick={() => addNormalOption(q.id)}
+                      onClick={() => addNormalOption(q._id)}
                       className='text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4'
                     >
                       <Plus size={14} /> Add Option
                     </button>
                     <button
-                      onClick={() => addOtherOption(q.id)}
+                      onClick={() => addOtherOption(q._id)}
                       className='text-sm font-black text-blue-500 hover:text-blue-600 flex items-center gap-2 mt-4'
                     >
                       | Add Other
@@ -289,93 +269,22 @@ const FormEditor: React.FC<Props> = ({
                 <div className='flex items-center gap-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 w-fit'>
                   <select
                     className='bg-white border-2 border-blue-100 rounded-lg px-3 py-1 font-bold text-blue-600 outline-none'
-                    value={q.maxRating || 5}
-                    onChange={(e) => updateQuestion(q.id, { maxRating: Number(e.target.value) })}
+                    value={q.maxRatings || 5}
+                    onChange={(e) => updateQuestion(q._id, { maxRatings: Number(e.target.value) })}
                   >
                     <option value={3}>3 Stars</option>
                     <option value={5}>5 Stars</option>
                     <option value={10}>10 Stars</option>
                   </select>
                   <div className='flex gap-1 text-amber-400'>
-                    {Array.from({ length: q.maxRating || 5 }).map((_, i) => (
+                    {Array.from({ length: q.maxRatings || 5 }).map((_, i) => (
                       <Star key={i} size={20} fill='currentColor' />
                     ))}
                   </div>
                 </div>
-              ) : q.type === 'linear_scale' ? null : (
+              ) : (
                 <div className='py-3 border-b-2 border-dashed border-gray-100 text-gray-300 font-medium italic'>
                   User input field...
-                </div>
-              )}
-
-              {q.type === 'linear_scale' && q.scale && (
-                <div className='bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-4 w-fit'>
-                  <div className='flex items-center gap-4'>
-                    <span className='font-bold text-sm text-gray-600'>Scale</span>
-
-                    <select
-                      value={q.scale.min}
-                      onChange={(e) =>
-                        updateQuestion(q.id, {
-                          scale: { ...q.scale!, min: Number(e.target.value) },
-                        })
-                      }
-                      className='border rounded-lg px-2 py-1 font-bold'
-                    >
-                      {[0, 1].map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-
-                    <span>to</span>
-
-                    <select
-                      value={q.scale.max}
-                      onChange={(e) =>
-                        updateQuestion(q.id, {
-                          scale: { ...q.scale!, max: Number(e.target.value) },
-                        })
-                      }
-                      className='border rounded-lg px-2 py-1 font-bold'
-                    >
-                      {[3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className='flex gap-4'>
-                    <input
-                      placeholder='Label for lowest value'
-                      value={q.scale.minLabel || ''}
-                      onChange={(e) =>
-                        updateQuestion(q.id, {
-                          scale: { ...q.scale!, minLabel: e.target.value },
-                        })
-                      }
-                      className='border rounded-lg px-3 py-2 w-48'
-                    />
-
-                    <input
-                      placeholder='Label for highest value'
-                      value={q.scale.maxLabel || ''}
-                      onChange={(e) =>
-                        updateQuestion(q.id, {
-                          scale: { ...q.scale!, maxLabel: e.target.value },
-                        })
-                      }
-                      className='border rounded-lg px-3 py-2 w-48'
-                    />
-                  </div>
-
-                  <div className='flex justify-between text-sm font-bold text-gray-500'>
-                    <span>{q.scale.minLabel || q.scale.min}</span>
-                    <span>{q.scale.maxLabel || q.scale.max}</span>
-                  </div>
                 </div>
               )}
             </div>
@@ -383,23 +292,23 @@ const FormEditor: React.FC<Props> = ({
             {/* Question Footer */}
             <div className='mt-8 pt-6 border-t border-gray-50 flex justify-between items-center'>
               <button
-                disabled={q.id === 'delTest'}
+                disabled={q._id === 'delTest'}
                 onClick={() => {
-                  if (q.id === 'delTest') return;
+                  if (q._id === 'delTest') return;
                   setCurrentForm({
                     ...currentForm,
-                    questions: currentForm.questions.filter((item) => item.id !== q.id),
+                    questions: currentForm.questions.filter((item) => item._id !== q._id),
                   });
                 }}
                 className={`flex items-center gap-2 text-gray-400 font-bold transition-colors
                           ${
-                            q.id === 'delTest'
+                            q._id === 'delTest'
                               ? 'text-gray-300 cursor-not-allowed'
                               : 'text-gray-400 hover:text-red-500 cursor-pointer'
                           }
                   `}
               >
-                <Trash2 size={18} className={q.id === 'delTest' ? 'text-gray-300' : ''} /> Delete
+                <Trash2 size={18} className={q._id === 'delTest' ? 'text-gray-300' : ''} /> Delete
                 Question
               </button>
 
@@ -409,8 +318,8 @@ const FormEditor: React.FC<Props> = ({
                 </span>
                 <input
                   type='checkbox'
-                  checked={q.required}
-                  onChange={(e) => updateQuestion(q.id, { required: e.target.checked })}
+                  checked={q.isRequired}
+                  onChange={(e) => updateQuestion(q._id, { isRequired: e.target.checked })}
                   className='w-5 h-5 rounded-lg border-2 border-gray-200 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer'
                 />
               </label>

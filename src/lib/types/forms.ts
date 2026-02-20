@@ -1,36 +1,25 @@
-export type QuestionType =
-  | 'short_answer'
-  | 'paragraph'
-  | 'multiple_choice'
-  | 'checkbox'
-  | 'rating'
-  | 'linear_scale';
+export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'checkbox' | 'rating';
 
 export interface Option {
-  id: string;
+  _id?: string;
   text: string;
+  selected?: boolean;
   isOther?: boolean;
 }
 
 export interface Question {
-  id: string;
+  _id: string;
   type: QuestionType;
   title: string;
+  isRequired: boolean;
   hint?: string;
   options?: Option[];
-  required: boolean;
-  maxRating?: number;
-
-  scale?: {
-    min: number; // e.g. 1
-    max: number; // e.g. 5
-    minLabel?: string;
-    maxLabel?: string;
-  };
+  maxRatings?: number;
 }
 
 export interface Form {
   _id: string;
   title: string;
+  version?: number;
   questions: Question[];
 }
