@@ -15,6 +15,7 @@ import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
 import type { ApiReview } from '../lib/types/review';
 import { ComplaintStatus } from '../lib/types/review';
+import { ReviewPreviewModal } from '../components/resource/ReviewPreviewModal';
 
 /* ─── helper type for the mapped review ─── */
 interface Review {
@@ -51,6 +52,9 @@ export default function ReviewsDemo() {
   const [selectedOutlet, setSelectedOutlet] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(false);
+  const [previewReviewId, setPreviewReviewId] = useState<string | null>(null);
+  const [previewReview, setPreviewReview] = useState<ApiReview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   /*  LOAD API DATA  */
   useEffect(() => {
@@ -125,6 +129,26 @@ export default function ReviewsDemo() {
 
     loadReviews();
   }, []);
+
+  /* ─── Fetch full review when opening preview ─── */
+  useEffect(() => {
+    if (!previewReviewId) {
+      setPreviewReview(null);
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewReview(null);
+    reviewsApi
+      .getOne(previewReviewId)
+      .then((data) => setPreviewReview(data))
+      .catch(() => setPreviewReview(null))
+      .finally(() => setPreviewLoading(false));
+  }, [previewReviewId]);
+
+  const handleClosePreview = () => {
+    setPreviewReviewId(null);
+    setPreviewReview(null);
+  };
 
   /* ================= FILTER LOGIC ================= */
   const filteredReviews = useMemo(() => {
@@ -336,6 +360,7 @@ export default function ReviewsDemo() {
               {filteredComplaints.map((review) => (
                 <Box
                   key={review.id}
+                  onClick={() => setPreviewReviewId(review.id)}
                   sx={{
                     width: 280,
                     p: 2.5,
@@ -346,6 +371,8 @@ export default function ReviewsDemo() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.5,
+                    cursor: 'pointer',
+                    '&:hover': { boxShadow: '0 8px 20px rgba(0,0,0,0.12)' },
                   }}
                 >
                   <Box display='flex' justifyContent='space-between'>
@@ -375,7 +402,7 @@ export default function ReviewsDemo() {
                   </Typography>
 
                   {/* ── Action buttons ── */}
-                  <Box display='flex' gap={1} mt='auto'>
+                  <Box display='flex' gap={1} mt='auto' onClick={(e) => e.stopPropagation()}>
                     <Button
                       size='small'
                       onClick={() => handleResolve()}
@@ -454,6 +481,7 @@ export default function ReviewsDemo() {
                     {groupedReviews[rating].map((review) => (
                       <Box
                         key={review.id}
+                        onClick={() => setPreviewReviewId(review.id)}
                         sx={{
                           width: 280,
                           p: 2.5,
@@ -463,6 +491,8 @@ export default function ReviewsDemo() {
                           display: 'flex',
                           flexDirection: 'column',
                           gap: 1.5,
+                          cursor: 'pointer',
+                          '&:hover': { boxShadow: '0 8px 20px rgba(0,0,0,0.12)' },
                         }}
                       >
                         <Box display='flex' justifyContent='space-between'>
@@ -507,6 +537,13 @@ export default function ReviewsDemo() {
           </Box>
         </Box>
       </Box>
+
+      <ReviewPreviewModal
+        open={!!previewReviewId}
+        onClose={handleClosePreview}
+        review={previewReview}
+        loading={previewLoading}
+      />
     </Box>
   );
 }

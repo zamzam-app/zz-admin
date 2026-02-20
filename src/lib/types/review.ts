@@ -25,6 +25,7 @@ export interface ApiReview {
     questions: {
       _id: string;
       type: string;
+      title?: string;
     }[];
   };
 
