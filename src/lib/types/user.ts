@@ -8,6 +8,8 @@ export interface User {
   phoneNumber?: string;
   outletId?: string[];
   token?: string;
+   isActive?: boolean;   
+  isBlocked?: boolean;
 }
 
 /* Payloads */
@@ -31,6 +33,7 @@ export interface UpdateUserPayload {
   password?: string;
   outletId?: string[];
   isActive?: boolean;
+   isBlocked?: boolean;
 }
 
 export interface LoginPayload {

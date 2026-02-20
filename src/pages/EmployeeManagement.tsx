@@ -20,6 +20,7 @@ type Employee = {
   password?: string;
   phoneNumber?: string;
   role: string;
+  isBlocked?: boolean;
 };
 
 const EMPLOYEE_KEYS = ['employees'];
@@ -28,6 +29,8 @@ export default function EmployeeManagement() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<Partial<Employee>>({});
+const [blockOpen, setBlockOpen] = useState(false);
+const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
 
   // 1. Fetching Data
   const { data: employees = [], isLoading } = useApiQuery(EMPLOYEE_KEYS, usersApi.getAll);
@@ -48,6 +51,8 @@ export default function EmployeeManagement() {
       onSuccess: () => setOpen(false),
     },
   );
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
   const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [EMPLOYEE_KEYS]);
 
@@ -91,13 +96,52 @@ export default function EmployeeManagement() {
       });
     }
   };
-
   const handleDelete = (emp: Employee) => {
-    const id = emp._id || emp.id;
-    if (id && window.confirm(`Are you sure you want to delete ${emp.name}?`)) {
-      deleteMutation.mutate(id);
+    setSelectedEmployee(emp);
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    const id = selectedEmployee?._id || selectedEmployee?.id;
+    if (id) {
+      deleteMutation.mutate(id, {
+        onSuccess: () => {
+          setDeleteOpen(false);
+          setSelectedEmployee(null);
+        },
+      });
     }
   };
+  const blockMutation = useApiMutation(
+    (data: { id: string; isBlocked: boolean }) =>
+      usersApi.update(data.id, { isBlocked: data.isBlocked }),
+    [EMPLOYEE_KEYS],
+  );
+  const openBlockModal = (emp: Employee) => {
+  setSelectedForBlock(emp);
+  setBlockOpen(true);
+};
+
+const confirmBlockToggle = () => {
+  if (!selectedForBlock) return;
+
+  const id = selectedForBlock._id || selectedForBlock.id;
+  if (!id) return;
+
+  blockMutation.mutate(
+    {
+      id,
+      isBlocked: !selectedForBlock.isBlocked,
+    },
+    {
+      onSuccess: () => {
+        setBlockOpen(false);
+        setSelectedForBlock(null);
+      },
+    }
+  );
+};
+
 
   return (
     <Box>
@@ -170,8 +214,15 @@ export default function EmployeeManagement() {
                   border: '1px solid rgba(229, 231, 235, 0.5)',
                   background: '#FFFFFF',
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  opacity:
-                    deleteMutation.isPending && deleteMutation.variables === emp.id ? 0.6 : 1,
+                 opacity:
+      emp.isBlocked
+        ? 0.6
+        : deleteMutation.isPending &&
+          deleteMutation.variables === (emp._id || emp.id)
+        ? 0.6
+        : 1,
+
+    filter: emp.isBlocked ? 'grayscale(60%)' : 'none',
                   '&:hover': {
                     transform: 'translateY(-10px)',
                     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.06)',
@@ -208,24 +259,47 @@ export default function EmployeeManagement() {
                   </Typography>
 
                   {/* Role Badge */}
-                  <Box
-                    sx={{
-                      px: 2,
-                      py: 0.5,
-                      borderRadius: '100px',
-                      fontSize: '0.65rem',
-                      fontWeight: 900,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      mb: 3,
-                      ...(emp.role.toLowerCase() === 'manager'
-                        ? { bgcolor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #DBEAFE' }
-                        : emp.role.toLowerCase() === 'admin'
-                          ? { bgcolor: '#F5F3FF', color: '#6D28D9', border: '1px solid #EDE9FE' }
-                          : { bgcolor: '#F9FAFB', color: '#374151', border: '1px solid #F3F4F6' }),
-                    }}
-                  >
-                    {emp.role}
+                  <Box display='flex' alignItems='center' gap={1} mb={3}>
+                    {/* Role Badge */}
+                    <Box
+                      sx={{
+                        px: 2,
+                        py: 0.5,
+                        borderRadius: '100px',
+                        fontSize: '0.65rem',
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        ...(emp.role.toLowerCase() === 'manager'
+                          ? { bgcolor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #DBEAFE' }
+                          : { bgcolor: '#F5F3FF', color: '#6D28D9', border: '1px solid #EDE9FE' }),
+                      }}
+                    >
+                      {emp.role}
+                    </Box>
+
+                    {/* Block / Unblock Button */}
+                    {/* Block / Unblock Toggle */}
+<label className="relative inline-flex items-center cursor-pointer">
+  <input
+    type="checkbox"
+    className="sr-only"
+    checked={emp.isBlocked}
+    onChange={() => openBlockModal(emp)} // Or directly call confirmBlockToggle if you want instant toggle
+    disabled={blockMutation.isPending}
+  />
+  <span
+    className={`w-12 h-6 bg-red-200 rounded-full transition-all ${
+      emp.isBlocked ? 'bg-red-500' : 'bg-red-200'
+    }`}
+  ></span>
+  <span
+    className={`absolute left-0 top-0 w-6 h-6 bg-white border border-gray-300 rounded-full shadow-md transform transition-transform ${
+      emp.isBlocked ? 'translate-x-6' : 'translate-x-0'
+    }`}
+  ></span>
+</label>
+
                   </Box>
 
                   {/* Contact Details */}
@@ -340,7 +414,6 @@ export default function EmployeeManagement() {
               label='Role'
               options={[
                 { label: 'Manager', value: 'manager' },
-                { label: 'Staff', value: 'staff' },
                 { label: 'Admin', value: 'admin' },
               ]}
               value={form.role || ''}
@@ -385,6 +458,104 @@ export default function EmployeeManagement() {
           </div>
         </form>
       </Modal>
+      <Modal
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          setSelectedEmployee(null);
+        }}
+        title='Delete Employee?'
+        maxWidth='sm'
+      >
+        <div className='flex flex-col items-center text-center -mt-2'>
+          <p className='text-gray-500 leading-relaxed mb-8'>
+            Are you sure you want to delete{' '}
+            <span className='font-bold text-[#1F2937]'>"{selectedEmployee?.name}"</span>?
+          </p>
+
+          <div className='flex gap-3 w-full'>
+            <button
+              onClick={() => {
+                setDeleteOpen(false);
+                setSelectedEmployee(null);
+              }}
+              className='flex-1 py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all'
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className='flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center justify-center gap-2'
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 size={16} className='animate-spin' />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+  open={blockOpen}
+  onClose={() => {
+    setBlockOpen(false);
+    setSelectedForBlock(null);
+  }}
+  title={
+    selectedForBlock?.isBlocked
+      ? "Unblock User?"
+      : "Block User?"
+  }
+  maxWidth="sm"
+>
+  <div className="flex flex-col items-center text-center -mt-2">
+    <p className="text-gray-500 leading-relaxed mb-8">
+      {selectedForBlock?.isBlocked
+        ? "This user will regain access to the system."
+        : "This user will no longer be able to access the system."}
+    </p>
+
+    <div className="flex gap-3 w-full">
+      <button
+        onClick={() => {
+          setBlockOpen(false);
+          setSelectedForBlock(null);
+        }}
+        className="flex-1 py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all"
+      >
+        Cancel
+      </button>
+
+      <button
+        onClick={confirmBlockToggle}
+        disabled={blockMutation.isPending}
+        className={`flex-1 py-3 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
+          selectedForBlock?.isBlocked
+            ? "bg-green-500 hover:bg-green-600 shadow-green-100"
+            : "bg-red-500 hover:bg-red-600 shadow-red-100"
+        }`}
+      >
+        {blockMutation.isPending ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            Processing...
+          </>
+        ) : selectedForBlock?.isBlocked ? (
+          "Unblock"
+        ) : (
+          "Block"
+        )}
+      </button>
+    </div>
+  </div>
+</Modal>
+
     </Box>
   );
 }
