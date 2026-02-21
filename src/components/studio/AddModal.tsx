@@ -14,7 +14,6 @@ type AddModalProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: (product: Product) => void;
-  /** When set, modal is in edit mode: form prefilled and submit calls PATCH */
   productToEdit?: Product | null;
 };
 
@@ -57,6 +56,14 @@ export const AddModal: React.FC<AddModalProps> = ({
       },
     },
   );
+
+  // Clear form when modal closes
+  useEffect(() => {
+    if (!open) {
+      const t = setTimeout(() => setNewProduct(initialFormState), 0);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
 
   // Sync form state when modal opens (add vs edit) so form shows correct initial values
   useEffect(() => {
@@ -176,9 +183,15 @@ export const AddModal: React.FC<AddModalProps> = ({
           <div>
             <Input
               label='Description'
+              multiline
+              rows={5}
               value={newProduct.description ?? ''}
               onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+              slotProps={{ htmlInput: { maxLength: 1000 } }}
             />
+            <p className='mt-1 text-right text-xs text-gray-500'>
+              {(newProduct.description ?? '').length} / 1000
+            </p>
           </div>
 
           <div>
