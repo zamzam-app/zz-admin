@@ -1,52 +1,27 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Popconfirm } from 'antd';
 import { Box, Typography, IconButton, Avatar, CircularProgress } from '@mui/material';
-import { Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import Input from '../components/common/Input';
-import { Modal } from '../components/common/Modal';
+import { AddModal } from '../components/manager/AddModal';
+import { DeleteModal } from '../components/manager/DeleteModal';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
-import { UpdateUserPayload, CreateUserPayload } from '../lib/types/manager';
-
-type Employee = {
-  id?: string;
-  _id?: string;
-  name: string;
-  userName?: string;
-  email: string;
-  password?: string;
-  phoneNumber?: string;
-  role: string;
-  isActive?: boolean; // ✅ added
-};
+import { UpdateUserPayload, User } from '../lib/types/manager';
 
 const EMPLOYEE_KEYS = ['employees'];
 
 export default function ManagersPage() {
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Employee | null>(null);
-  const [form, setForm] = useState<Partial<Employee>>({});
-  const [blockOpen, setBlockOpen] = useState(false);
-  const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
+  const [editing, setEditing] = useState<User | null>(null);
+  const [blockConfirmEmployee, setBlockConfirmEmployee] = useState<User | null>(null);
 
   const { data: employees = [], isLoading } = useApiQuery(EMPLOYEE_KEYS, usersApi.getAll);
 
-  const createMutation = useApiMutation(
-    (data: CreateUserPayload) => usersApi.create(data),
-    [EMPLOYEE_KEYS],
-    { onSuccess: () => setOpen(false) },
-  );
-
-  const updateMutation = useApiMutation(
-    (data: { id: string; payload: UpdateUserPayload }) => usersApi.update(data.id, data.payload),
-    [EMPLOYEE_KEYS],
-    { onSuccess: () => setOpen(false) },
-  );
-
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
 
   const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [EMPLOYEE_KEYS]);
 
@@ -57,87 +32,42 @@ export default function ManagersPage() {
       } as UpdateUserPayload),
     [EMPLOYEE_KEYS],
     {
-      onSuccess: () => {
-        setBlockOpen(false);
-        setSelectedForBlock(null);
-      },
+      onSuccess: () => setBlockConfirmEmployee(null),
     },
   );
 
   const openAdd = () => {
-    setForm({});
     setEditing(null);
     setOpen(true);
   };
 
-  const openEdit = (emp: Employee) => {
+  const openEdit = (emp: User) => {
     setEditing(emp);
-    setForm(emp);
     setOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.email || !form.userName) return;
-
-    const id = editing?._id || editing?.id;
-
-    if (editing && id) {
-      updateMutation.mutate({
-        id,
-        payload: {
-          name: form.name,
-          userName: form.userName,
-          email: form.email,
-          role: 'manager',
-          phoneNumber: form.phoneNumber,
-          password: form.password,
-        },
-      });
-    } else {
-      createMutation.mutate({
-        name: form.name!,
-        userName: form.userName!,
-        email: form.email!,
-        role: 'manager',
-        phoneNumber: form.phoneNumber!,
-        password: form.password,
-      });
-    }
-  };
-
-  const handleDelete = (emp: Employee) => {
+  const handleDelete = (emp: User) => {
     setSelectedEmployee(emp);
     setDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
-    const id = selectedEmployee?._id || selectedEmployee?.id;
+  const confirmDelete = (id: string) => {
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        setDeleteOpen(false);
+        setSelectedEmployee(null);
+      },
+    });
+  };
+
+  const handleBlockConfirm = (emp: User) => {
+    const id = emp._id || emp.id;
     if (id) {
-      deleteMutation.mutate(id, {
-        onSuccess: () => {
-          setDeleteOpen(false);
-          setSelectedEmployee(null);
-        },
+      blockMutation.mutate({
+        id,
+        isActive: !(emp.isActive ?? true),
       });
     }
-  };
-
-  const openBlockModal = (emp: Employee) => {
-    setSelectedForBlock(emp);
-    setBlockOpen(true);
-  };
-
-  const confirmBlockToggle = () => {
-    if (!selectedForBlock) return;
-
-    const id = selectedForBlock._id || selectedForBlock.id;
-    if (!id) return;
-
-    blockMutation.mutate({
-      id,
-      isActive: !(selectedForBlock.isActive ?? true),
-    });
   };
 
   return (
@@ -295,25 +225,50 @@ export default function ManagersPage() {
                     </Box>
 
                     {/* Block / Unblock Toggle */}
-                    <label className='relative inline-flex items-center cursor-pointer'>
-                      <input
-                        type='checkbox'
-                        className='sr-only'
-                        checked={emp.isActive ?? true}
-                        onChange={() => openBlockModal(emp)}
-                        disabled={blockMutation.isPending}
-                      />
-                      <span
-                        className={`w-12 h-6 bg-red-200 rounded-full transition-all ${
-                          emp.isActive === false ? 'bg-red-500' : 'bg-red-200'
-                        }`}
-                      ></span>
-                      <span
-                        className={`absolute left-0 top-0 w-6 h-6 bg-white border border-gray-300 rounded-full shadow-md transform transition-transform ${
-                          emp.isActive === false ? 'translate-x-6' : 'translate-x-0'
-                        }`}
-                      ></span>
-                    </label>
+                    <Popconfirm
+                      open={
+                        (blockConfirmEmployee?._id || blockConfirmEmployee?.id) ===
+                        (emp._id || emp.id)
+                      }
+                      onOpenChange={(open) => !open && setBlockConfirmEmployee(null)}
+                      title={emp.isActive === false ? 'Unblock User?' : 'Block User?'}
+                      description={
+                        emp.isActive === false
+                          ? 'This user will regain access to the system.'
+                          : 'This user will no longer be able to access the system.'
+                      }
+                      onConfirm={() => handleBlockConfirm(emp)}
+                      okText={emp.isActive === false ? 'Unblock' : 'Block'}
+                      cancelText='Cancel'
+                      okButtonProps={{
+                        className:
+                          emp.isActive === false
+                            ? '!bg-green-500 hover:!bg-green-600'
+                            : '!bg-red-500 hover:!bg-red-600',
+                      }}
+                    >
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <label className='relative inline-flex items-center cursor-pointer'>
+                          <input
+                            type='checkbox'
+                            className='sr-only'
+                            checked={emp.isActive ?? true}
+                            onChange={() => setBlockConfirmEmployee(emp)}
+                            disabled={blockMutation.isPending}
+                          />
+                          <span
+                            className={`w-12 h-6 rounded-full transition-all ${
+                              emp.isActive === false ? 'bg-red-500' : 'bg-red-200'
+                            }`}
+                          />
+                          <span
+                            className={`absolute left-0 top-0 w-6 h-6 bg-white border border-gray-300 rounded-full shadow-md transform transition-transform ${
+                              emp.isActive === false ? 'translate-x-6' : 'translate-x-0'
+                            }`}
+                          />
+                        </label>
+                      </span>
+                    </Popconfirm>
                   </Box>
 
                   {/* Contact Details */}
@@ -387,170 +342,23 @@ export default function ManagersPage() {
         )}
       </Box>
 
-      {/* Modal */}
-      <Modal
+      <AddModal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? 'Edit Employee' : 'Add Employee'}
-        maxWidth='md'
-      >
-        <form onSubmit={handleSave} className='flex flex-col gap-8'>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8'>
-            <Input
-              label='Full Name'
-              placeholder='Enter name'
-              value={form.name || ''}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-            <Input
-              label='Username'
-              placeholder='test-manager-01'
-              value={form.userName || ''}
-              onChange={(e) => setForm({ ...form, userName: e.target.value })}
-              required
-            />
-            <Input
-              label='Email'
-              type='email'
-              placeholder='testmanager01@zamzam.com'
-              value={form.email || ''}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-            />
-            <Input
-              label='Phone Number'
-              placeholder='+1234567890'
-              value={form.phoneNumber || ''}
-              onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-              required
-            />
+        editing={editing}
+        onSuccess={() => setOpen(false)}
+      />
 
-            <Input
-              label='Password'
-              type='password'
-              placeholder='password123'
-              value={form.password || ''}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required={!editing}
-            />
-          </div>
-
-          <div className='flex justify-end items-center gap-4 pt-6 border-t border-gray-100'>
-            <Button
-              type='button'
-              variant='ghost'
-              onClick={() => setOpen(false)}
-              className='font-bold text-gray-400'
-            >
-              Cancel
-            </Button>
-            <Button
-              type='submit'
-              variant='admin-primary'
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className='px-12 py-3.5 rounded-2xl font-black shadow-lg flex items-center justify-center gap-2'
-            >
-              {createMutation.isPending || updateMutation.isPending ? (
-                <>
-                  <Loader2 size={18} className='animate-spin' />
-                  Processing...
-                </>
-              ) : editing ? (
-                'Update Employee'
-              ) : (
-                'Save Employee'
-              )}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-      <Modal
+      <DeleteModal
         open={deleteOpen}
         onClose={() => {
           setDeleteOpen(false);
           setSelectedEmployee(null);
         }}
-        title='Delete Employee?'
-        maxWidth='sm'
-      >
-        <div className='flex flex-col items-center text-center -mt-2'>
-          <p className='text-gray-500 leading-relaxed mb-8'>
-            Are you sure you want to delete{' '}
-            <span className='font-bold text-[#1F2937]'>"{selectedEmployee?.name}"</span>?
-          </p>
-
-          <div className='flex gap-3 w-full'>
-            <button
-              onClick={() => {
-                setDeleteOpen(false);
-                setSelectedEmployee(null);
-              }}
-              className='flex-1 py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all'
-            >
-              Cancel
-            </button>
-
-            <button
-              onClick={confirmDelete}
-              disabled={deleteMutation.isPending}
-              className='flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center justify-center gap-2'
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 size={16} className='animate-spin' />
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
-      <Modal
-        open={blockOpen}
-        onClose={() => {
-          setBlockOpen(false);
-          setSelectedForBlock(null);
-        }}
-        /* FIX: If isActive is true, they are currently active, so show "Block" */
-        title={selectedForBlock?.isActive === false ? 'Unblock User?' : 'Block User?'}
-        maxWidth='sm'
-      >
-        <div className='flex flex-col items-center text-center -mt-2'>
-          <p className='text-gray-500 leading-relaxed mb-8'>
-            {selectedForBlock?.isActive === false
-              ? 'This user will regain access to the system.'
-              : 'This user will no longer be able to access the system.'}
-          </p>
-
-          <div className='flex gap-3 w-full'>
-            {/* ... Cancel Button ... */}
-
-            <button
-              onClick={confirmBlockToggle}
-              disabled={blockMutation.isPending}
-              className={`flex-1 py-3 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
-                /* FIX: Logic swap here for colors */
-                selectedForBlock?.isActive === false
-                  ? 'bg-green-500 hover:bg-green-600 shadow-green-100' // Unblocking = Green
-                  : 'bg-red-500 hover:bg-red-600 shadow-red-100' // Blocking = Red
-              }`}
-            >
-              {blockMutation.isPending ? (
-                <>
-                  <Loader2 size={16} className='animate-spin' /> Processing...
-                </>
-              ) : selectedForBlock?.isActive === false ? (
-                'Unblock'
-              ) : (
-                'Block'
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
+        employee={selectedEmployee}
+        onConfirm={confirmDelete}
+        isPending={deleteMutation.isPending}
+      />
     </Box>
   );
 }
