@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Popconfirm, Switch } from 'antd';
+import { Image, Popconfirm, Switch } from 'antd';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -128,12 +128,42 @@ const Studio = () => {
               products.map((product) => (
                 <tr key={product._id} className='hover:bg-[#F9FAFB]/50 transition-colors'>
                   <td className='px-8 py-6'>
-                    <div className='w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-[#F9FAFB]'>
-                      <img
-                        src={product.images?.[0]}
-                        alt='no image available'
-                        className='w-full h-full object-cover'
-                      />
+                    <div className='w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-[#F9FAFB] cursor-pointer'>
+                      {product.images?.length ? (
+                        <Image.PreviewGroup
+                          preview={{
+                            zIndex: 10000,
+                            actionsRender: (_, { icons }) => (
+                              <span className='ant-image-preview-operations'>
+                                {icons.zoomInIcon}
+                                {icons.zoomOutIcon}
+                                {icons.prevIcon}
+                                {icons.nextIcon}
+                              </span>
+                            ),
+                          }}
+                        >
+                          {(product.images ?? []).map((src, i) => (
+                            <Image
+                              key={src}
+                              src={src}
+                              alt={`${product.name} ${i + 1}`}
+                              style={i > 0 ? { display: 'none' } : undefined}
+                              rootClassName={i === 0 ? '!block w-full h-full' : undefined}
+                              classNames={
+                                i === 0
+                                  ? { root: '!w-full !h-full', image: '!w-16 !h-16 !object-cover' }
+                                  : undefined
+                              }
+                              preview={{ mask: 'Preview' }}
+                            />
+                          ))}
+                        </Image.PreviewGroup>
+                      ) : (
+                        <div className='w-full h-full flex items-center justify-center text-gray-400 text-xs'>
+                          No image
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className='px-8 py-6'>
