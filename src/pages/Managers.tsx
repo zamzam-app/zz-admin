@@ -24,7 +24,7 @@ type Employee = {
 
 const EMPLOYEE_KEYS = ['employees'];
 
-export default function EmployeeManagement() {
+export default function ManagersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<Partial<Employee>>({});
