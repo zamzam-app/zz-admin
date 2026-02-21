@@ -7,6 +7,7 @@ import Card from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { AddModal } from '../components/manager/AddModal';
 import { DeleteModal } from '../components/common/DeleteModal';
+import { NoDataFallback } from '../components/common/NoDataFallback';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { UpdateUserPayload, User } from '../lib/types/manager';
@@ -92,22 +93,10 @@ export default function ManagersPage() {
             <CircularProgress size={48} sx={{ color: '#3B82F6' }} />
           </Box>
         ) : employees.length === 0 ? (
-          <Box
-            textAlign='center'
-            py={12}
-            sx={{
-              bgcolor: 'rgba(249, 250, 251, 0.7)',
-              borderRadius: '32px',
-              border: '2px dashed #E5E7EB',
-            }}
-          >
-            <Typography variant='h6' fontWeight={600} color='text.secondary'>
-              No employees found
-            </Typography>
-            <Typography variant='body2' color='text.disabled'>
-              Try adding a new member to your team
-            </Typography>
-          </Box>
+          <NoDataFallback
+            title='No employees found'
+            description='Try adding a new member to your team'
+          />
         ) : (
           <Box
             sx={{
