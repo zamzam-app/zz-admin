@@ -5,11 +5,13 @@ import { Button } from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 import { useQueryClient } from '@tanstack/react-query';
-import { useApiQuery } from '../lib/react-query/use-api-hooks';
+import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { productApi } from '../lib/services/api/product.api';
 import type { Product } from '../lib/types/product';
 import { AddModal } from '../components/studio/AddModal';
 import { DeleteModal } from '../components/common/DeleteModal';
+
+const PRODUCT_KEYS = ['products'];
 
 const Studio = () => {
   const queryClient = useQueryClient();
@@ -18,26 +20,28 @@ const Studio = () => {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [toggleConfirm, setToggleConfirm] = useState<{ id: string; list: boolean } | null>(null);
 
-  const { data, isLoading, error, refetch } = useApiQuery(['products'], () => productApi.getAll());
+  const { data, isLoading, error, refetch } = useApiQuery(PRODUCT_KEYS, () => productApi.getAll());
   const products = Array.isArray(data) ? data : [];
 
-  const handleDelete = async (id: string) => {
-    try {
-      await productApi.delete(id);
-      await queryClient.invalidateQueries({ queryKey: ['products'] });
-      setProductToDelete(null);
-    } catch {
-      alert('Could not delete product');
-    }
+  const deleteMutation = useApiMutation((id: string) => productApi.delete(id), [PRODUCT_KEYS]);
+  const toggleMutation = useApiMutation(
+    (payload: { id: string; isActive: boolean }) =>
+      productApi.update(payload.id, { isActive: payload.isActive }),
+    [PRODUCT_KEYS],
+    { onSuccess: () => setToggleConfirm(null) },
+  );
+
+  const confirmDelete = (id: string) => {
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        setProductToDelete(null);
+      },
+    });
   };
 
-  const handleToggleActive = async (id: string, isActive: boolean) => {
-    try {
-      await productApi.update(id, { isActive });
-      await queryClient.invalidateQueries({ queryKey: ['products'] });
-      setToggleConfirm(null);
-    } catch {
-      setToggleConfirm(null);
+  const handleToggleConfirm = () => {
+    if (toggleConfirm) {
+      toggleMutation.mutate({ id: toggleConfirm.id, isActive: toggleConfirm.list });
     }
   };
 
@@ -190,15 +194,15 @@ const Studio = () => {
                             ? 'Are you sure you want to list this product?'
                             : 'Are you sure you want to unlist this product?'
                         }
-                        onConfirm={() =>
-                          toggleConfirm && handleToggleActive(product._id, toggleConfirm.list)
-                        }
+                        onConfirm={handleToggleConfirm}
                         okText='Yes'
                         cancelText='No'
+                        okButtonProps={{ loading: toggleMutation.isPending }}
                       >
                         <span onClick={(e) => e.stopPropagation()}>
                           <Switch
                             checked={product.isActive}
+                            disabled={toggleMutation.isPending}
                             onChange={(checked) =>
                               setToggleConfirm({ id: product._id, list: checked })
                             }
@@ -251,7 +255,8 @@ const Studio = () => {
         title='Delete Product?'
         entityName={productToDelete?.name}
         confirmId={productToDelete?._id}
-        onConfirm={handleDelete}
+        onConfirm={confirmDelete}
+        isPending={deleteMutation.isPending}
       />
     </div>
   );
