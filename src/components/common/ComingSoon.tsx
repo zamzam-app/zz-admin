@@ -4,7 +4,7 @@ interface PlaceholderPageProps {
   title?: string;
 }
 
-const PlaceholderPage: React.FC<PlaceholderPageProps> = ({ title = 'Page' }) => {
+const ComingSoon: React.FC<PlaceholderPageProps> = ({ title = 'Page' }) => {
   return (
     <div className='p-6 bg-white rounded-lg shadow text-center'>
       <h1 className='text-3xl font-bold text-gray-800 mb-4'>{title}</h1>
@@ -13,4 +13,4 @@ const PlaceholderPage: React.FC<PlaceholderPageProps> = ({ title = 'Page' }) => 
   );
 };
 
-export default PlaceholderPage;
+export default ComingSoon;

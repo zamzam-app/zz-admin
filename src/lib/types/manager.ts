@@ -1,19 +1,34 @@
+export const MANAGER_KEYS = ['managers'];
+
 export interface User {
-  id?: string;
-  _id?: string;
   name: string;
-  userName?: string;
   email: string;
   role: string;
+  userName?: string;
   phoneNumber?: string;
   outletId?: string[];
-  token?: string;
+  _id?: string;
+  id?: string;
   isActive?: boolean;
-  isBlocked?: boolean;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UsersListMeta {
+  total: number;
+  currentPage: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  limit: number;
+}
+
+export interface UsersListResponse {
+  data: User[];
+  meta: UsersListMeta;
 }
 
 /* Payloads */
-
 export interface CreateUserPayload {
   name: string;
   userName: string;
