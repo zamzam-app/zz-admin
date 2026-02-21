@@ -2,6 +2,7 @@ import api from './axios';
 import { USERS } from './endpoints';
 import {
   User,
+  UsersListResponse,
   CreateUserPayload,
   UpdateUserPayload,
   ChangePasswordPayload,
@@ -11,6 +12,14 @@ export const usersApi = {
   getAll: async (): Promise<User[]> => {
     const res = await api.get<User[]>(USERS.BASE);
     return res.data;
+  },
+
+  /** GET /users?role=manager — returns paginated list of managers */
+  getManagers: async (): Promise<User[]> => {
+    const res = await api.get<UsersListResponse>(USERS.BASE, {
+      params: { role: 'manager' },
+    });
+    return res.data.data;
   },
 
   getById: async (id: string): Promise<User> => {

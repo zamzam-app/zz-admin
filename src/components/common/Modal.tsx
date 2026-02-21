@@ -21,7 +21,7 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = 'sm',
   className = '',
-  contentClassName = 'p-8',
+  contentClassName = 'p-8 cursor-default',
 }) => {
   const widthMap = {
     xs: 320,
@@ -77,7 +77,7 @@ export const Modal: React.FC<ModalProps> = ({
                 </h3>
                 <button
                   onClick={onClose}
-                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 shrink-0'
+                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 shrink-0 cursor-pointer'
                 >
                   <X size={20} />
                 </button>
@@ -85,11 +85,13 @@ export const Modal: React.FC<ModalProps> = ({
             ) : (
               <>
                 {title && (
-                  <h3 className='text-xl font-black text-[#1F2937] tracking-tight'>{title}</h3>
+                  <h3 className='text-xl font-black text-[#1F2937] tracking-tight cursor-default'>
+                    {title}
+                  </h3>
                 )}
                 <button
                   onClick={onClose}
-                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400'
+                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 cursor-pointer'
                 >
                   <X size={20} />
                 </button>

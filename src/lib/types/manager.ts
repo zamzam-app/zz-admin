@@ -13,6 +13,19 @@ export interface User {
   updatedAt?: string;
 }
 
+export interface UsersListMeta {
+  total: number;
+  currentPage: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  limit: number;
+}
+
+export interface UsersListResponse {
+  data: User[];
+  meta: UsersListMeta;
+}
+
 /* Payloads */
 export interface CreateUserPayload {
   name: string;

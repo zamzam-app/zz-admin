@@ -6,7 +6,7 @@ import { Plus, Trash2, Edit2 } from 'lucide-react';
 import Card from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { AddModal } from '../components/manager/AddModal';
-import { DeleteModal } from '../components/manager/DeleteModal';
+import { DeleteModal } from '../components/common/DeleteModal';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { UpdateUserPayload, User } from '../lib/types/manager';
@@ -18,13 +18,8 @@ export default function ManagersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [blockConfirmEmployee, setBlockConfirmEmployee] = useState<User | null>(null);
 
-  const { data: employees = [], isLoading } = useApiQuery(EMPLOYEE_KEYS, usersApi.getAll);
-
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
-
+  const { data: employees = [], isLoading } = useApiQuery(EMPLOYEE_KEYS, usersApi.getManagers);
   const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [EMPLOYEE_KEYS]);
-
   const blockMutation = useApiMutation(
     (data: { id: string; isActive: boolean }) =>
       usersApi.update(data.id, {
@@ -36,20 +31,8 @@ export default function ManagersPage() {
     },
   );
 
-  const openAdd = () => {
-    setEditing(null);
-    setOpen(true);
-  };
-
-  const openEdit = (emp: User) => {
-    setEditing(emp);
-    setOpen(true);
-  };
-
-  const handleDelete = (emp: User) => {
-    setSelectedEmployee(emp);
-    setDeleteOpen(true);
-  };
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
 
   const confirmDelete = (id: string) => {
     deleteMutation.mutate(id, {
@@ -90,7 +73,14 @@ export default function ManagersPage() {
           </Typography>
         </Box>
 
-        <Button variant='admin-primary' onClick={openAdd} className='rounded-2xl px-6 py-4'>
+        <Button
+          variant='admin-primary'
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+          className='rounded-2xl px-6 py-4'
+        >
           <Plus size={18} /> Add Employee
         </Button>
       </Box>
@@ -303,7 +293,10 @@ export default function ManagersPage() {
                 >
                   <IconButton
                     disabled={emp.isActive === false || deleteMutation.isPending}
-                    onClick={() => openEdit(emp)}
+                    onClick={() => {
+                      setEditing(emp);
+                      setOpen(true);
+                    }}
                     size='small'
                     sx={{
                       bgcolor: '#FFFFFF',
@@ -319,7 +312,10 @@ export default function ManagersPage() {
                       emp.isActive === false ||
                       (deleteMutation.isPending && deleteMutation.variables === (emp._id || emp.id))
                     }
-                    onClick={() => handleDelete(emp)}
+                    onClick={() => {
+                      setSelectedEmployee(emp);
+                      setDeleteOpen(true);
+                    }}
                     size='small'
                     sx={{
                       bgcolor: '#FFFFFF',
@@ -355,7 +351,9 @@ export default function ManagersPage() {
           setDeleteOpen(false);
           setSelectedEmployee(null);
         }}
-        employee={selectedEmployee}
+        title='Delete Employee?'
+        entityName={selectedEmployee?.name}
+        confirmId={selectedEmployee?._id || selectedEmployee?.id}
         onConfirm={confirmDelete}
         isPending={deleteMutation.isPending}
       />

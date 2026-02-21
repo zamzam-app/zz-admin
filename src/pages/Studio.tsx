@@ -9,7 +9,7 @@ import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { productApi } from '../lib/services/api/product.api';
 import type { Product } from '../lib/types/product';
 import { AddModal } from '../components/studio/AddModal';
-import { DeleteModal } from '../components/studio/DeleteModal';
+import { DeleteModal } from '../components/common/DeleteModal';
 
 const Studio = () => {
   const queryClient = useQueryClient();
@@ -248,7 +248,9 @@ const Studio = () => {
       <DeleteModal
         open={!!productToDelete}
         onClose={() => setProductToDelete(null)}
-        product={productToDelete}
+        title='Delete Product?'
+        entityName={productToDelete?.name}
+        confirmId={productToDelete?._id}
         onConfirm={handleDelete}
       />
     </div>
