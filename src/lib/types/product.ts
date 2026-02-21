@@ -3,16 +3,16 @@ export interface Product {
   name: string;
   price: number;
   description: string;
-  ratingsId?: string;
   images: string[];
-  type: 'premade' | 'custom';
-  isActive?: boolean;
-  isDeleted?: boolean;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
+
 export interface CreateProductRequest {
   name: string;
   price: number;
   description: string;
   images: string[];
-  type: 'premade' | 'custom';
 }
