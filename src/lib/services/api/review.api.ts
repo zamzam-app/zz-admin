@@ -25,19 +25,13 @@ export const reviewsApi = {
     return data;
   },
 
-  update: async (
-    id: string,
-    review: { comment?: string; stars?: number }
-  ): Promise<ApiReview> => {
+  update: async (id: string, review: { comment?: string; stars?: number }): Promise<ApiReview> => {
     const payload: Partial<{ comment: string; value: number }> = {};
 
     if (review.comment !== undefined) payload.comment = review.comment;
     if (review.stars !== undefined) payload.value = review.stars;
 
-    const { data } = await apiClient.patch<ApiReview>(
-      `/rating/${id}`,
-      payload
-    );
+    const { data } = await apiClient.patch<ApiReview>(`/rating/${id}`, payload);
     return data;
   },
 

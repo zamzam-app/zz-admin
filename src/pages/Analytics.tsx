@@ -33,7 +33,7 @@ export default function Analytics() {
 
     return sorted.sort((a, b) => a.rating - b.rating);
   }, [sortOrder]);
-  
+
   const store = storesList.find((s) => s.id === id);
   if (!store) return <div className='p-8'>Store not found</div>;
 
@@ -44,7 +44,6 @@ export default function Analytics() {
     { name: 'Apr', val: 4.7 },
     { name: 'May', val: 4.8 },
   ];
-  
 
   return (
     <div className='max-w-7xl mx-auto space-y-8'>

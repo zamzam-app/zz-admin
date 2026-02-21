@@ -32,7 +32,6 @@ export default function FormBuilderPage() {
   const handleCreateNew = async () => {
     try {
       const newForm = await formsApi.createForm();
-      // Ensure we use the ID returned by MongoDB (_id)
       setCurrentForm(newForm);
       setSavedForms((prev) => [...prev, newForm]);
       setView('builder');
@@ -79,7 +78,6 @@ export default function FormBuilderPage() {
     }
   };
 
-  // Prevent crashes if currentForm is null during builder mode
   if (loading && view === 'dashboard') return <div>Loading...</div>;
 
   return (

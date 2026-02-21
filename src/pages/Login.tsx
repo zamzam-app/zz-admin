@@ -14,7 +14,6 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     //  console.log('Login submit clicked');
     if (!email) {
       message.error('Please enter your email');

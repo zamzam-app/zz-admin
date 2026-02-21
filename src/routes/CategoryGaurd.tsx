@@ -11,7 +11,7 @@ type Props = {
 
 export default function CategoryGaurd({ allowed, children }: Props) {
   const { isAuthenticated, user } = useAuth();
-    if (user?.role === 'admin') {
+  if (user?.role === 'admin') {
     return <>{children}</>;
   }
   //check stores based on user outlet id
