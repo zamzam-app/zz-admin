@@ -5,21 +5,24 @@ import { X } from 'lucide-react';
 type ModalProps = {
   open: boolean;
   onClose: () => void;
-  title?: string;
   children: React.ReactNode;
+  title?: string;
+  titleAlign?: 'left' | 'center';
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  contentClassName?: string;
 };
 
 export const Modal: React.FC<ModalProps> = ({
   open,
   onClose,
   title,
+  titleAlign = 'left',
   children,
-  maxWidth = 'sm', // Default to a standard size
+  maxWidth = 'sm',
   className = '',
+  contentClassName = 'p-8',
 }) => {
-  // Mapping maxWidth to pixel values for the reusable container
   const widthMap = {
     xs: 320,
     sm: 448,
@@ -38,8 +41,8 @@ export const Modal: React.FC<ModalProps> = ({
         backdrop: {
           timeout: 500,
           sx: {
-            backgroundColor: 'rgba(15, 23, 42, 0.7)', // Deep slate overlay
-            backdropFilter: 'blur(4px)', // Soft blur on background only
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
           },
         },
       }}
@@ -57,26 +60,45 @@ export const Modal: React.FC<ModalProps> = ({
             width: '100%',
             maxWidth: widthMap[maxWidth],
             bgcolor: 'background.paper',
-            borderRadius: '28px', // Proper rounded corners
+            borderRadius: '28px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             outline: 'none',
-            overflow: 'hidden', // Keeps children inside the rounded corners
+            overflow: 'hidden',
           }}
           className={className}
         >
           {/* Header Section */}
           <div className='flex items-center justify-between p-6 border-b border-gray-50'>
-            {title && <h3 className='text-xl font-black text-[#1F2937] tracking-tight'>{title}</h3>}
-            <button
-              onClick={onClose}
-              className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400'
-            >
-              <X size={20} />
-            </button>
+            {titleAlign === 'center' ? (
+              <>
+                <div className='w-10 shrink-0' aria-hidden />
+                <h3 className='text-xl font-black text-[#1F2937] tracking-tight text-center flex-1'>
+                  {title}
+                </h3>
+                <button
+                  onClick={onClose}
+                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 shrink-0'
+                >
+                  <X size={20} />
+                </button>
+              </>
+            ) : (
+              <>
+                {title && (
+                  <h3 className='text-xl font-black text-[#1F2937] tracking-tight'>{title}</h3>
+                )}
+                <button
+                  onClick={onClose}
+                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400'
+                >
+                  <X size={20} />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Content Section */}
-          <div className='p-8'>{children}</div>
+          <div className={contentClassName}>{children}</div>
         </Box>
       </Fade>
     </MUIModal>

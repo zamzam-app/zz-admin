@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { message, Upload } from 'antd';
+import type { UploadFile } from 'antd/es/upload/interface';
+import { Loader2 } from 'lucide-react';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
-import Select from '../common/Select';
 import { Modal } from '../common/Modal';
 import { productApi } from '../../lib/services/api/product.api';
 import type { Product, CreateProductRequest } from '../../lib/types/product';
+import { useApiMutation } from '../../lib/react-query/use-api-hooks';
 import { useImageUpload } from '../../lib/hooks/useImageUpload';
 
 type AddModalProps = {
@@ -13,16 +16,27 @@ type AddModalProps = {
   onSuccess: (product: Product) => void;
 };
 
-const initialFormState: Partial<Product> & { type?: 'premade' | 'custom' } = {
+const initialFormState: CreateProductRequest = {
   name: '',
-  price: undefined,
+  price: 1,
   description: '',
   images: [],
-  type: 'premade',
 };
 
 export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) => {
   const [newProduct, setNewProduct] = useState(initialFormState);
+
+  const createMutation = useApiMutation(
+    (payload: CreateProductRequest) => productApi.create(payload),
+    [['products']],
+    {
+      onSuccess: (savedProduct) => {
+        setNewProduct(initialFormState);
+        onSuccess(savedProduct);
+        onClose();
+      },
+    },
+  );
 
   const {
     upload,
@@ -31,135 +45,167 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
     clearError: clearUploadError,
   } = useImageUpload('products');
 
+  useEffect(() => {
+    if (uploadError) message.error(uploadError.message);
+  }, [uploadError]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!newProduct.name || !newProduct.price) {
-      alert('Please fill all required fields');
+    if (!newProduct.name || !newProduct.description || newProduct.price == null) {
+      message.error('Please fill all required fields');
       return;
     }
 
-    try {
-      const payload = {
-        name: newProduct.name,
-        price: newProduct.price,
-        description: newProduct.description || '',
-        ratingsId: '60d5ecb86217152c9043e02d', // ⚠ replace with real one if dynamic
-        images: newProduct.images ?? [],
-        type: newProduct.type || 'premade',
-      };
+    if (!newProduct.images?.length) {
+      message.error('Please upload at least one image');
+      return;
+    }
 
-      const savedProduct = await productApi.create(payload as CreateProductRequest);
-      onSuccess(savedProduct);
-      setNewProduct(initialFormState);
-      onClose();
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Save failed:', error.message);
-      } else {
-        console.error('Save failed:', error);
-      }
+    const payload: CreateProductRequest = {
+      name: newProduct.name,
+      price: newProduct.price,
+      description: newProduct.description ?? '',
+      images: newProduct.images ?? [],
+    };
+
+    try {
+      await createMutation.mutateAsync(payload);
+    } catch (err: unknown) {
+      const data =
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        err.response &&
+        typeof err.response === 'object' &&
+        'data' in err.response &&
+        err.response.data &&
+        typeof err.response.data === 'object' &&
+        'message' in err.response.data
+          ? (err.response.data as { message?: string | string[] }).message
+          : undefined;
+      const msg = data;
+      const firstError = Array.isArray(msg)
+        ? msg[0]
+        : typeof msg === 'string'
+          ? msg
+          : 'Something went wrong';
+      message.error(firstError);
     }
   };
 
+  const uploadFileList: UploadFile[] = useMemo(
+    () =>
+      (newProduct.images ?? []).map((url, i) => ({
+        uid: `${i}-${url}`,
+        name: url.split('/').pop() ?? 'image',
+        status: 'done' as const,
+        url,
+      })),
+    [newProduct.images],
+  );
+
   return (
-    <Modal open={open} onClose={onClose} title='New Inventory Item' maxWidth='lg'>
-      <div className='max-h-[70vh] overflow-y-auto -mx-2 px-2'>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title='New Inventory Item'
+      titleAlign='center'
+      maxWidth='lg'
+      contentClassName='pt-2 px-8 pb-8'
+    >
+      <div className='max-h-[70vh] overflow-y-auto -mx-2 px-2 pt-4'>
         <form onSubmit={handleSubmit} className='space-y-6'>
           <div>
             <Input
               label='Product Title'
               value={newProduct.name || ''}
               onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className='grid grid-cols-2 gap-8'>
-            <Input
-              label='Price ($)'
-              type='number'
-              value={newProduct.price ?? ''}
-              onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
-              required
-            />
-            <Select
-              label='Type'
-              options={['premade', 'custom']}
-              value={newProduct.type || 'premade'}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, type: e.target.value as 'premade' | 'custom' })
-              }
             />
           </div>
 
           <div>
             <Input
               label='Description'
-              value={newProduct.description || ''}
+              value={newProduct.description ?? ''}
               onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
             />
           </div>
 
-          {/* Cloudinary image upload */}
+          <div>
+            <Input
+              label='Price'
+              value={newProduct.price ?? ''}
+              onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
+            />
+          </div>
+
+          {/* Image upload */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Upload Images</label>
-            <input
-              type='file'
-              multiple
+            <Upload
               accept='image/*'
+              multiple
+              maxCount={4}
+              listType='picture-card'
+              fileList={uploadFileList}
               disabled={uploadLoading}
-              onChange={async (e) => {
-                const files = e.target.files;
-                if (!files?.length) return;
+              customRequest={({ file, onSuccess, onError }) => {
                 clearUploadError();
-                try {
-                  const urls = await Promise.all(Array.from(files).map((file) => upload(file)));
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    images: [...(prev.images ?? []), ...urls],
-                  }));
-                } catch {
-                  // error already set in hook
-                }
-                e.target.value = '';
+                upload(file as File)
+                  .then((url) => {
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      images: [...(prev.images ?? []), url],
+                    }));
+                    onSuccess?.(url);
+                  })
+                  .catch((err) =>
+                    onError?.(err instanceof Error ? err : new Error('Upload failed')),
+                  );
               }}
-              className='block w-full text-sm text-gray-500 file:py-2 file:px-4 file:border file:border-gray-300 file:rounded-lg file:text-sm file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none'
-            />
-            {uploadLoading && <p className='mt-1 text-sm text-gray-500'>Uploading…</p>}
-            {uploadError && <p className='mt-1 text-sm text-red-600'>{uploadError.message}</p>}
-            {/* Preview */}
-            <div className='flex flex-wrap gap-2 mt-2'>
-              {(newProduct.images ?? []).map((url, idx) => (
-                <div key={idx} className='relative'>
-                  <img
-                    src={url}
-                    alt={`Preview ${idx + 1}`}
-                    className='w-16 h-16 object-cover rounded-lg'
-                  />
-                  <button
-                    type='button'
-                    onClick={() =>
-                      setNewProduct((prev) => ({
-                        ...prev,
-                        images: (prev.images ?? []).filter((_, i) => i !== idx),
-                      }))
-                    }
-                    className='absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600'
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
+              onRemove={(file) => {
+                setNewProduct((prev) => ({
+                  ...prev,
+                  images: (prev.images ?? []).filter((u) => u !== file.url),
+                }));
+              }}
+              showUploadList={{ showPreviewIcon: false }}
+            >
+              {uploadFileList.length >= 4 ? null : uploadLoading ? (
+                <span className='inline-flex flex-col items-center justify-center gap-2 text-gray-400 pointer-events-none'>
+                  <Loader2 size={24} className='animate-spin' />
+                  <span className='text-xs'>Uploading…</span>
+                </span>
+              ) : (
+                '+ Upload'
+              )}
+            </Upload>
           </div>
 
           <div className='flex justify-end gap-6'>
-            <Button type='button' variant='ghost' onClick={onClose}>
+            <Button
+              type='button'
+              variant='ghost'
+              onClick={onClose}
+              disabled={createMutation.isPending}
+            >
               Cancel
             </Button>
-            <Button type='submit' variant='admin-primary' className='rounded-2xl px-10'>
-              Launch Item
+            <Button
+              type='submit'
+              variant='admin-primary'
+              className='rounded-2xl px-10 inline-flex items-center gap-2'
+              disabled={createMutation.isPending || uploadLoading}
+            >
+              {createMutation.isPending || uploadLoading ? (
+                <>
+                  <Loader2 size={18} className='animate-spin shrink-0 text-white' />
+                  <span className='text-white'>Saving…</span>
+                </>
+              ) : (
+                'Launch Item'
+              )}
             </Button>
           </div>
         </form>
