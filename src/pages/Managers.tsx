@@ -8,7 +8,7 @@ import Input from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
-import { UpdateUserPayload, CreateUserPayload } from '../lib/types/user';
+import { UpdateUserPayload, CreateUserPayload } from '../lib/types/manager';
 
 type Employee = {
   id?: string;

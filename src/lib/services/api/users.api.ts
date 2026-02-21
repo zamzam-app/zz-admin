@@ -5,7 +5,7 @@ import {
   CreateUserPayload,
   UpdateUserPayload,
   ChangePasswordPayload,
-} from '../../types/user';
+} from '../../types/manager';
 
 export const usersApi = {
   getAll: async (): Promise<User[]> => {

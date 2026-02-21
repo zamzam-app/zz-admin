@@ -1,19 +1,19 @@
 export interface User {
-  id?: string;
-  _id?: string;
   name: string;
-  userName?: string;
   email: string;
   role: string;
+  userName?: string;
   phoneNumber?: string;
   outletId?: string[];
-  token?: string;
+  _id?: string;
+  id?: string;
   isActive?: boolean;
-  isBlocked?: boolean;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /* Payloads */
-
 export interface CreateUserPayload {
   name: string;
   userName: string;

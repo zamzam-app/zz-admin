@@ -1,6 +1,6 @@
 import api from './axios';
 import { AUTH } from './endpoints';
-import { User, LoginPayload, LoginResponse } from '../../types/user';
+import { User, LoginPayload, LoginResponse } from '../../types/manager';
 
 export const authApi = {
   login: async (payload: LoginPayload): Promise<LoginResponse> => {

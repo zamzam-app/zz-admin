@@ -7,7 +7,7 @@ import Input from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { useApiMutation } from '../lib/react-query/use-api-hooks';
 import { usersApi } from '../lib/services/api/users.api';
-import { ChangePasswordPayload } from '../lib/types/user';
+import { ChangePasswordPayload } from '../lib/types/manager';
 import { message } from 'antd';
 
 export default function Settings() {
