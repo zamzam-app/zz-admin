@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Popconfirm } from 'antd';
-import { Box, Typography, IconButton, Avatar, CircularProgress } from '@mui/material';
+import { Popconfirm, Switch } from 'antd';
+import { Box, Typography, IconButton, Avatar, CircularProgress, Chip } from '@mui/material';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import { Button } from '../components/common/Button';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import { AddModal } from '../components/manager/AddModal';
 import { DeleteModal } from '../components/common/DeleteModal';
 import { NoDataFallback } from '../components/common/NoDataFallback';
@@ -14,12 +15,26 @@ import { UpdateUserPayload, User } from '../lib/types/manager';
 
 const EMPLOYEE_KEYS = ['employees'];
 
+type ModalState =
+  | null
+  | { type: 'add' }
+  | { type: 'edit'; user: User }
+  | { type: 'delete'; user: User };
+
+function getEmpId(e: User | null | undefined): string | undefined {
+  return e ? (e._id ?? e.id) : undefined;
+}
+
 export default function ManagersPage() {
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<User | null>(null);
+  const [modal, setModal] = useState<ModalState>(null);
   const [blockConfirmEmployee, setBlockConfirmEmployee] = useState<User | null>(null);
 
-  const { data: employees = [], isLoading } = useApiQuery(EMPLOYEE_KEYS, usersApi.getManagers);
+  const {
+    data: employees = [],
+    isLoading,
+    error,
+    refetch,
+  } = useApiQuery(EMPLOYEE_KEYS, usersApi.getManagers);
   const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [EMPLOYEE_KEYS]);
   const blockMutation = useApiMutation(
     (data: { id: string; isActive: boolean }) =>
@@ -32,20 +47,14 @@ export default function ManagersPage() {
     },
   );
 
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
-
   const confirmDelete = (id: string) => {
     deleteMutation.mutate(id, {
-      onSuccess: () => {
-        setDeleteOpen(false);
-        setSelectedEmployee(null);
-      },
+      onSuccess: () => setModal(null),
     });
   };
 
   const handleBlockConfirm = (emp: User) => {
-    const id = emp._id || emp.id;
+    const id = getEmpId(emp);
     if (id) {
       blockMutation.mutate({
         id,
@@ -53,6 +62,53 @@ export default function ManagersPage() {
       });
     }
   };
+
+  const addModalOpen = modal !== null && (modal.type === 'add' || modal.type === 'edit');
+  const editing = modal?.type === 'edit' ? modal.user : null;
+  const deleteModalOpen = modal?.type === 'delete';
+  const selectedEmployee = modal?.type === 'delete' ? modal.user : null;
+
+  if (error) {
+    return (
+      <Box>
+        <Box
+          display='flex'
+          flexDirection={{ xs: 'column', sm: 'row' }}
+          justifyContent='space-between'
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          gap={2}
+          mb={4}
+        >
+          <Box>
+            <Typography variant='h4' fontWeight={800} color='#1F2937'>
+              Managers
+            </Typography>
+            <Typography variant='body2' color='text.secondary'>
+              Manage outlet managers
+            </Typography>
+          </Box>
+        </Box>
+        <Box
+          sx={{
+            bgcolor: '#fff',
+            borderRadius: '24px',
+            border: '1px solid #f3f4f6',
+            overflow: 'hidden',
+          }}
+        >
+          <NoDataFallback
+            title='Failed to load employees'
+            description={error.message}
+            action={
+              <Button variant='admin-primary' onClick={() => refetch()} className='rounded-2xl'>
+                Try again
+              </Button>
+            }
+          />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -67,19 +123,16 @@ export default function ManagersPage() {
       >
         <Box>
           <Typography variant='h4' fontWeight={800} color='#1F2937'>
-            Employees
+            Managers
           </Typography>
           <Typography variant='body2' color='text.secondary'>
-            Manage outlet staff (non-managers)
+            Manage outlet managers
           </Typography>
         </Box>
 
         <Button
           variant='admin-primary'
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
+          onClick={() => setModal({ type: 'add' })}
           className='rounded-2xl px-6 py-4'
         >
           <Plus size={18} /> Add Employee
@@ -89,13 +142,20 @@ export default function ManagersPage() {
       {/* Employee Grid */}
       <Box sx={{ flexGrow: 1, minHeight: '400px', position: 'relative' }}>
         {isLoading ? (
-          <Box display='flex' justifyContent='center' alignItems='center' py={12}>
-            <CircularProgress size={48} sx={{ color: '#3B82F6' }} />
-          </Box>
+          <LoadingSpinner />
         ) : employees.length === 0 ? (
           <NoDataFallback
             title='No employees found'
             description='Try adding a new member to your team'
+            action={
+              <Button
+                variant='admin-primary'
+                onClick={() => setModal({ type: 'add' })}
+                className='rounded-2xl'
+              >
+                Add Employee
+              </Button>
+            }
           />
         ) : (
           <Box
@@ -111,7 +171,7 @@ export default function ManagersPage() {
           >
             {employees.map((emp) => (
               <Card
-                key={emp._id || emp.id}
+                key={getEmpId(emp) ?? emp.email ?? ''}
                 sx={{
                   p: 3,
                   position: 'relative',
@@ -123,7 +183,7 @@ export default function ManagersPage() {
                   opacity:
                     emp.isActive === false
                       ? 0.6
-                      : deleteMutation.isPending && deleteMutation.variables === (emp._id || emp.id)
+                      : deleteMutation.isPending && deleteMutation.variables === getEmpId(emp)
                         ? 0.6
                         : 1,
 
@@ -185,30 +245,26 @@ export default function ManagersPage() {
 
                   {/* Role Badge */}
                   <Box display='flex' alignItems='center' gap={1} mb={3}>
-                    {/* Role Badge */}
-                    <Box
+                    <Chip
+                      label={emp.role}
                       sx={{
-                        px: 2,
+                        px: 1.5,
                         py: 0.5,
                         borderRadius: '100px',
-                        fontSize: '0.65rem',
+                        fontSize: '0.7rem',
                         fontWeight: 900,
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
-                        ...(emp.role.toLowerCase() === 'manager'
-                          ? { bgcolor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #DBEAFE' }
-                          : { bgcolor: '#F5F3FF', color: '#6D28D9', border: '1px solid #EDE9FE' }),
+                        backgroundColor: '#EFF6FF',
+                        color: '#1D4ED8',
+                        border: '1px solid #DBEAFE',
                       }}
-                    >
-                      {emp.role}
-                    </Box>
+                      variant='outlined'
+                    />
 
                     {/* Block / Unblock Toggle */}
                     <Popconfirm
-                      open={
-                        (blockConfirmEmployee?._id || blockConfirmEmployee?.id) ===
-                        (emp._id || emp.id)
-                      }
+                      open={getEmpId(blockConfirmEmployee) === getEmpId(emp)}
                       onOpenChange={(open) => !open && setBlockConfirmEmployee(null)}
                       title={emp.isActive === false ? 'Unblock User?' : 'Block User?'}
                       description={
@@ -226,27 +282,11 @@ export default function ManagersPage() {
                             : '!bg-red-500 hover:!bg-red-600',
                       }}
                     >
-                      <span onClick={(e) => e.stopPropagation()}>
-                        <label className='relative inline-flex items-center cursor-pointer'>
-                          <input
-                            type='checkbox'
-                            className='sr-only'
-                            checked={emp.isActive ?? true}
-                            onChange={() => setBlockConfirmEmployee(emp)}
-                            disabled={blockMutation.isPending}
-                          />
-                          <span
-                            className={`w-12 h-6 rounded-full transition-all ${
-                              emp.isActive === false ? 'bg-red-500' : 'bg-red-200'
-                            }`}
-                          />
-                          <span
-                            className={`absolute left-0 top-0 w-6 h-6 bg-white border border-gray-300 rounded-full shadow-md transform transition-transform ${
-                              emp.isActive === false ? 'translate-x-6' : 'translate-x-0'
-                            }`}
-                          />
-                        </label>
-                      </span>
+                      <Switch
+                        checked={emp.isActive ?? true}
+                        disabled={blockMutation.isPending}
+                        onChange={() => setBlockConfirmEmployee(emp)}
+                      />
                     </Popconfirm>
                   </Box>
 
@@ -282,10 +322,7 @@ export default function ManagersPage() {
                 >
                   <IconButton
                     disabled={emp.isActive === false || deleteMutation.isPending}
-                    onClick={() => {
-                      setEditing(emp);
-                      setOpen(true);
-                    }}
+                    onClick={() => setModal({ type: 'edit', user: emp })}
                     size='small'
                     sx={{
                       bgcolor: '#FFFFFF',
@@ -299,12 +336,9 @@ export default function ManagersPage() {
                   <IconButton
                     disabled={
                       emp.isActive === false ||
-                      (deleteMutation.isPending && deleteMutation.variables === (emp._id || emp.id))
+                      (deleteMutation.isPending && deleteMutation.variables === getEmpId(emp))
                     }
-                    onClick={() => {
-                      setSelectedEmployee(emp);
-                      setDeleteOpen(true);
-                    }}
+                    onClick={() => setModal({ type: 'delete', user: emp })}
                     size='small'
                     sx={{
                       bgcolor: '#FFFFFF',
@@ -313,8 +347,7 @@ export default function ManagersPage() {
                       '&:hover': { bgcolor: '#F3F4F6' },
                     }}
                   >
-                    {deleteMutation.isPending &&
-                    deleteMutation.variables === (emp._id || emp.id) ? (
+                    {deleteMutation.isPending && deleteMutation.variables === getEmpId(emp) ? (
                       <CircularProgress size={16} color='inherit' />
                     ) : (
                       <Trash2 size={16} />
@@ -328,21 +361,18 @@ export default function ManagersPage() {
       </Box>
 
       <AddModal
-        open={open}
-        onClose={() => setOpen(false)}
+        open={addModalOpen}
+        onClose={() => setModal(null)}
         editing={editing}
-        onSuccess={() => setOpen(false)}
+        onSuccess={() => setModal(null)}
       />
 
       <DeleteModal
-        open={deleteOpen}
-        onClose={() => {
-          setDeleteOpen(false);
-          setSelectedEmployee(null);
-        }}
+        open={deleteModalOpen}
+        onClose={() => setModal(null)}
         title='Delete Employee?'
         entityName={selectedEmployee?.name}
-        confirmId={selectedEmployee?._id || selectedEmployee?.id}
+        confirmId={getEmpId(selectedEmployee)}
         onConfirm={confirmDelete}
         isPending={deleteMutation.isPending}
       />
