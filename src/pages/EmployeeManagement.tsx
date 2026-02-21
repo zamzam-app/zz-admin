@@ -5,7 +5,6 @@ import { Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
 import Card from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import Input from '../components/common/Input';
-import Select from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
@@ -20,7 +19,7 @@ type Employee = {
   password?: string;
   phoneNumber?: string;
   role: string;
-  isBlocked?: boolean;
+  isActive?: boolean; // ✅ added
 };
 
 const EMPLOYEE_KEYS = ['employees'];
@@ -29,32 +28,41 @@ export default function EmployeeManagement() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<Partial<Employee>>({});
-const [blockOpen, setBlockOpen] = useState(false);
-const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
+  const [blockOpen, setBlockOpen] = useState(false);
+  const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
 
-  // 1. Fetching Data
   const { data: employees = [], isLoading } = useApiQuery(EMPLOYEE_KEYS, usersApi.getAll);
 
-  // 2. Mutations
   const createMutation = useApiMutation(
     (data: CreateUserPayload) => usersApi.create(data),
     [EMPLOYEE_KEYS],
-    {
-      onSuccess: () => setOpen(false),
-    },
+    { onSuccess: () => setOpen(false) },
   );
 
   const updateMutation = useApiMutation(
     (data: { id: string; payload: UpdateUserPayload }) => usersApi.update(data.id, data.payload),
     [EMPLOYEE_KEYS],
-    {
-      onSuccess: () => setOpen(false),
-    },
+    { onSuccess: () => setOpen(false) },
   );
+
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
   const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [EMPLOYEE_KEYS]);
+
+  const blockMutation = useApiMutation(
+    (data: { id: string; isActive: boolean }) =>
+      usersApi.update(data.id, {
+        isActive: data.isActive,
+      } as UpdateUserPayload),
+    [EMPLOYEE_KEYS],
+    {
+      onSuccess: () => {
+        setBlockOpen(false);
+        setSelectedForBlock(null);
+      },
+    },
+  );
 
   const openAdd = () => {
     setForm({});
@@ -70,9 +78,10 @@ const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.userName || !form.role) return;
+    if (!form.name || !form.email || !form.userName) return;
 
     const id = editing?._id || editing?.id;
+
     if (editing && id) {
       updateMutation.mutate({
         id,
@@ -80,7 +89,7 @@ const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
           name: form.name,
           userName: form.userName,
           email: form.email,
-          role: form.role,
+          role: 'manager',
           phoneNumber: form.phoneNumber,
           password: form.password,
         },
@@ -90,12 +99,13 @@ const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
         name: form.name!,
         userName: form.userName!,
         email: form.email!,
-        role: form.role!,
+        role: 'manager',
         phoneNumber: form.phoneNumber!,
         password: form.password,
       });
     }
   };
+
   const handleDelete = (emp: Employee) => {
     setSelectedEmployee(emp);
     setDeleteOpen(true);
@@ -112,36 +122,23 @@ const [selectedForBlock, setSelectedForBlock] = useState<Employee | null>(null);
       });
     }
   };
-  const blockMutation = useApiMutation(
-    (data: { id: string; isBlocked: boolean }) =>
-      usersApi.update(data.id, { isBlocked: data.isBlocked }),
-    [EMPLOYEE_KEYS],
-  );
+
   const openBlockModal = (emp: Employee) => {
-  setSelectedForBlock(emp);
-  setBlockOpen(true);
-};
+    setSelectedForBlock(emp);
+    setBlockOpen(true);
+  };
 
-const confirmBlockToggle = () => {
-  if (!selectedForBlock) return;
+  const confirmBlockToggle = () => {
+    if (!selectedForBlock) return;
 
-  const id = selectedForBlock._id || selectedForBlock.id;
-  if (!id) return;
+    const id = selectedForBlock._id || selectedForBlock.id;
+    if (!id) return;
 
-  blockMutation.mutate(
-    {
+    blockMutation.mutate({
       id,
-      isBlocked: !selectedForBlock.isBlocked,
-    },
-    {
-      onSuccess: () => {
-        setBlockOpen(false);
-        setSelectedForBlock(null);
-      },
-    }
-  );
-};
-
+      isActive: !(selectedForBlock.isActive ?? true),
+    });
+  };
 
   return (
     <Box>
@@ -205,7 +202,7 @@ const confirmBlockToggle = () => {
           >
             {employees.map((emp) => (
               <Card
-                key={emp.id}
+                key={emp._id || emp.id}
                 sx={{
                   p: 3,
                   position: 'relative',
@@ -214,15 +211,14 @@ const confirmBlockToggle = () => {
                   border: '1px solid rgba(229, 231, 235, 0.5)',
                   background: '#FFFFFF',
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                 opacity:
-      emp.isBlocked
-        ? 0.6
-        : deleteMutation.isPending &&
-          deleteMutation.variables === (emp._id || emp.id)
-        ? 0.6
-        : 1,
+                  opacity:
+                    emp.isActive === false
+                      ? 0.6
+                      : deleteMutation.isPending && deleteMutation.variables === (emp._id || emp.id)
+                        ? 0.6
+                        : 1,
 
-    filter: emp.isBlocked ? 'grayscale(60%)' : 'none',
+                  filter: emp.isActive === false ? 'grayscale(60%)' : 'none',
                   '&:hover': {
                     transform: 'translateY(-10px)',
                     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.06)',
@@ -234,6 +230,26 @@ const confirmBlockToggle = () => {
                   },
                 }}
               >
+                {emp.isActive === false && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 12,
+                      left: 12,
+                      bgcolor: '#FEE2E2',
+                      color: '#B91C1C',
+                      px: 2,
+                      py: 0.5,
+                      borderRadius: '999px',
+                      fontSize: '0.65rem',
+                      fontWeight: 900,
+                      letterSpacing: '0.05em',
+                      zIndex: 2,
+                    }}
+                  >
+                    BLOCKED
+                  </Box>
+                )}
                 {/* Header Info */}
                 <Box display='flex' flexDirection='column' alignItems='center' textAlign='center'>
                   <Avatar
@@ -278,28 +294,26 @@ const confirmBlockToggle = () => {
                       {emp.role}
                     </Box>
 
-                    {/* Block / Unblock Button */}
                     {/* Block / Unblock Toggle */}
-<label className="relative inline-flex items-center cursor-pointer">
-  <input
-    type="checkbox"
-    className="sr-only"
-    checked={emp.isBlocked}
-    onChange={() => openBlockModal(emp)} // Or directly call confirmBlockToggle if you want instant toggle
-    disabled={blockMutation.isPending}
-  />
-  <span
-    className={`w-12 h-6 bg-red-200 rounded-full transition-all ${
-      emp.isBlocked ? 'bg-red-500' : 'bg-red-200'
-    }`}
-  ></span>
-  <span
-    className={`absolute left-0 top-0 w-6 h-6 bg-white border border-gray-300 rounded-full shadow-md transform transition-transform ${
-      emp.isBlocked ? 'translate-x-6' : 'translate-x-0'
-    }`}
-  ></span>
-</label>
-
+                    <label className='relative inline-flex items-center cursor-pointer'>
+                      <input
+                        type='checkbox'
+                        className='sr-only'
+                        checked={emp.isActive ?? true}
+                        onChange={() => openBlockModal(emp)}
+                        disabled={blockMutation.isPending}
+                      />
+                      <span
+                        className={`w-12 h-6 bg-red-200 rounded-full transition-all ${
+                          emp.isActive === false ? 'bg-red-500' : 'bg-red-200'
+                        }`}
+                      ></span>
+                      <span
+                        className={`absolute left-0 top-0 w-6 h-6 bg-white border border-gray-300 rounded-full shadow-md transform transition-transform ${
+                          emp.isActive === false ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      ></span>
+                    </label>
                   </Box>
 
                   {/* Contact Details */}
@@ -333,7 +347,7 @@ const confirmBlockToggle = () => {
                   }}
                 >
                   <IconButton
-                    disabled={deleteMutation.isPending}
+                    disabled={emp.isActive === false || deleteMutation.isPending}
                     onClick={() => openEdit(emp)}
                     size='small'
                     sx={{
@@ -347,7 +361,8 @@ const confirmBlockToggle = () => {
                   </IconButton>
                   <IconButton
                     disabled={
-                      deleteMutation.isPending && deleteMutation.variables === (emp._id || emp.id)
+                      emp.isActive === false ||
+                      (deleteMutation.isPending && deleteMutation.variables === (emp._id || emp.id))
                     }
                     onClick={() => handleDelete(emp)}
                     size='small'
@@ -410,15 +425,7 @@ const confirmBlockToggle = () => {
               onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
               required
             />
-            <Select
-              label='Role'
-              options={[
-                { label: 'Manager', value: 'manager' },
-                { label: 'Admin', value: 'admin' },
-              ]}
-              value={form.role || ''}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-            />
+
             <Input
               label='Password'
               type='password'
@@ -502,60 +509,48 @@ const confirmBlockToggle = () => {
         </div>
       </Modal>
       <Modal
-  open={blockOpen}
-  onClose={() => {
-    setBlockOpen(false);
-    setSelectedForBlock(null);
-  }}
-  title={
-    selectedForBlock?.isBlocked
-      ? "Unblock User?"
-      : "Block User?"
-  }
-  maxWidth="sm"
->
-  <div className="flex flex-col items-center text-center -mt-2">
-    <p className="text-gray-500 leading-relaxed mb-8">
-      {selectedForBlock?.isBlocked
-        ? "This user will regain access to the system."
-        : "This user will no longer be able to access the system."}
-    </p>
-
-    <div className="flex gap-3 w-full">
-      <button
-        onClick={() => {
+        open={blockOpen}
+        onClose={() => {
           setBlockOpen(false);
           setSelectedForBlock(null);
         }}
-        className="flex-1 py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all"
+        /* FIX: If isActive is true, they are currently active, so show "Block" */
+        title={selectedForBlock?.isActive === false ? 'Unblock User?' : 'Block User?'}
+        maxWidth='sm'
       >
-        Cancel
-      </button>
+        <div className='flex flex-col items-center text-center -mt-2'>
+          <p className='text-gray-500 leading-relaxed mb-8'>
+            {selectedForBlock?.isActive === false
+              ? 'This user will regain access to the system.'
+              : 'This user will no longer be able to access the system.'}
+          </p>
 
-      <button
-        onClick={confirmBlockToggle}
-        disabled={blockMutation.isPending}
-        className={`flex-1 py-3 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
-          selectedForBlock?.isBlocked
-            ? "bg-green-500 hover:bg-green-600 shadow-green-100"
-            : "bg-red-500 hover:bg-red-600 shadow-red-100"
-        }`}
-      >
-        {blockMutation.isPending ? (
-          <>
-            <Loader2 size={16} className="animate-spin" />
-            Processing...
-          </>
-        ) : selectedForBlock?.isBlocked ? (
-          "Unblock"
-        ) : (
-          "Block"
-        )}
-      </button>
-    </div>
-  </div>
-</Modal>
+          <div className='flex gap-3 w-full'>
+            {/* ... Cancel Button ... */}
 
+            <button
+              onClick={confirmBlockToggle}
+              disabled={blockMutation.isPending}
+              className={`flex-1 py-3 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                /* FIX: Logic swap here for colors */
+                selectedForBlock?.isActive === false
+                  ? 'bg-green-500 hover:bg-green-600 shadow-green-100' // Unblocking = Green
+                  : 'bg-red-500 hover:bg-red-600 shadow-red-100' // Blocking = Red
+              }`}
+            >
+              {blockMutation.isPending ? (
+                <>
+                  <Loader2 size={16} className='animate-spin' /> Processing...
+                </>
+              ) : selectedForBlock?.isActive === false ? (
+                'Unblock'
+              ) : (
+                'Block'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </Box>
   );
 }
