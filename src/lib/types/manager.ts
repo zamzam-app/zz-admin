@@ -1,3 +1,5 @@
+export const MANAGER_KEYS = ['managers'];
+
 export interface User {
   name: string;
   email: string;

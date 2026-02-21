@@ -11,9 +11,7 @@ import { DeleteModal } from '../components/common/DeleteModal';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
-import { UpdateUserPayload, User } from '../lib/types/manager';
-
-const EMPLOYEE_KEYS = ['employees'];
+import { MANAGER_KEYS, UpdateUserPayload, User } from '../lib/types/manager';
 
 type ModalState =
   | null
@@ -34,14 +32,14 @@ export default function ManagersPage() {
     isLoading,
     error,
     refetch,
-  } = useApiQuery(EMPLOYEE_KEYS, usersApi.getManagers);
-  const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [EMPLOYEE_KEYS]);
+  } = useApiQuery(MANAGER_KEYS, usersApi.getManagers);
+  const deleteMutation = useApiMutation((id: string) => usersApi.delete(id), [MANAGER_KEYS]);
   const blockMutation = useApiMutation(
     (data: { id: string; isActive: boolean }) =>
       usersApi.update(data.id, {
         isActive: data.isActive,
       } as UpdateUserPayload),
-    [EMPLOYEE_KEYS],
+    [MANAGER_KEYS],
     {
       onSuccess: () => setBlockConfirmEmployee(null),
     },

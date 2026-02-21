@@ -5,9 +5,7 @@ import { Button } from '../common/Button';
 import Input from '../common/Input';
 import { usersApi } from '../../lib/services/api/users.api';
 import { useApiMutation } from '../../lib/react-query/use-api-hooks';
-import type { User, CreateUserPayload, UpdateUserPayload } from '../../lib/types/manager';
-
-const EMPLOYEE_KEYS: unknown[][] = [['employees']];
+import { MANAGER_KEYS, User, CreateUserPayload, UpdateUserPayload } from '../../lib/types/manager';
 
 type AddModalProps = {
   open: boolean;
@@ -18,43 +16,59 @@ type AddModalProps = {
 
 const initialForm: Partial<User> & { password?: string } = {};
 
+function getUserId(u: User | null | undefined): string | undefined {
+  return u ? (u._id ?? u.id) : undefined;
+}
+
 export function AddModal({ open, onClose, editing, onSuccess }: AddModalProps) {
   const [form, setForm] = useState<Partial<User> & { password?: string }>(initialForm);
+  const [error, setError] = useState<string | null>(null);
 
   const createMutation = useApiMutation(
     (data: CreateUserPayload) => usersApi.create(data),
-    EMPLOYEE_KEYS,
+    [MANAGER_KEYS],
     {
-      onSuccess: () => {
-        onSuccess();
-        onClose();
-      },
+      onSuccess: () => onSuccess(),
+      onError: (err) => setError(err.message ?? 'Failed to create employee'),
     },
   );
 
   const updateMutation = useApiMutation(
     (data: { id: string; payload: UpdateUserPayload }) => usersApi.update(data.id, data.payload),
-    EMPLOYEE_KEYS,
+    [MANAGER_KEYS],
     {
-      onSuccess: () => {
-        onSuccess();
-        onClose();
-      },
+      onSuccess: () => onSuccess(),
+      onError: (err) => setError(err.message ?? 'Failed to update employee'),
     },
   );
 
   useEffect(() => {
-    if (!open) return;
-    const next = editing ? { ...editing } : initialForm;
-    const t = setTimeout(() => setForm(next), 0);
+    if (open) {
+      const next = editing ? { ...editing } : initialForm;
+      const t = setTimeout(() => {
+        setForm(next);
+        setError(null);
+      }, 0);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => {
+      setForm(initialForm);
+      setError(null);
+    }, 0);
     return () => clearTimeout(t);
   }, [open, editing]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.userName) return;
+    setError(null);
+    if (!form.name?.trim() || !form.email?.trim() || !form.userName?.trim()) return;
+    const phone = form.phoneNumber?.trim();
+    if (!editing && !phone) {
+      setError('Phone number is required.');
+      return;
+    }
 
-    const id = editing?._id || editing?.id;
+    const id = getUserId(editing);
 
     if (editing && id) {
       updateMutation.mutate({
@@ -64,17 +78,16 @@ export function AddModal({ open, onClose, editing, onSuccess }: AddModalProps) {
           userName: form.userName,
           email: form.email,
           role: 'manager',
-          phoneNumber: form.phoneNumber,
-          password: form.password,
+          phoneNumber: phone ?? form.phoneNumber,
         },
       });
     } else {
       createMutation.mutate({
-        name: form.name,
-        userName: form.userName,
-        email: form.email,
+        name: form.name!,
+        userName: form.userName!,
+        email: form.email!,
         role: 'manager',
-        phoneNumber: form.phoneNumber ?? '',
+        phoneNumber: phone ?? '',
         password: form.password,
       });
     }
@@ -90,6 +103,14 @@ export function AddModal({ open, onClose, editing, onSuccess }: AddModalProps) {
       maxWidth='md'
     >
       <form onSubmit={handleSave} className='flex flex-col gap-8'>
+        {error && (
+          <p
+            className='text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3'
+            role='alert'
+          >
+            {error}
+          </p>
+        )}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8'>
           <Input
             label='Full Name'
