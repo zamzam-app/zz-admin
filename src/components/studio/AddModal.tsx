@@ -22,7 +22,7 @@ const initialFormState: Partial<Product> & { type?: 'premade' | 'custom' } = {
 };
 
 export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) => {
-  const [newCake, setNewCake] = useState(initialFormState);
+  const [newProduct, setNewProduct] = useState(initialFormState);
 
   const {
     upload,
@@ -34,24 +34,24 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!newCake.name || !newCake.price) {
+    if (!newProduct.name || !newProduct.price) {
       alert('Please fill all required fields');
       return;
     }
 
     try {
       const payload = {
-        name: newCake.name,
-        price: newCake.price,
-        description: newCake.description || '',
+        name: newProduct.name,
+        price: newProduct.price,
+        description: newProduct.description || '',
         ratingsId: '60d5ecb86217152c9043e02d', // ⚠ replace with real one if dynamic
-        images: newCake.images ?? [],
-        type: newCake.type || 'premade',
+        images: newProduct.images ?? [],
+        type: newProduct.type || 'premade',
       };
 
       const savedProduct = await productApi.create(payload as CreateProductRequest);
       onSuccess(savedProduct);
-      setNewCake(initialFormState);
+      setNewProduct(initialFormState);
       onClose();
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -69,8 +69,8 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
           <div>
             <Input
               label='Product Title'
-              value={newCake.name || ''}
-              onChange={(e) => setNewCake({ ...newCake, name: e.target.value })}
+              value={newProduct.name || ''}
+              onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
               required
             />
           </div>
@@ -79,16 +79,16 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
             <Input
               label='Price ($)'
               type='number'
-              value={newCake.price ?? ''}
-              onChange={(e) => setNewCake({ ...newCake, price: Number(e.target.value) })}
+              value={newProduct.price ?? ''}
+              onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
               required
             />
             <Select
               label='Type'
               options={['premade', 'custom']}
-              value={newCake.type || 'premade'}
+              value={newProduct.type || 'premade'}
               onChange={(e) =>
-                setNewCake({ ...newCake, type: e.target.value as 'premade' | 'custom' })
+                setNewProduct({ ...newProduct, type: e.target.value as 'premade' | 'custom' })
               }
             />
           </div>
@@ -96,8 +96,8 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
           <div>
             <Input
               label='Description'
-              value={newCake.description || ''}
-              onChange={(e) => setNewCake({ ...newCake, description: e.target.value })}
+              value={newProduct.description || ''}
+              onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
             />
           </div>
 
@@ -115,7 +115,7 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
                 clearUploadError();
                 try {
                   const urls = await Promise.all(Array.from(files).map((file) => upload(file)));
-                  setNewCake((prev) => ({
+                  setNewProduct((prev) => ({
                     ...prev,
                     images: [...(prev.images ?? []), ...urls],
                   }));
@@ -130,7 +130,7 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
             {uploadError && <p className='mt-1 text-sm text-red-600'>{uploadError.message}</p>}
             {/* Preview */}
             <div className='flex flex-wrap gap-2 mt-2'>
-              {(newCake.images ?? []).map((url, idx) => (
+              {(newProduct.images ?? []).map((url, idx) => (
                 <div key={idx} className='relative'>
                   <img
                     src={url}
@@ -140,7 +140,7 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
                   <button
                     type='button'
                     onClick={() =>
-                      setNewCake((prev) => ({
+                      setNewProduct((prev) => ({
                         ...prev,
                         images: (prev.images ?? []).filter((_, i) => i !== idx),
                       }))

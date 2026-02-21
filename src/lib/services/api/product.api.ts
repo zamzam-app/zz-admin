@@ -4,7 +4,7 @@ import type { Product, CreateProductRequest } from '../../types/product';
 export const productApi = {
   getAll: async (): Promise<Product[]> => {
     const { data } = await apiClient.get<Product[]>('/product');
-    return data;
+    return Array.isArray(data) ? data : [];
   },
 
   create: async (payload: CreateProductRequest): Promise<Product> => {
