@@ -6,6 +6,7 @@ import Select from '../components/common/Select';
 import { productApi } from '../lib/services/api/product.api';
 import type { Product } from '../lib/types/product';
 import { Modal } from '../components/common/Modal';
+import { useImageUpload } from '../lib/hooks/useImageUpload';
 
 interface Cake {
   id: string;
@@ -32,7 +33,12 @@ const Studio = () => {
     type: 'premade',
   });
 
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // For file uploads
+  const {
+    upload,
+    loading: uploadLoading,
+    error: uploadError,
+    clearError: clearUploadError,
+  } = useImageUpload('products');
 
   // Map API Product to Cake
   const mapProductToCake = (apiData: Product): Cake => ({
@@ -89,7 +95,7 @@ const Studio = () => {
         price: newCake.price,
         description: newCake.description || '',
         ratingsId: '60d5ecb86217152c9043e02d', // ⚠ replace with real one if dynamic
-        images: selectedFiles.map((file) => file.name),
+        images: newCake.images ?? [],
         type: newCake.type || 'premade',
       };
 
@@ -97,7 +103,6 @@ const Studio = () => {
 
       setCakes((prev) => [...prev, mapProductToCake(savedProduct)]);
       setIsModalOpen(false);
-      setSelectedFiles([]);
 
       setNewCake({
         name: '',
@@ -227,7 +232,7 @@ const Studio = () => {
                 />
               </div>
 
-              {/* File Upload */}
+              {/* Cloudinary image upload */}
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Upload Images
@@ -236,21 +241,48 @@ const Studio = () => {
                   type='file'
                   multiple
                   accept='image/*'
-                  onChange={(e) => {
-                    if (!e.target.files) return;
-                    setSelectedFiles(Array.from(e.target.files));
+                  disabled={uploadLoading}
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files?.length) return;
+                    clearUploadError();
+                    try {
+                      const urls = await Promise.all(Array.from(files).map((file) => upload(file)));
+                      setNewCake((prev) => ({
+                        ...prev,
+                        images: [...(prev.images ?? []), ...urls],
+                      }));
+                    } catch {
+                      // error already set in hook
+                    }
+                    e.target.value = '';
                   }}
-                  className='block w-full text-sm text-gray-500 file:py-2 file:px-4 file:border file:border-gray-300 file:rounded-lg file:text-sm file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100'
+                  className='block w-full text-sm text-gray-500 file:py-2 file:px-4 file:border file:border-gray-300 file:rounded-lg file:text-sm file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none'
                 />
+                {uploadLoading && <p className='mt-1 text-sm text-gray-500'>Uploading…</p>}
+                {uploadError && <p className='mt-1 text-sm text-red-600'>{uploadError.message}</p>}
                 {/* Preview */}
-                <div className='flex gap-2 mt-2'>
-                  {selectedFiles.map((file, idx) => (
-                    <img
-                      key={idx}
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      className='w-16 h-16 object-cover rounded-lg'
-                    />
+                <div className='flex flex-wrap gap-2 mt-2'>
+                  {(newCake.images ?? []).map((url, idx) => (
+                    <div key={idx} className='relative'>
+                      <img
+                        src={url}
+                        alt={`Preview ${idx + 1}`}
+                        className='w-16 h-16 object-cover rounded-lg'
+                      />
+                      <button
+                        type='button'
+                        onClick={() =>
+                          setNewCake((prev) => ({
+                            ...prev,
+                            images: (prev.images ?? []).filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className='absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600'
+                      >
+                        ×
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
