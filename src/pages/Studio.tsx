@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Popconfirm, Switch } from 'antd';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
@@ -13,7 +14,9 @@ import { DeleteModal } from '../components/studio/DeleteModal';
 const Studio = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [toggleConfirm, setToggleConfirm] = useState<{ id: string; list: boolean } | null>(null);
 
   const { data, isLoading, error, refetch } = useApiQuery(['products'], () => productApi.getAll());
   const products = Array.isArray(data) ? data : [];
@@ -25,6 +28,16 @@ const Studio = () => {
       setProductToDelete(null);
     } catch {
       alert('Could not delete product');
+    }
+  };
+
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    try {
+      await productApi.update(id, { isActive });
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+      setToggleConfirm(null);
+    } catch {
+      setToggleConfirm(null);
     }
   };
 
@@ -64,7 +77,10 @@ const Studio = () => {
         </div>
         <Button
           variant='admin-primary'
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setProductToEdit(null);
+            setIsModalOpen(true);
+          }}
           className='rounded-2xl py-4 shadow-xl shadow-gray-900/10'
         >
           <div className='flex items-center gap-2'>
@@ -94,7 +110,10 @@ const Studio = () => {
                     action={
                       <Button
                         variant='admin-primary'
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => {
+                          setProductToEdit(null);
+                          setIsModalOpen(true);
+                        }}
                         className='rounded-2xl'
                       >
                         <span className='flex items-center gap-2'>
@@ -132,12 +151,48 @@ const Studio = () => {
                     </div>
                   </td>
                   <td className='px-8 py-6 text-right'>
-                    <button
-                      onClick={() => setProductToDelete(product)}
-                      className='p-3 text-gray-400 hover:text-[#E11D48] hover:bg-white rounded-xl transition-all cursor-pointer'
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className='flex items-center justify-end gap-1'>
+                      <Popconfirm
+                        open={toggleConfirm?.id === product._id}
+                        onOpenChange={(open) => !open && setToggleConfirm(null)}
+                        title={
+                          toggleConfirm?.list
+                            ? 'Are you sure you want to list this product?'
+                            : 'Are you sure you want to unlist this product?'
+                        }
+                        onConfirm={() =>
+                          toggleConfirm && handleToggleActive(product._id, toggleConfirm.list)
+                        }
+                        okText='Yes'
+                        cancelText='No'
+                      >
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <Switch
+                            checked={product.isActive}
+                            onChange={(checked) =>
+                              setToggleConfirm({ id: product._id, list: checked })
+                            }
+                          />
+                        </span>
+                      </Popconfirm>
+                      <button
+                        onClick={() => {
+                          setProductToEdit(product);
+                          setIsModalOpen(true);
+                        }}
+                        className='p-3 text-gray-400 hover:text-[#1F2937] hover:bg-gray-100 rounded-xl transition-all cursor-pointer'
+                        title='Edit'
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => setProductToDelete(product)}
+                        className='p-3 text-gray-400 hover:text-[#E11D48] hover:bg-white rounded-xl transition-all cursor-pointer'
+                        title='Delete'
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -147,11 +202,16 @@ const Studio = () => {
       </div>
 
       <AddModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        open={isModalOpen || !!productToEdit}
+        onClose={() => {
+          setIsModalOpen(false);
+          setProductToEdit(null);
+        }}
+        productToEdit={productToEdit}
         onSuccess={async () => {
           await queryClient.invalidateQueries({ queryKey: ['products'] });
           setIsModalOpen(false);
+          setProductToEdit(null);
         }}
       />
 

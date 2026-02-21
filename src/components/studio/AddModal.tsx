@@ -6,7 +6,7 @@ import { Button } from '../common/Button';
 import Input from '../common/Input';
 import { Modal } from '../common/Modal';
 import { productApi } from '../../lib/services/api/product.api';
-import type { Product, CreateProductRequest } from '../../lib/types/product';
+import type { Product, CreateProductRequest, UpdateProductDto } from '../../lib/types/product';
 import { useApiMutation } from '../../lib/react-query/use-api-hooks';
 import { useImageUpload } from '../../lib/hooks/useImageUpload';
 
@@ -14,6 +14,8 @@ type AddModalProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: (product: Product) => void;
+  /** When set, modal is in edit mode: form prefilled and submit calls PATCH */
+  productToEdit?: Product | null;
 };
 
 const initialFormState: CreateProductRequest = {
@@ -23,8 +25,14 @@ const initialFormState: CreateProductRequest = {
   images: [],
 };
 
-export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) => {
+export const AddModal: React.FC<AddModalProps> = ({
+  open,
+  onClose,
+  onSuccess,
+  productToEdit = null,
+}) => {
   const [newProduct, setNewProduct] = useState(initialFormState);
+  const isEditMode = !!productToEdit;
 
   const createMutation = useApiMutation(
     (payload: CreateProductRequest) => productApi.create(payload),
@@ -37,6 +45,35 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
       },
     },
   );
+
+  const updateMutation = useApiMutation(
+    ({ id, payload }: { id: string; payload: UpdateProductDto }) => productApi.update(id, payload),
+    [['products']],
+    {
+      onSuccess: (savedProduct) => {
+        setNewProduct(initialFormState);
+        onSuccess(savedProduct);
+        onClose();
+      },
+    },
+  );
+
+  // Sync form state when modal opens (add vs edit) so form shows correct initial values
+  useEffect(() => {
+    if (!open) return;
+    const next = productToEdit
+      ? {
+          name: productToEdit.name,
+          price: productToEdit.price,
+          description: productToEdit.description ?? '',
+          images: productToEdit.images ?? [],
+        }
+      : initialFormState;
+    const t = setTimeout(() => setNewProduct(next), 0);
+    return () => clearTimeout(t);
+  }, [open, productToEdit]);
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   const {
     upload,
@@ -70,7 +107,19 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
     };
 
     try {
-      await createMutation.mutateAsync(payload);
+      if (isEditMode && productToEdit) {
+        await updateMutation.mutateAsync({
+          id: productToEdit._id,
+          payload: {
+            name: payload.name,
+            price: payload.price,
+            description: payload.description,
+            images: payload.images,
+          },
+        });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
     } catch (err: unknown) {
       const data =
         err &&
@@ -109,7 +158,7 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
     <Modal
       open={open}
       onClose={onClose}
-      title='New Inventory Item'
+      title={isEditMode ? 'Edit Product' : 'New Inventory Item'}
       titleAlign='center'
       maxWidth='lg'
       contentClassName='pt-2 px-8 pb-8'
@@ -184,25 +233,22 @@ export const AddModal: React.FC<AddModalProps> = ({ open, onClose, onSuccess }) 
           </div>
 
           <div className='flex justify-end gap-6'>
-            <Button
-              type='button'
-              variant='ghost'
-              onClick={onClose}
-              disabled={createMutation.isPending}
-            >
+            <Button type='button' variant='ghost' onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
             <Button
               type='submit'
               variant='admin-primary'
               className='rounded-2xl px-10 inline-flex items-center gap-2'
-              disabled={createMutation.isPending || uploadLoading}
+              disabled={isPending || uploadLoading}
             >
-              {createMutation.isPending || uploadLoading ? (
+              {isPending || uploadLoading ? (
                 <>
                   <Loader2 size={18} className='animate-spin shrink-0 text-white' />
                   <span className='text-white'>Saving…</span>
                 </>
+              ) : isEditMode ? (
+                'Save changes'
               ) : (
                 'Launch Item'
               )}

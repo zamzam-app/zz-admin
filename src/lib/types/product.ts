@@ -16,3 +16,11 @@ export interface CreateProductRequest {
   description: string;
   images: string[];
 }
+
+export interface UpdateProductDto {
+  name?: string;
+  price?: number;
+  description?: string;
+  images?: string[];
+  isActive?: boolean;
+}
