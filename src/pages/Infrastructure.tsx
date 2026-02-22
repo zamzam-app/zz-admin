@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Store, MapPin, QrCode, Trash2, User, Captions } from 'lucide-react';
+import { Plus, Store, MapPin, QrCode, Trash2, User, Captions, Layers } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Store as StoreType, StoreCategory } from '../lib/types/types';
 import { Button } from '../components/common/Button';
@@ -8,7 +8,7 @@ import Card from '../components/common/Card';
 import { DeleteModal } from '../components/common/DeleteModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
-import { OutletModal, QrCodeModal } from '../components/infrastructure';
+import { OutletModal, OutletTypesModal, QrCodeModal } from '../components/infrastructure';
 import { outletApi } from '../lib/services/api/outlet.api';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { usersApi } from '../lib/services/api/users.api';
@@ -39,6 +39,7 @@ export default function Infrastructure() {
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedQrStore, setSelectedQrStore] = useState<StoreType | null>(null);
   const [outletToDelete, setOutletToDelete] = useState<StoreType | null>(null);
+  const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
 
   const [availableForms] = useState<Form[]>(() => {
     try {
@@ -113,9 +114,20 @@ export default function Infrastructure() {
         <h1 className='text-3xl font-black text-[#1F2937]'>Outlet Infrastructure</h1>
         <p className='text-gray-500 text-sm'>Manage all physical outlets and QR points</p>
       </div>
-      <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl px-6 py-4'>
-        <Plus size={18} /> Add Outlet
-      </Button>
+      <div className='flex flex-wrap gap-3'>
+        <Button
+          type='button'
+          variant='outline'
+          onClick={() => setOutletTypesModalOpen(true)}
+          className='rounded-2xl px-6 py-4'
+        >
+          <Layers size={18} className='mr-2' />
+          Outlet Types
+        </Button>
+        <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl px-6 py-4'>
+          <Plus size={18} /> Add Outlet
+        </Button>
+      </div>
     </div>
   );
 
@@ -192,6 +204,12 @@ export default function Infrastructure() {
           entityName={outletToDelete?.name}
           confirmId={outletToDelete?.id}
           onConfirm={handleConfirmDelete}
+        />
+        <OutletTypesModal
+          open={outletTypesModalOpen}
+          onClose={() => setOutletTypesModalOpen(false)}
+          availableForms={availableForms}
+          managers={managers}
         />
       </div>
     );
@@ -285,6 +303,12 @@ export default function Infrastructure() {
         entityName={outletToDelete?.name}
         confirmId={outletToDelete?.id}
         onConfirm={handleConfirmDelete}
+      />
+      <OutletTypesModal
+        open={outletTypesModalOpen}
+        onClose={() => setOutletTypesModalOpen(false)}
+        availableForms={availableForms}
+        managers={managers}
       />
     </div>
   );

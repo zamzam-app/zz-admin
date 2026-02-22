@@ -8,6 +8,8 @@ type ModalProps = {
   children: React.ReactNode;
   title?: string;
   titleAlign?: 'left' | 'center';
+  /** Rendered in the header before the close button (e.g. "Add" action) */
+  headerAction?: React.ReactNode;
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   contentClassName?: string;
@@ -18,6 +20,7 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   titleAlign = 'left',
+  headerAction,
   children,
   maxWidth = 'sm',
   className = '',
@@ -75,12 +78,15 @@ export const Modal: React.FC<ModalProps> = ({
                 <h3 className='text-xl font-black text-[#1F2937] tracking-tight text-center flex-1'>
                   {title}
                 </h3>
-                <button
-                  onClick={onClose}
-                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 shrink-0 cursor-pointer'
-                >
-                  <X size={20} />
-                </button>
+                <div className='flex items-center gap-2'>
+                  {headerAction}
+                  <button
+                    onClick={onClose}
+                    className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 shrink-0 cursor-pointer'
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </>
             ) : (
               <>
@@ -89,12 +95,15 @@ export const Modal: React.FC<ModalProps> = ({
                     {title}
                   </h3>
                 )}
-                <button
-                  onClick={onClose}
-                  className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 cursor-pointer'
-                >
-                  <X size={20} />
-                </button>
+                <div className='flex items-center gap-2 ml-auto'>
+                  {headerAction}
+                  <button
+                    onClick={onClose}
+                    className='p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 shrink-0 cursor-pointer'
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </>
             )}
           </div>
