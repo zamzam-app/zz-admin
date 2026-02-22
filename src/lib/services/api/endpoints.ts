@@ -14,3 +14,8 @@ export const USERS = {
 export const UPLOAD = {
   SIGNATURE: '/upload/signature',
 };
+
+export const OUTLET = {
+  BASE: '/outlet',
+  BY_ID: (id: string) => `/outlet/${id}`,
+};

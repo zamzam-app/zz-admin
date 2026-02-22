@@ -1,16 +1,39 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Store, MapPin, QrCode, Trash2, User, Captions } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Store as StoreType, StoreCategory } from '../lib/types/types';
 import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
 import { DeleteModal } from '../components/common/DeleteModal';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import { NoDataFallback } from '../components/common/NoDataFallback';
 import { OutletModal, QrCodeModal } from '../components/infrastructure';
-import { storesList, MANAGERS } from '../__mocks__/managers';
+import { outletApi } from '../lib/services/api/outlet.api';
+import { OUTLET_KEYS } from '../lib/types/outlet';
+import { usersApi } from '../lib/services/api/users.api';
+import { useApiQuery } from '../lib/react-query/use-api-hooks';
+import { MANAGER_KEYS, User as ManagerUser } from '../lib/types/manager';
+import type { ManagerOption } from '../components/infrastructure';
 import { Form } from '../lib/types/forms';
 
+function toManagerOption(user: ManagerUser): ManagerOption {
+  return {
+    id: user._id ?? user.id ?? '',
+    name: user.name,
+    phone: user.phoneNumber,
+  };
+}
+
 export default function Infrastructure() {
-  const [stores, setStores] = useState(storesList);
+  const queryClient = useQueryClient();
+  const {
+    data: stores = [],
+    isLoading,
+    error,
+  } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
+  const { data: managersList = [] } = useApiQuery(MANAGER_KEYS, usersApi.getManagers);
+  const managers: ManagerOption[] = managersList.map(toManagerOption);
   const [outletModalOpen, setOutletModalOpen] = useState(false);
   const [editingOutlet, setEditingOutlet] = useState<StoreType | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
@@ -35,13 +58,17 @@ export default function Infrastructure() {
     setOutletModalOpen(true);
   };
 
+  const setStoresInCache = (updater: (prev: StoreType[]) => StoreType[]) => {
+    queryClient.setQueryData<StoreType[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
+  };
+
   const handleSaveOutlet = (editingId: string | null, data: Partial<StoreType>) => {
     if (!data.name || !data.category) return;
 
     if (editingId) {
-      setStores((prev) => prev.map((s) => (s.id === editingId ? { ...s, ...data } : s)));
+      setStoresInCache((prev) => prev.map((s) => (s.id === editingId ? { ...s, ...data } : s)));
     } else {
-      setStores((prev) => [
+      setStoresInCache((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
@@ -66,7 +93,7 @@ export default function Infrastructure() {
   const handleGenerateQr = (store: StoreType) => {
     if (!store.qrToken) {
       const updatedStore = { ...store, qrToken: nanoid(10) };
-      setStores((prev) => prev.map((s) => (s.id === store.id ? updatedStore : s)));
+      setStoresInCache((prev) => prev.map((s) => (s.id === store.id ? updatedStore : s)));
       setSelectedQrStore(updatedStore);
     } else {
       setSelectedQrStore(store);
@@ -75,23 +102,103 @@ export default function Infrastructure() {
   };
 
   const handleConfirmDelete = (id: string) => {
-    setStores((prev) => prev.filter((s) => s.id !== id));
+    setStoresInCache((prev) => prev.filter((s) => s.id !== id));
     setOutletToDelete(null);
   };
 
+  const header = (
+    <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
+      <div>
+        <h1 className='text-3xl font-black text-[#1F2937]'>Outlet Infrastructure</h1>
+        <p className='text-gray-500 text-sm'>Manage all physical outlets and QR points</p>
+      </div>
+      <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl px-6 py-4'>
+        <Plus size={18} /> Add Outlet
+      </Button>
+    </div>
+  );
+
+  if (error) {
+    return (
+      <div className='space-y-8'>
+        {header}
+        <div className='rounded-2xl border border-gray-100 bg-white overflow-hidden'>
+          <NoDataFallback
+            title='No outlets found'
+            description='Try adding a new outlet to get started'
+            action={
+              <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl'>
+                Add Outlet
+              </Button>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className='space-y-8'>
+        {header}
+        <div className='min-h-[400px] relative'>
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
+  }
+
+  if (stores.length === 0) {
+    return (
+      <div className='space-y-8'>
+        {header}
+        <div className='rounded-2xl border border-gray-100 bg-white overflow-hidden min-h-[400px] flex items-center justify-center'>
+          <NoDataFallback
+            title='No outlets found'
+            description='Try adding a new outlet to get started'
+            action={
+              <Button
+                type='button'
+                variant='admin-primary'
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleOpenAdd();
+                }}
+                className='rounded-2xl'
+              >
+                Add Outlet
+              </Button>
+            }
+          />
+        </div>
+        <OutletModal
+          open={outletModalOpen}
+          onClose={() => {
+            setOutletModalOpen(false);
+            setEditingOutlet(null);
+          }}
+          editing={editingOutlet}
+          onSave={handleSaveOutlet}
+          availableForms={availableForms}
+          managers={managers}
+        />
+        <QrCodeModal open={qrOpen} onClose={() => setQrOpen(false)} store={selectedQrStore} />
+        <DeleteModal
+          open={!!outletToDelete}
+          onClose={() => setOutletToDelete(null)}
+          title='Delete Outlet?'
+          entityName={outletToDelete?.name}
+          confirmId={outletToDelete?.id}
+          onConfirm={handleConfirmDelete}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className='space-y-8'>
-      {/* Header */}
-      <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
-        <div>
-          <h1 className='text-3xl font-black text-[#1F2937]'>Outlet Infrastructure</h1>
-          <p className='text-gray-500 text-sm'>Manage all physical outlets and QR points</p>
-        </div>
-
-        <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl px-6 py-4'>
-          <Plus size={18} /> Add Outlet
-        </Button>
-      </div>
+      {header}
 
       {/* Outlet Grid */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
@@ -165,7 +272,7 @@ export default function Infrastructure() {
         editing={editingOutlet}
         onSave={handleSaveOutlet}
         availableForms={availableForms}
-        managers={MANAGERS}
+        managers={managers}
       />
 
       <QrCodeModal open={qrOpen} onClose={() => setQrOpen(false)} store={selectedQrStore} />
