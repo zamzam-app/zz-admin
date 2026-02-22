@@ -1,6 +1,5 @@
-import React from 'react';
-import { useEffect } from 'react';
-import { Popconfirm } from 'antd';
+import React, { useEffect } from 'react';
+import { message, Popconfirm } from 'antd';
 import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus } from 'lucide-react';
 import { Form, Question, QuestionType } from '../../lib/types/forms';
 import { Button } from '../common/Button';
@@ -21,6 +20,31 @@ const FormEditor: React.FC<Props> = ({
   onCancel,
   onPreview,
 }) => {
+  const validate = (): boolean => {
+    const errors: string[] = [];
+
+    if (!currentForm.title?.trim()) {
+      errors.push('Form title is required');
+    }
+
+    currentForm.questions.forEach((q, idx) => {
+      if (!q.title?.trim()) {
+        errors.push(`Question ${idx + 1}: title is required`);
+      }
+    });
+
+    if (errors.length > 0) {
+      message.error(errors[0]);
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = () => {
+    if (!validate()) return;
+    onSave();
+  };
+
   useEffect(() => {
     if (currentForm.questions.length === 0) {
       const ratingQuestion: Question = {
@@ -137,14 +161,14 @@ const FormEditor: React.FC<Props> = ({
           >
             <button
               type='button'
-              className='p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition shadow-sm'
+              className='p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition shadow-sm cursor-pointer'
             >
               <ArrowLeft size={20} className='text-[#1F2937]' />
             </button>
           </Popconfirm>
-          <div>
+          <div className='flex-1 min-w-0'>
             <input
-              className='text-2xl font-black text-[#1F2937] outline-none bg-transparent border-b-2 border-transparent focus:border-blue-500 w-full md:w-auto'
+              className='text-2xl font-black text-[#1F2937] outline-none bg-transparent border-b-2 border-transparent focus:border-blue-500 w-full md:w-auto transition-colors'
               value={currentForm.title}
               placeholder='Untitled Form'
               onChange={(e) => setCurrentForm({ ...currentForm, title: e.target.value })}
@@ -164,7 +188,7 @@ const FormEditor: React.FC<Props> = ({
           </Button>
           <Button
             variant='admin-primary'
-            onClick={onSave}
+            onClick={handleSave}
             className='rounded-2xl px-8 py-4 shadow-lg flex items-center gap-3'
           >
             <Save size={18} />
@@ -186,12 +210,14 @@ const FormEditor: React.FC<Props> = ({
                   <span className='flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-500 font-black text-xs'>
                     {idx + 1}
                   </span>
-                  <input
-                    className='w-full text-lg font-black text-[#1F2937] bg-transparent outline-none border-b-2 border-gray-50 focus:border-blue-500 py-1 transition-all'
-                    placeholder='Enter your question here...'
-                    value={q.title}
-                    onChange={(e) => updateQuestion(q._id, { title: e.target.value })}
-                  />
+                  <div className='flex-1 min-w-0'>
+                    <input
+                      className='w-full text-lg font-black text-[#1F2937] bg-transparent outline-none border-b-2 border-gray-50 focus:border-blue-500 py-1 transition-all'
+                      placeholder='Enter your question here...'
+                      value={q.title}
+                      onChange={(e) => updateQuestion(q._id, { title: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className='flex items-center gap-2 px-1 text-gray-400'>
