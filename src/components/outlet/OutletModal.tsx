@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { message, Upload } from 'antd';
+import type { UploadFile } from 'antd/es/upload/interface';
 import { Loader2 } from 'lucide-react';
 import type { Outlet } from '../../lib/types/outlet';
 import { Button } from '../common/Button';
@@ -11,6 +13,7 @@ import { outletTypeApi } from '../../lib/services/api/outlet-type.api';
 import { OUTLET_KEYS } from '../../lib/types/outlet';
 import { OUTLET_TYPE_KEYS } from '../../lib/types/outlet-type';
 import { useApiQuery, useApiMutation } from '../../lib/react-query/use-api-hooks';
+import { useImageUpload } from '../../lib/hooks/useImageUpload';
 import type { CreateOutletPayload, UpdateOutletPayload } from '../../lib/types/outlet';
 
 export type ManagerOption = { id: string; name: string; phone?: string };
@@ -64,9 +67,26 @@ export function OutletModal({
     },
   );
 
+  const {
+    upload,
+    loading: uploadLoading,
+    error: uploadError,
+    clearError: clearUploadError,
+  } = useImageUpload('outlets');
+
+  useEffect(() => {
+    if (uploadError) message.error(uploadError.message);
+  }, [uploadError]);
+
   useEffect(() => {
     if (open) {
-      const next = editing ? { ...editing } : {};
+      const next = editing
+        ? {
+            ...editing,
+            description: editing.description ?? '',
+            images: editing.images ?? [],
+          }
+        : {};
       const t = setTimeout(() => {
         setForm(next);
         setError(null);
@@ -87,6 +107,8 @@ export function OutletModal({
 
     const payload = {
       name: form.name.trim(),
+      description: form.description?.trim() || undefined,
+      images: form.images?.length ? form.images : undefined,
       address: form.address?.trim() ?? undefined,
       outletType: form.outletTypeId,
       managerId: form.managerId || undefined,
@@ -104,24 +126,38 @@ export function OutletModal({
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  const uploadFileList: UploadFile[] = useMemo(
+    () =>
+      (form.images ?? []).map((url, i) => ({
+        uid: `${i}-${url}`,
+        name: url.split('/').pop() ?? 'image',
+        status: 'done' as const,
+        url,
+      })),
+    [form.images],
+  );
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={editing ? 'Edit Outlet' : 'Register Outlet'}
-      maxWidth='md'
+      titleAlign='center'
+      maxWidth='lg'
+      contentClassName='pt-2 px-8 pb-8'
     >
-      <form onSubmit={handleSubmit} className='flex flex-col gap-8'>
-        {error && (
-          <p
-            className='text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3'
-            role='alert'
-          >
-            {error}
-          </p>
-        )}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8'>
-          <div className='md:col-span-2'>
+      <div className='max-h-[70vh] overflow-y-auto -mx-2 px-2 pt-4'>
+        <form onSubmit={handleSubmit} className='space-y-6'>
+          {error && (
+            <p
+              className='text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3'
+              role='alert'
+            >
+              {error}
+            </p>
+          )}
+
+          <div>
             <Input
               label='Outlet Name'
               value={form.name || ''}
@@ -130,35 +166,51 @@ export function OutletModal({
             />
           </div>
 
-          <Select
-            label='Outlet Type'
-            options={outletTypes.map((ot) => ({ label: ot.name, value: ot._id }))}
-            value={form.outletTypeId || ''}
-            onChange={(e) => {
-              const selected = outletTypes.find((ot) => ot._id === e.target.value);
-              setForm({
-                ...form,
-                outletTypeId: selected?._id,
-                outletTypeName: selected?.name,
-              });
-            }}
-          />
+          <div>
+            <Input
+              label='Description'
+              multiline
+              rows={5}
+              value={form.description ?? ''}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              slotProps={{ htmlInput: { maxLength: 1000 } }}
+            />
+            <p className='mt-1 text-right text-xs text-gray-500'>
+              {(form.description ?? '').length} / 1000
+            </p>
+          </div>
 
-          <Select
-            label='Choose Form'
-            options={availableForms.map((f) => ({ label: f.title, value: f._id }))}
-            value={form.formId || ''}
-            onChange={(e) => {
-              const formItem = availableForms.find((f) => f._id === e.target.value);
-              setForm({
-                ...form,
-                formId: formItem?._id,
-                formTitle: formItem?.title,
-              });
-            }}
-          />
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6'>
+            <Select
+              label='Outlet Type'
+              options={outletTypes.map((ot) => ({ label: ot.name, value: ot._id }))}
+              value={form.outletTypeId || ''}
+              onChange={(e) => {
+                const selected = outletTypes.find((ot) => ot._id === e.target.value);
+                setForm({
+                  ...form,
+                  outletTypeId: selected?._id,
+                  outletTypeName: selected?.name,
+                });
+              }}
+            />
 
-          <div className='md:col-span-2'>
+            <Select
+              label='Choose Form'
+              options={availableForms.map((f) => ({ label: f.title, value: f._id }))}
+              value={form.formId || ''}
+              onChange={(e) => {
+                const formItem = availableForms.find((f) => f._id === e.target.value);
+                setForm({
+                  ...form,
+                  formId: formItem?._id,
+                  formTitle: formItem?.title,
+                });
+              }}
+            />
+          </div>
+
+          <div>
             <Input
               label='Address'
               value={form.address || ''}
@@ -166,7 +218,7 @@ export function OutletModal({
             />
           </div>
 
-          <div className='md:col-span-2'>
+          <div>
             <Select
               label='Assigned Manager'
               options={managers.map((m) => ({ label: m.name, value: m.id }))}
@@ -182,36 +234,73 @@ export function OutletModal({
               }}
             />
           </div>
-        </div>
 
-        <div className='flex justify-end gap-4 pt-6 border-t border-gray-100'>
-          <Button
-            type='button'
-            variant='ghost'
-            onClick={onClose}
-            className='font-bold text-gray-400'
-          >
-            Cancel
-          </Button>
-          <Button
-            type='submit'
-            variant='admin-primary'
-            disabled={isPending}
-            className='px-10 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2'
-          >
-            {isPending ? (
-              <>
-                <Loader2 size={18} className='animate-spin' />
-                Processing...
-              </>
-            ) : editing ? (
-              'Update Outlet'
-            ) : (
-              'Save Outlet'
-            )}
-          </Button>
-        </div>
-      </form>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>Upload Images</label>
+            <Upload
+              accept='image/*'
+              multiple
+              maxCount={4}
+              listType='picture-card'
+              fileList={uploadFileList}
+              disabled={uploadLoading}
+              customRequest={({ file, onSuccess, onError }) => {
+                clearUploadError();
+                upload(file as File)
+                  .then((url) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      images: [...(prev.images ?? []), url],
+                    }));
+                    onSuccess?.(url);
+                  })
+                  .catch((err) =>
+                    onError?.(err instanceof Error ? err : new Error('Upload failed')),
+                  );
+              }}
+              onRemove={(file) => {
+                setForm((prev) => ({
+                  ...prev,
+                  images: (prev.images ?? []).filter((u) => u !== file.url),
+                }));
+              }}
+              showUploadList={{ showPreviewIcon: false }}
+            >
+              {uploadFileList.length >= 4 ? null : uploadLoading ? (
+                <span className='inline-flex flex-col items-center justify-center gap-2 text-gray-400 pointer-events-none'>
+                  <Loader2 size={24} className='animate-spin' />
+                  <span className='text-xs'>Uploading…</span>
+                </span>
+              ) : (
+                '+ Upload'
+              )}
+            </Upload>
+          </div>
+
+          <div className='flex justify-end gap-6'>
+            <Button type='button' variant='ghost' onClick={onClose} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button
+              type='submit'
+              variant='admin-primary'
+              className='rounded-2xl px-10 inline-flex items-center gap-2'
+              disabled={isPending || uploadLoading}
+            >
+              {isPending || uploadLoading ? (
+                <>
+                  <Loader2 size={18} className='animate-spin shrink-0 text-white' />
+                  <span className='text-white'>Saving…</span>
+                </>
+              ) : editing ? (
+                'Update Outlet'
+              ) : (
+                'Save Outlet'
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
     </Modal>
   );
 }

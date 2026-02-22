@@ -10,6 +10,8 @@ export interface Outlet {
   rating: number;
   totalFeedback: number;
   image?: string;
+  images?: string[];
+  description?: string;
   address?: string;
   managerPhone?: string;
   formId?: string;

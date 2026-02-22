@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Store, MapPin, QrCode, Trash2, User, Captions, Layers } from 'lucide-react';
+import { Plus, Store, MapPin, QrCode, Trash2, User, Layers } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { Outlet } from '../lib/types/outlet';
 import { Button } from '../components/common/Button';
@@ -211,7 +211,7 @@ export default function Infrastructure() {
                 <div>
                   <h4 className='font-black text-lg text-[#1F2937]'>{store.name}</h4>
                   <p className='text-[10px] text-gray-400 uppercase font-bold tracking-widest'>
-                    {store.outletTypeName ?? store.category}
+                    {store.outletTypeName}
                   </p>
                 </div>
               </div>
@@ -233,11 +233,7 @@ export default function Infrastructure() {
               </div>
               <div className='flex items-center gap-2'>
                 <User size={14} />
-                {store.managerName || 'No Manager Assigned'}
-              </div>
-              <div className='flex items-center gap-2'>
-                <Captions size={14} />
-                {store.formTitle || 'N/A'}
+                {store.managerName ?? 'No Manager Assigned'}
               </div>
             </div>
 
