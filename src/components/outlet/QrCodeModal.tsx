@@ -1,13 +1,13 @@
 import { Download } from 'lucide-react';
 import QRCode from 'react-qr-code';
-import { Store as StoreType } from '../../lib/types/types';
+import type { Outlet } from '../../lib/types/outlet';
 import { Button } from '../common/Button';
 import { Modal } from '../common/Modal';
 
 export type QrCodeModalProps = {
   open: boolean;
   onClose: () => void;
-  store: StoreType | null;
+  store: Outlet | null;
 };
 
 export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {

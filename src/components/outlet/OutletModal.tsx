@@ -1,51 +1,108 @@
-import React from 'react';
-import { Store as StoreType, StoreCategory } from '../../lib/types/types';
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import type { Outlet } from '../../lib/types/outlet';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
 import Select from '../common/Select';
 import { Modal } from '../common/Modal';
 import { Form } from '../../lib/types/forms';
+import { outletApi } from '../../lib/services/api/outlet.api';
+import { outletTypeApi } from '../../lib/services/api/outlet-type.api';
+import { OUTLET_KEYS } from '../../lib/types/outlet';
+import { OUTLET_TYPE_KEYS } from '../../lib/types/outlet-type';
+import { useApiQuery, useApiMutation } from '../../lib/react-query/use-api-hooks';
+import type { CreateOutletPayload, UpdateOutletPayload } from '../../lib/types/outlet';
 
 export type ManagerOption = { id: string; name: string; phone?: string };
 
 export type OutletModalProps = {
   open: boolean;
   onClose: () => void;
-  editing: StoreType | null;
-  onSave: (editingId: string | null, data: Partial<StoreType>) => void;
+  editing: Outlet | null;
+  onSuccess: () => void;
   availableForms: Form[];
   managers: ManagerOption[];
 };
+
+function getOutletId(outlet: Outlet | null | undefined): string | undefined {
+  return outlet ? (outlet.id ?? (outlet as { _id?: string })._id) : undefined;
+}
 
 export function OutletModal({
   open,
   onClose,
   editing,
-  onSave,
+  onSuccess,
   availableForms,
   managers,
 }: OutletModalProps) {
-  const [form, setForm] = React.useState<Partial<StoreType>>({});
+  const [form, setForm] = useState<Partial<Outlet>>({});
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  const { data: outletTypesData } = useApiQuery(
+    OUTLET_TYPE_KEYS,
+    () => outletTypeApi.getOutletTypes({ page: 1, limit: 100 }),
+    { enabled: open },
+  );
+  const outletTypes = outletTypesData?.data ?? [];
+
+  const createMutation = useApiMutation(
+    (data: CreateOutletPayload) => outletApi.create(data),
+    [OUTLET_KEYS],
+    {
+      onSuccess: () => onSuccess(),
+      onError: (err) => setError(err.message ?? 'Failed to create outlet'),
+    },
+  );
+
+  const updateMutation = useApiMutation(
+    (data: { id: string; payload: UpdateOutletPayload }) => outletApi.update(data.id, data.payload),
+    [OUTLET_KEYS],
+    {
+      onSuccess: () => onSuccess(),
+      onError: (err) => setError(err.message ?? 'Failed to update outlet'),
+    },
+  );
+
+  useEffect(() => {
     if (open) {
-      setForm(editing ? { ...editing } : {});
-    } else {
-      setForm({});
+      const next = editing ? { ...editing } : {};
+      const t = setTimeout(() => {
+        setForm(next);
+        setError(null);
+      }, 0);
+      return () => clearTimeout(t);
     }
+    const t = setTimeout(() => {
+      setForm({});
+      setError(null);
+    }, 0);
+    return () => clearTimeout(t);
   }, [open, editing]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.category) return;
+    setError(null);
+    if (!form.name?.trim() || !form.outletTypeId) return;
 
-    if (editing?.id) {
-      onSave(editing.id, form);
+    const payload = {
+      name: form.name.trim(),
+      address: form.address?.trim() ?? undefined,
+      outletType: form.outletTypeId,
+      managerId: form.managerId || undefined,
+      formId: form.formId || undefined,
+    };
+
+    const id = getOutletId(editing);
+
+    if (editing && id) {
+      updateMutation.mutate({ id, payload });
     } else {
-      onSave(null, form);
+      createMutation.mutate(payload as CreateOutletPayload);
     }
-    onClose();
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Modal
@@ -55,6 +112,14 @@ export function OutletModal({
       maxWidth='md'
     >
       <form onSubmit={handleSubmit} className='flex flex-col gap-8'>
+        {error && (
+          <p
+            className='text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3'
+            role='alert'
+          >
+            {error}
+          </p>
+        )}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8'>
           <div className='md:col-span-2'>
             <Input
@@ -67,9 +132,16 @@ export function OutletModal({
 
           <Select
             label='Outlet Type'
-            options={Object.values(StoreCategory)}
-            value={form.category || ''}
-            onChange={(e) => setForm({ ...form, category: e.target.value as StoreCategory })}
+            options={outletTypes.map((ot) => ({ label: ot.name, value: ot._id }))}
+            value={form.outletTypeId || ''}
+            onChange={(e) => {
+              const selected = outletTypes.find((ot) => ot._id === e.target.value);
+              setForm({
+                ...form,
+                outletTypeId: selected?._id,
+                outletTypeName: selected?.name,
+              });
+            }}
           />
 
           <Select
@@ -113,15 +185,30 @@ export function OutletModal({
         </div>
 
         <div className='flex justify-end gap-4 pt-6 border-t border-gray-100'>
-          <Button variant='ghost' onClick={onClose} className='font-bold text-gray-400'>
+          <Button
+            type='button'
+            variant='ghost'
+            onClick={onClose}
+            className='font-bold text-gray-400'
+          >
             Cancel
           </Button>
           <Button
             type='submit'
             variant='admin-primary'
-            className='px-10 py-3.5 rounded-2xl font-black'
+            disabled={isPending}
+            className='px-10 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2'
           >
-            {editing ? 'Update Outlet' : 'Save Outlet'}
+            {isPending ? (
+              <>
+                <Loader2 size={18} className='animate-spin' />
+                Processing...
+              </>
+            ) : editing ? (
+              'Update Outlet'
+            ) : (
+              'Save Outlet'
+            )}
           </Button>
         </div>
       </form>

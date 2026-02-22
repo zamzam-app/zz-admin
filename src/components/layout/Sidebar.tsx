@@ -25,7 +25,7 @@ import {
   Grading,
 } from '@mui/icons-material';
 import { storesList } from '../../__mocks__/managers';
-import { Store } from '../../lib/types/types';
+import type { Outlet } from '../../lib/types/outlet';
 import { Modal } from '../common/Modal';
 
 const drawerWidth = 280;
@@ -67,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   /* ================================
    1. Resolve user outlets safely
   ================================= */
-  const userStores = React.useMemo<Store[]>(() => {
+  const userStores = React.useMemo<Outlet[]>(() => {
     if (role === 'admin') return storesList;
     const ids = user?.outletId || [];
     return storesList.filter((store) => ids.includes(store.outletId));

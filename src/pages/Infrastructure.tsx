@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Store, MapPin, QrCode, Trash2, User, Captions, Layers } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { Store as StoreType, StoreCategory } from '../lib/types/types';
+import type { Outlet } from '../lib/types/outlet';
 import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
 import { DeleteModal } from '../components/common/DeleteModal';
@@ -35,10 +35,10 @@ export default function Infrastructure() {
   const { data: managersList = [] } = useApiQuery(MANAGER_KEYS, usersApi.getManagers);
   const managers: ManagerOption[] = managersList.map(toManagerOption);
   const [outletModalOpen, setOutletModalOpen] = useState(false);
-  const [editingOutlet, setEditingOutlet] = useState<StoreType | null>(null);
+  const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
-  const [selectedQrStore, setSelectedQrStore] = useState<StoreType | null>(null);
-  const [outletToDelete, setOutletToDelete] = useState<StoreType | null>(null);
+  const [selectedQrStore, setSelectedQrStore] = useState<Outlet | null>(null);
+  const [outletToDelete, setOutletToDelete] = useState<Outlet | null>(null);
   const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
 
   const [availableForms] = useState<Form[]>(() => {
@@ -50,7 +50,7 @@ export default function Infrastructure() {
     }
   });
 
-  const handleEdit = (store: StoreType) => {
+  const handleEdit = (store: Outlet) => {
     setEditingOutlet(store);
     setOutletModalOpen(true);
   };
@@ -60,39 +60,16 @@ export default function Infrastructure() {
     setOutletModalOpen(true);
   };
 
-  const setStoresInCache = (updater: (prev: StoreType[]) => StoreType[]) => {
-    queryClient.setQueryData<StoreType[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
+  const setStoresInCache = (updater: (prev: Outlet[]) => Outlet[]) => {
+    queryClient.setQueryData<Outlet[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
   };
 
-  const handleSaveOutlet = (editingId: string | null, data: Partial<StoreType>) => {
-    if (!data.name || !data.category) return;
-
-    if (editingId) {
-      setStoresInCache((prev) => prev.map((s) => (s.id === editingId ? { ...s, ...data } : s)));
-    } else {
-      setStoresInCache((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          name: data.name || '',
-          outletId: data.outletId || `outlet-${Date.now().toString()}`,
-          category: data.category as StoreCategory,
-          address: data.address || '',
-          rating: 0,
-          totalFeedback: 0,
-          managerId: data.managerId,
-          managerName: data.managerName,
-          formId: data.formId,
-          formTitle: data.formTitle,
-          qrToken: nanoid(10),
-        },
-      ]);
-    }
+  const handleOutletSuccess = () => {
     setOutletModalOpen(false);
     setEditingOutlet(null);
   };
 
-  const handleGenerateQr = (store: StoreType) => {
+  const handleGenerateQr = (store: Outlet) => {
     if (!store.qrToken) {
       const updatedStore = { ...store, qrToken: nanoid(10) };
       setStoresInCache((prev) => prev.map((s) => (s.id === store.id ? updatedStore : s)));
@@ -192,7 +169,7 @@ export default function Infrastructure() {
             setEditingOutlet(null);
           }}
           editing={editingOutlet}
-          onSave={handleSaveOutlet}
+          onSuccess={handleOutletSuccess}
           availableForms={availableForms}
           managers={managers}
         />
@@ -234,7 +211,7 @@ export default function Infrastructure() {
                 <div>
                   <h4 className='font-black text-lg text-[#1F2937]'>{store.name}</h4>
                   <p className='text-[10px] text-gray-400 uppercase font-bold tracking-widest'>
-                    {store.category}
+                    {store.outletTypeName ?? store.category}
                   </p>
                 </div>
               </div>
@@ -289,7 +266,7 @@ export default function Infrastructure() {
           setEditingOutlet(null);
         }}
         editing={editingOutlet}
-        onSave={handleSaveOutlet}
+        onSuccess={handleOutletSuccess}
         availableForms={availableForms}
         managers={managers}
       />
