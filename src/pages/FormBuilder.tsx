@@ -14,6 +14,7 @@ type ViewMode = 'dashboard' | 'builder' | 'viewer' | 'preview';
 export default function FormBuilderPage() {
   const [view, setView] = useState<ViewMode>('dashboard');
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
+  const [isNewForm, setIsNewForm] = useState(false);
 
   const {
     data: savedForms = [],
@@ -23,10 +24,6 @@ export default function FormBuilderPage() {
   } = useApiQuery(FORM_KEYS, formsApi.getForms);
 
   const createMutation = useApiMutation<Form, void>(() => formsApi.createForm(), [FORM_KEYS], {
-    onSuccess: (newForm) => {
-      setCurrentForm(newForm);
-      setView('builder');
-    },
     onError: () => message.error('Failed to create form'),
   });
 
@@ -48,14 +45,23 @@ export default function FormBuilderPage() {
     onError: () => message.error('Delete failed'),
   });
 
+  const DRAFT_FORM_ID = 'draft';
+
   const handleCreateNew = () => {
-    createMutation.mutate();
+    setCurrentForm({
+      _id: DRAFT_FORM_ID,
+      title: 'Untitled Form',
+      questions: [],
+    });
+    setIsNewForm(true);
+    setView('builder');
   };
 
   const handleEdit = async (form: Form) => {
     try {
       const fullForm = await formsApi.getForm(form._id);
       setCurrentForm(fullForm);
+      setIsNewForm(false);
       setView('builder');
     } catch {
       message.error('Failed to load form details');
@@ -64,10 +70,29 @@ export default function FormBuilderPage() {
 
   const handleSave = () => {
     if (!currentForm) return;
-    updateMutation.mutate({
-      id: currentForm._id,
-      payload: { title: currentForm.title, questions: currentForm.questions },
-    });
+    if (isNewForm && currentForm._id === DRAFT_FORM_ID) {
+      createMutation.mutate(undefined, {
+        onSuccess: (newForm) => {
+          updateMutation.mutate(
+            {
+              id: newForm._id,
+              payload: { title: currentForm.title, questions: currentForm.questions },
+            },
+            {
+              onSuccess: () => {
+                setCurrentForm(null);
+                setIsNewForm(false);
+              },
+            },
+          );
+        },
+      });
+    } else {
+      updateMutation.mutate({
+        id: currentForm._id,
+        payload: { title: currentForm.title, questions: currentForm.questions },
+      });
+    }
   };
 
   const handleDelete = (form: Form) => {
@@ -119,7 +144,24 @@ export default function FormBuilderPage() {
           currentForm={currentForm}
           setCurrentForm={setCurrentForm as React.Dispatch<React.SetStateAction<Form | null>>}
           onSave={handleSave}
-          onCancel={() => setView('dashboard')}
+          onCancel={() => {
+            if (isNewForm && currentForm._id === DRAFT_FORM_ID) {
+              setView('dashboard');
+              setCurrentForm(null);
+              setIsNewForm(false);
+            } else if (isNewForm) {
+              deleteMutation.mutate(currentForm._id, {
+                onSuccess: () => {
+                  setView('dashboard');
+                  setCurrentForm(null);
+                  setIsNewForm(false);
+                },
+              });
+            } else {
+              setView('dashboard');
+              setCurrentForm(null);
+            }
+          }}
           onPreview={() => setView('preview')}
         />
       )}

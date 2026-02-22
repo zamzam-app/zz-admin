@@ -1,5 +1,6 @@
 import React from 'react';
 import { useEffect } from 'react';
+import { Popconfirm } from 'antd';
 import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus } from 'lucide-react';
 import { Form, Question, QuestionType } from '../../lib/types/forms';
 import { Button } from '../common/Button';
@@ -126,12 +127,21 @@ const FormEditor: React.FC<Props> = ({
     <div className='space-y-8'>
       <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
         <div className='flex items-center gap-4'>
-          <button
-            onClick={onCancel}
-            className='p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition shadow-sm'
+          <Popconfirm
+            title='Are you sure you want to leave the form creation?'
+            onConfirm={onCancel}
+            okText='Yes'
+            cancelText='No'
+            getPopupContainer={() => document.body}
+            styles={{ root: { zIndex: 10000 } }}
           >
-            <ArrowLeft size={20} className='text-[#1F2937]' />
-          </button>
+            <button
+              type='button'
+              className='p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition shadow-sm'
+            >
+              <ArrowLeft size={20} className='text-[#1F2937]' />
+            </button>
+          </Popconfirm>
           <div>
             <input
               className='text-2xl font-black text-[#1F2937] outline-none bg-transparent border-b-2 border-transparent focus:border-blue-500 w-full md:w-auto'
