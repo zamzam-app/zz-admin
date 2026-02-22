@@ -75,13 +75,7 @@ const FormEditor: React.FC<Props> = ({
         q._id === qId
           ? {
               ...q,
-              options: [
-                ...(q.options || []),
-                {
-                  _id: Date.now().toString(),
-                  text: `Option ${(q.options?.length || 0) + 1}`,
-                },
-              ],
+              options: [...(q.options || []), { text: `Option ${(q.options?.length || 0) + 1}` }],
             }
           : q,
       ),
@@ -93,20 +87,36 @@ const FormEditor: React.FC<Props> = ({
       ...currentForm,
       questions: currentForm.questions.map((q) => {
         if (q._id !== qId) return q;
-
-        // prevent duplicate "Other"
-        if (q.options?.some((o) => o.isOther)) return q;
-
+        if (q.options?.some((o) => o.text === 'Other:')) return q;
         return {
           ...q,
-          options: [
-            ...(q.options || []),
-            {
-              _id: 'other',
-              text: 'Other:',
-              isOther: true,
-            },
-          ],
+          options: [...(q.options || []), { text: 'Other:' }],
+        };
+      }),
+    });
+  };
+
+  const updateOption = (qId: string, optionIndex: number, text: string) => {
+    setCurrentForm({
+      ...currentForm,
+      questions: currentForm.questions.map((q) => {
+        if (q._id !== qId || !q.options) return q;
+        return {
+          ...q,
+          options: q.options.map((opt, i) => (i === optionIndex ? { ...opt, text } : opt)),
+        };
+      }),
+    });
+  };
+
+  const removeOption = (qId: string, optionIndex: number) => {
+    setCurrentForm({
+      ...currentForm,
+      questions: currentForm.questions.map((q) => {
+        if (q._id !== qId || !q.options) return q;
+        return {
+          ...q,
+          options: q.options.filter((_, i) => i !== optionIndex),
         };
       }),
     });
@@ -209,12 +219,12 @@ const FormEditor: React.FC<Props> = ({
             <div className='pl-11'>
               {['multiple_choice', 'checkbox'].includes(q.type) ? (
                 <div className='space-y-3'>
-                  {q.options?.map((o) => (
-                    <div key={o._id} className='flex items-center gap-3 group'>
+                  {q.options?.map((o, optIdx) => (
+                    <div key={optIdx} className='flex items-center gap-3 group'>
                       <div
                         className={`w-4 h-4 rounded-full border-2 ${q.type === 'checkbox' ? 'rounded-md' : 'rounded-full'} border-gray-200`}
                       />
-                      {o.isOther ? (
+                      {o.text === 'Other:' ? (
                         <div className='flex items-center gap-2 flex-1'>
                           <span className='font-medium text-gray-600 whitespace-nowrap'>
                             Other:
@@ -229,21 +239,11 @@ const FormEditor: React.FC<Props> = ({
                         <input
                           className='flex-1 border-b border-gray-100 outline-none py-1 focus:border-blue-400 text-[#1F2937] font-medium'
                           value={o.text}
-                          onChange={(e) =>
-                            updateQuestion(q._id, {
-                              options: q.options?.map((opt) =>
-                                opt._id === o._id ? { ...opt, text: e.target.value } : opt,
-                              ),
-                            })
-                          }
+                          onChange={(e) => updateOption(q._id, optIdx, e.target.value)}
                         />
                       )}
                       <button
-                        onClick={() =>
-                          updateQuestion(q._id, {
-                            options: q.options?.filter((opt) => opt._id !== o._id),
-                          })
-                        }
+                        onClick={() => removeOption(q._id, optIdx)}
                         className='p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition'
                       >
                         <X size={16} />
