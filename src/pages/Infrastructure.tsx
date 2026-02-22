@@ -39,6 +39,7 @@ export default function Infrastructure() {
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedQrStore, setSelectedQrStore] = useState<StoreType | null>(null);
   const [outletToDelete, setOutletToDelete] = useState<StoreType | null>(null);
+
   const [availableForms] = useState<Form[]>(() => {
     try {
       const stored = localStorage.getItem('saved_forms');
