@@ -13,76 +13,22 @@ import {
 import { Star, AlertTriangle } from 'lucide-react';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
-import type { ApiReview, ComplaintReview, Review } from '../lib/types/review';
-import { ComplaintStatus, REVIEW_KEYS } from '../lib/types/review';
+import type { Review } from '../lib/types/review';
+import { REVIEW_KEYS } from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/resource/ReviewPreviewModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 import { Button as CommonButton } from '../components/common/Button';
 
-/** Map API ratings to Review and ComplaintReview lists (pure, for useMemo). */
-function mapRatingsToReviews(ratings: ApiReview[]): {
-  allReviews: Review[];
-  complaintReviews: ComplaintReview[];
-} {
-  const mapped: Review[] = [];
-  const complaints: ComplaintReview[] = [];
-
-  ratings.forEach((r) => {
-    const formIdObj = typeof r.formId === 'object' && r.formId !== null ? r.formId : null;
-    const questionMap = new Map(formIdObj?.questions?.map((q) => [q._id, q.type]) ?? []);
-
-    let customerName = 'Anonymous';
-    let commentText = '';
-
-    for (const res of r.userResponses ?? []) {
-      const questionType = questionMap.get(res.questionId);
-      const answer = res.answer;
-
-      if (questionType === 'short_answer') {
-        customerName = Array.isArray(answer)
-          ? (answer[0]?.toString() ?? 'Anonymous')
-          : (answer?.toString() ?? 'Anonymous');
-      }
-
-      if (questionType === 'paragraph') {
-        commentText = Array.isArray(answer)
-          ? (answer[0]?.toString() ?? '')
-          : (answer?.toString() ?? '');
-      }
-    }
-
-    const outletIdObj = typeof r.outletId === 'object' && r.outletId !== null ? r.outletId : null;
-    const baseReview: Review = {
-      id: r._id,
-      customer: customerName,
-      outletId: outletIdObj?._id ?? (typeof r.outletId === 'string' ? r.outletId : ''),
-      outletName: outletIdObj?.name ?? 'Outlet',
-      rating: r.overallRating ?? 0,
-      comment: commentText,
-      date: new Date(r.createdAt).toLocaleDateString(),
-    };
-
-    mapped.push(baseReview);
-
-    const pendingComplaintQuestions = (r.userResponses ?? []).filter(
-      (res) => res.isComplaint === true && res.complaintStatus === ComplaintStatus.PENDING,
-    );
-
-    if (pendingComplaintQuestions.length > 0) {
-      complaints.push({
-        ...baseReview,
-        complaintQuestions: pendingComplaintQuestions.map((q) => ({
-          questionId: q.questionId,
-          answer: q.answer,
-          complaintStatus: q.complaintStatus,
-        })),
-      });
-    }
-  });
-
-  return { allReviews: mapped, complaintReviews: complaints };
+/** Derive a short comment from the first non-rating userResponse (e.g. paragraph). */
+function getReviewComment(r: Review): string {
+  const res = r.userResponses?.find(
+    (x) =>
+      Array.isArray(x.answer) && x.answer.length > 0 && x.questionId?.title !== 'Overall Rating',
+  );
+  if (!res) return '—';
+  return Array.isArray(res.answer) ? res.answer.join(', ') : String(res.answer ?? '—');
 }
 
 /* ─── scrollable container sx (hidden scrollbar) ─── */
@@ -106,10 +52,7 @@ export default function ReviewsDemo() {
     refetch,
   } = useApiQuery(REVIEW_KEYS, () => reviewsApi.getAll());
 
-  const { allReviews } = useMemo(() => {
-    const ratings = data?.data ?? [];
-    return mapRatingsToReviews(ratings);
-  }, [data?.data]);
+  const allReviews = useMemo(() => data?.data ?? [], [data?.data]);
 
   const { data: previewReview = null, isLoading: previewLoading } = useApiQuery(
     [...REVIEW_KEYS, 'detail', previewReviewId ?? ''],
@@ -128,11 +71,11 @@ export default function ReviewsDemo() {
     let reviews = allReviews;
 
     if (user.role !== 'admin' && Array.isArray(user.outletId) && user.outletId.length > 0) {
-      reviews = reviews.filter((r) => user.outletId!.includes(r.outletId));
+      reviews = reviews.filter((r) => user.outletId!.includes(r.outletId?._id));
     }
 
     if (selectedOutlet !== 'all') {
-      reviews = reviews.filter((r) => r.outletId === selectedOutlet);
+      reviews = reviews.filter((r) => r.outletId?._id === selectedOutlet);
     }
 
     return reviews;
@@ -140,33 +83,35 @@ export default function ReviewsDemo() {
 
   /* ─── Complaint box: all reviews with rating < 3 (same filters as main list) ─── */
   const filteredComplaints = useMemo(
-    () => filteredReviews.filter((r) => r.rating < 3),
+    () => filteredReviews.filter((r) => r.overallRating < 3),
     [filteredReviews],
   );
 
   const hasComplaints = filteredComplaints.length > 0;
 
   /*  OUTLET LIST  */
-  const outlets = useMemo(() => {
+  const outlets = useMemo((): [string, string][] => {
     let base = allReviews;
 
     if (user?.role !== 'admin' && Array.isArray(user?.outletId)) {
-      base = base.filter((r) => user.outletId!.includes(r.outletId));
+      base = base.filter((r) => r.outletId && user.outletId!.includes(r.outletId._id));
     }
 
-    return Array.from(new Map(base.map((r) => [r.outletId, r.outletName])).entries());
+    const entries = base.map((r): [string, string] => [r.outletId._id, r.outletId.name]);
+    return Array.from(new Map(entries).entries());
   }, [user, allReviews]);
 
   /*  SORT + GROUP  */
   const groupedReviews = useMemo(() => {
     const sorted = [...filteredReviews].sort((a, b) =>
-      sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating,
+      sortOrder === 'asc' ? a.overallRating - b.overallRating : b.overallRating - a.overallRating,
     );
 
     const groups: Record<number, Review[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
     sorted.forEach((review) => {
-      if (groups[review.rating]) {
-        groups[review.rating].push(review);
+      const rating = review.overallRating;
+      if (rating >= 1 && rating <= 5 && groups[rating]) {
+        groups[rating].push(review);
       }
     });
 
@@ -356,8 +301,8 @@ export default function ReviewsDemo() {
             >
               {filteredComplaints.map((review) => (
                 <Box
-                  key={review.id}
-                  onClick={() => setPreviewReviewId(review.id)}
+                  key={review._id}
+                  onClick={() => setPreviewReviewId(review._id)}
                   sx={{
                     width: 280,
                     p: 2.5,
@@ -374,28 +319,30 @@ export default function ReviewsDemo() {
                 >
                   <Box display='flex' justifyContent='space-between'>
                     <Box display='flex' alignItems='center' gap={1}>
-                      <Avatar sx={{ width: 32, height: 32 }}>{review.customer.charAt(0)}</Avatar>
+                      <Avatar sx={{ width: 32, height: 32 }}>
+                        {(review.userId?.name ?? 'A').charAt(0)}
+                      </Avatar>
                       <Typography fontWeight={700} fontSize={14}>
-                        {review.customer}
+                        {review.userId?.name ?? 'Anonymous'}
                       </Typography>
                     </Box>
                     <Typography variant='caption' color='text.secondary'>
-                      {review.date}
+                      {new Date(review.createdAt).toLocaleDateString()}
                     </Typography>
                   </Box>
 
                   <Typography variant='caption' sx={{ fontWeight: 600, color: '#6B7280' }}>
-                    {review.outletName}
+                    {review.outletId?.name ?? 'Outlet'}
                   </Typography>
 
                   <Box display='flex' gap={0.5}>
-                    {[...Array(review.rating)].map((_, i) => (
+                    {[...Array(review.overallRating)].map((_, i) => (
                       <Star key={i} size={16} fill='#D4AF37' color='#D4AF37' />
                     ))}
                   </Box>
 
                   <Typography variant='body2' sx={{ fontSize: 14, color: '#374151' }}>
-                    {review.comment}
+                    {getReviewComment(review)}
                   </Typography>
 
                   {/* ── Action buttons ── */}
@@ -477,8 +424,8 @@ export default function ReviewsDemo() {
                   >
                     {groupedReviews[rating].map((review) => (
                       <Box
-                        key={review.id}
-                        onClick={() => setPreviewReviewId(review.id)}
+                        key={review._id}
+                        onClick={() => setPreviewReviewId(review._id)}
                         sx={{
                           width: 280,
                           p: 2.5,
@@ -495,29 +442,29 @@ export default function ReviewsDemo() {
                         <Box display='flex' justifyContent='space-between'>
                           <Box display='flex' alignItems='center' gap={1}>
                             <Avatar sx={{ width: 32, height: 32 }}>
-                              {review.customer.charAt(0)}
+                              {(review.userId?.name ?? 'A').charAt(0)}
                             </Avatar>
                             <Typography fontWeight={700} fontSize={14}>
-                              {review.customer}
+                              {review.userId?.name ?? 'Anonymous'}
                             </Typography>
                           </Box>
                           <Typography variant='caption' color='text.secondary'>
-                            {review.date}
+                            {new Date(review.createdAt).toLocaleDateString()}
                           </Typography>
                         </Box>
 
                         <Typography variant='caption' sx={{ fontWeight: 600, color: '#6B7280' }}>
-                          {review.outletName}
+                          {review.outletId?.name ?? 'Outlet'}
                         </Typography>
 
                         <Box display='flex' gap={0.5}>
-                          {[...Array(review.rating)].map((_, i) => (
+                          {[...Array(review.overallRating)].map((_, i) => (
                             <Star key={i} size={16} fill='#D4AF37' color='#D4AF37' />
                           ))}
                         </Box>
 
                         <Typography variant='body2' sx={{ fontSize: 14, color: '#374151' }}>
-                          {review.comment}
+                          {getReviewComment(review)}
                         </Typography>
                       </Box>
                     ))}
@@ -538,7 +485,11 @@ export default function ReviewsDemo() {
       <ReviewPreviewModal
         open={!!previewReviewId}
         onClose={handleClosePreview}
-        review={previewReviewId ? previewReview : null}
+        review={
+          previewReviewId
+            ? (allReviews.find((r) => r._id === previewReviewId) ?? previewReview)
+            : null
+        }
         loading={previewLoading}
       />
     </Box>

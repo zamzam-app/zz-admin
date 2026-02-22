@@ -11,60 +11,48 @@ export enum ComplaintStatus {
   DISMISSED = 'dismissed',
 }
 
-/** Single user response (answer to a question); may be a complaint. */
-export interface UserResponse {
-  questionId: string;
-  answer: string | string[] | number;
-  isComplaint?: boolean;
-  complaintStatus?: ComplaintStatus;
-  resolvedAt?: string;
-  resolutionNotes?: string;
-  resolutionBy?: string;
-}
-
-export interface ApiReview {
+interface UserRef {
   _id: string;
-  createdAt: string;
-  overallRating: number;
-  userId: string;
-  type?: RatingType;
-
-  outletId?:
-    | string
-    | {
-        _id: string;
-        name: string;
-      };
-
-  /** Form ref (id) or populated form with questions. */
-  formId?:
-    | string
-    | {
-        questions: {
-          _id: string;
-          type: string;
-          title?: string;
-        }[];
-      };
-
-  userResponses: UserResponse[];
+  name: string;
 }
 
-/** Mapped review for the Reviews page (derived from ApiReview). */
+interface OutletRef {
+  _id: string;
+  name: string;
+}
+
+interface QuestionRef {
+  _id: string;
+  title: string;
+}
+
+interface UserResponse {
+  _id: string;
+  questionId: QuestionRef;
+  answer: string[];
+  isComplaint: boolean;
+  complaintStatus: 'pending' | 'resolved' | 'rejected';
+  resolutionBy: string | null;
+}
+
 export interface Review {
-  id: string;
-  customer: string;
-  outletId: string;
-  outletName: string;
-  rating: number;
-  comment: string;
-  date: string;
+  _id: string;
+  isActive: boolean;
+  isDeleted: boolean;
+  userId: UserRef;
+  outletId: OutletRef;
+  userResponses: UserResponse[];
+  overallRating: number;
+  type: 'review' | 'complaint';
+  formId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** Mapped complaint review (extends Review with complaint info). */
 export interface ComplaintReview extends Review {
   complaintQuestions: {
-    questionId: string;
+    questionId: string | { _id: string; title?: string };
     answer: string | string[] | number;
     complaintStatus?: ComplaintStatus;
   }[];
@@ -92,6 +80,6 @@ export interface RatingsListMeta {
 
 /** Paginated response for ratings get-all API. */
 export interface RatingsListResponse {
-  data: ApiReview[];
+  data: Review[];
   meta: RatingsListMeta;
 }

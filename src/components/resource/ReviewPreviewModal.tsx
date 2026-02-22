@@ -4,27 +4,12 @@ import { Star } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { NoDataFallback } from '../common/NoDataFallback';
-import type { ApiReview } from '../../lib/types/review';
-
-const questionTypeLabel: Record<string, string> = {
-  short_answer: 'Short answer',
-  paragraph: 'Comment',
-  rating: 'Rating',
-  multiple_choice: 'Multiple choice',
-  checkbox: 'Checkbox',
-};
-
-function formatAnswer(answer: string | string[] | number): string {
-  if (Array.isArray(answer)) {
-    return answer.map((a) => String(a ?? '')).join(', ');
-  }
-  return String(answer ?? '');
-}
+import type { Review } from '../../lib/types/review';
 
 type ReviewPreviewModalProps = {
   open: boolean;
   onClose: () => void;
-  review: ApiReview | null;
+  review: Review | null;
   loading?: boolean;
 };
 
@@ -34,11 +19,6 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
   review,
   loading = false,
 }) => {
-  const formIdObj = review?.formId && typeof review.formId === 'object' ? review.formId : null;
-  const questionMap = new Map(
-    formIdObj?.questions?.map((q) => [q._id, { type: q.type, title: q.title }]) ?? [],
-  );
-
   return (
     <Modal open={open} onClose={onClose} title='Complete Review' maxWidth='md'>
       {loading ? (
@@ -73,17 +53,23 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
               gap: 2,
             }}
           >
-            {(review.userResponses ?? []).map((res) => {
-              const q = questionMap.get(res.questionId);
-              const type = q?.type ?? 'paragraph';
-              const label =
-                q?.title && q.title.trim() !== '' ? q.title : (questionTypeLabel[type] ?? type);
+            {(review.userResponses ?? []).map((res, index) => {
               const isComplaint = res.isComplaint === true;
+              const qId =
+                typeof res.questionId === 'object' && res.questionId !== null
+                  ? res.questionId._id
+                  : String(res.questionId);
+              const questionTitle =
+                typeof res.questionId === 'object' &&
+                res.questionId !== null &&
+                'title' in res.questionId
+                  ? (res.questionId as { _id: string; title?: string }).title?.trim()
+                  : null;
 
               return (
                 <Box
                   component='li'
-                  key={res.questionId}
+                  key={`${qId}-${index}`}
                   sx={{
                     p: 2,
                     borderRadius: 2,
@@ -96,13 +82,13 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                   }}
                 >
                   <Typography
-                    variant='caption'
+                    variant='subtitle2'
                     fontWeight={700}
-                    color='text.secondary'
+                    color='text.primary'
                     display='block'
                     mb={0.5}
                   >
-                    {label}
+                    {questionTitle ?? 'Question'}
                     {isComplaint && (
                       <Typography
                         component='span'
@@ -115,10 +101,8 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                       </Typography>
                     )}
                   </Typography>
-                  <Typography variant='body2'>
-                    {type === 'rating'
-                      ? `${formatAnswer(res.answer)} / 5`
-                      : formatAnswer(res.answer) || '—'}
+                  <Typography variant='body2' color='text.secondary'>
+                    {Array.isArray(res.answer) ? res.answer.join(', ') : String(res.answer ?? '—')}
                   </Typography>
                 </Box>
               );
