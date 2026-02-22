@@ -219,7 +219,7 @@ export default function Infrastructure() {
               <div className='flex gap-2'>
                 <button
                   onClick={() => setOutletToDelete(store)}
-                  className='p-2 text-red-500 hover:bg-red-50 rounded-xl'
+                  className='p-2 text-red-500 hover:bg-red-50 rounded-xl cursor-pointer'
                 >
                   <Trash2 size={16} />
                 </button>
@@ -240,13 +240,13 @@ export default function Infrastructure() {
             <div className='flex gap-3 mt-6'>
               <button
                 onClick={() => handleGenerateQr(store)}
-                className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50'
+                className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer'
               >
                 <QrCode size={16} /> QR Code
               </button>
               <button
                 onClick={() => handleEdit(store)}
-                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800'
+                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
               >
                 Edit
               </button>

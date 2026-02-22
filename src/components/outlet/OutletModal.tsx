@@ -144,9 +144,9 @@ export function OutletModal({
       title={editing ? 'Edit Outlet' : 'Register Outlet'}
       titleAlign='center'
       maxWidth='lg'
-      contentClassName='pt-2 px-8 pb-8'
+      contentClassName='pt-2 px-8 pb-8 max-h-[90vh] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
     >
-      <div className='max-h-[70vh] overflow-y-auto -mx-2 px-2 pt-4'>
+      <div className='-mx-2 px-2 pt-4'>
         <form onSubmit={handleSubmit} className='space-y-6'>
           {error && (
             <p
