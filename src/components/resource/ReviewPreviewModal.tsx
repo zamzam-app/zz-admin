@@ -32,8 +32,9 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
   review,
   loading = false,
 }) => {
+  const formIdObj = review?.formId && typeof review.formId === 'object' ? review.formId : null;
   const questionMap = new Map(
-    review?.formId?.questions?.map((q) => [q._id, { type: q.type, title: q.title }]) ?? [],
+    formIdObj?.questions?.map((q) => [q._id, { type: q.type, title: q.title }]) ?? [],
   );
 
   return (
@@ -49,7 +50,9 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
           {/* Meta */}
           <Box display='flex' flexWrap='wrap' gap={2} alignItems='center'>
             <Typography variant='body2' fontWeight={600} color='text.secondary'>
-              {review.outletId?.name ?? 'Outlet'}
+              {typeof review.outletId === 'object' && review.outletId?.name
+                ? review.outletId.name
+                : 'Outlet'}
             </Typography>
             <Typography variant='body2' color='text.secondary'>
               {new Date(review.createdAt).toLocaleDateString()}
@@ -68,7 +71,7 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
               gap: 2,
             }}
           >
-            {(review.response ?? []).map((res) => {
+            {(review.userResponses ?? []).map((res) => {
               const q = questionMap.get(res.questionId);
               const type = q?.type ?? 'paragraph';
               const label =
@@ -126,7 +129,7 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
               Overall Ratings
             </Typography>
             <Box display='flex' gap={0.75} alignItems='center'>
-              {[...Array(review.totalRatings ?? 0)].map((_, i) => (
+              {[...Array(review.overallRating ?? 0)].map((_, i) => (
                 <Star key={i} size={28} fill='#D4AF37' color='#D4AF37' />
               ))}
             </Box>

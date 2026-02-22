@@ -1,3 +1,5 @@
+export const REVIEW_KEYS = ['reviews'];
+
 export enum RatingType {
   COMPLAINT = 'complaint',
   REVIEW = 'review',
@@ -9,33 +11,62 @@ export enum ComplaintStatus {
   DISMISSED = 'dismissed',
 }
 
+/** Single user response (answer to a question); may be a complaint. */
+export interface UserResponse {
+  questionId: string;
+  answer: string | string[] | number;
+  isComplaint?: boolean;
+  complaintStatus?: ComplaintStatus;
+  resolvedAt?: string;
+  resolutionNotes?: string;
+  resolutionBy?: string;
+}
+
 export interface ApiReview {
   _id: string;
   createdAt: string;
-  totalRatings: number;
+  overallRating: number;
   userId: string;
   type?: RatingType;
 
-  outletId?: {
-    _id: string;
-    name: string;
-  };
+  outletId?:
+    | string
+    | {
+        _id: string;
+        name: string;
+      };
 
-  formId: {
-    questions: {
-      _id: string;
-      type: string;
-      title?: string;
-    }[];
-  };
+  /** Form ref (id) or populated form with questions. */
+  formId?:
+    | string
+    | {
+        questions: {
+          _id: string;
+          type: string;
+          title?: string;
+        }[];
+      };
 
-  response: {
+  userResponses: UserResponse[];
+}
+
+/** Mapped review for the Reviews page (derived from ApiReview). */
+export interface Review {
+  id: string;
+  customer: string;
+  outletId: string;
+  outletName: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
+/** Mapped complaint review (extends Review with complaint info). */
+export interface ComplaintReview extends Review {
+  complaintQuestions: {
     questionId: string;
     answer: string | string[] | number;
-    isComplaint?: boolean;
     complaintStatus?: ComplaintStatus;
-    complaintResolvedAt?: Date | string;
-    complaintManagerNotes?: string;
   }[];
 }
 
@@ -48,4 +79,19 @@ export interface ReviewUI {
   date: string;
   rating: number;
   comment: string;
+}
+
+/** Pagination meta for ratings list API. */
+export interface RatingsListMeta {
+  total: number;
+  currentPage: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  limit: number;
+}
+
+/** Paginated response for ratings get-all API. */
+export interface RatingsListResponse {
+  data: ApiReview[];
+  meta: RatingsListMeta;
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -13,29 +13,77 @@ import {
 import { Star, AlertTriangle } from 'lucide-react';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
-import type { ApiReview } from '../lib/types/review';
-import { ComplaintStatus } from '../lib/types/review';
+import type { ApiReview, ComplaintReview, Review } from '../lib/types/review';
+import { ComplaintStatus, REVIEW_KEYS } from '../lib/types/review';
+
+/** Map API ratings to Review and ComplaintReview lists (pure, for useMemo). */
+function mapRatingsToReviews(ratings: ApiReview[]): {
+  allReviews: Review[];
+  complaintReviews: ComplaintReview[];
+} {
+  const mapped: Review[] = [];
+  const complaints: ComplaintReview[] = [];
+
+  ratings.forEach((r) => {
+    const formIdObj = typeof r.formId === 'object' && r.formId !== null ? r.formId : null;
+    const questionMap = new Map(formIdObj?.questions?.map((q) => [q._id, q.type]) ?? []);
+
+    let customerName = 'Anonymous';
+    let commentText = '';
+
+    for (const res of r.userResponses ?? []) {
+      const questionType = questionMap.get(res.questionId);
+      const answer = res.answer;
+
+      if (questionType === 'short_answer') {
+        customerName = Array.isArray(answer)
+          ? (answer[0]?.toString() ?? 'Anonymous')
+          : (answer?.toString() ?? 'Anonymous');
+      }
+
+      if (questionType === 'paragraph') {
+        commentText = Array.isArray(answer)
+          ? (answer[0]?.toString() ?? '')
+          : (answer?.toString() ?? '');
+      }
+    }
+
+    const outletIdObj = typeof r.outletId === 'object' && r.outletId !== null ? r.outletId : null;
+    const baseReview: Review = {
+      id: r._id,
+      customer: customerName,
+      outletId: outletIdObj?._id ?? (typeof r.outletId === 'string' ? r.outletId : ''),
+      outletName: outletIdObj?.name ?? 'Outlet',
+      rating: r.overallRating ?? 0,
+      comment: commentText,
+      date: new Date(r.createdAt).toLocaleDateString(),
+    };
+
+    mapped.push(baseReview);
+
+    const pendingComplaintQuestions = (r.userResponses ?? []).filter(
+      (res) => res.isComplaint === true && res.complaintStatus === ComplaintStatus.PENDING,
+    );
+
+    if (pendingComplaintQuestions.length > 0) {
+      complaints.push({
+        ...baseReview,
+        complaintQuestions: pendingComplaintQuestions.map((q) => ({
+          questionId: q.questionId,
+          answer: q.answer,
+          complaintStatus: q.complaintStatus,
+        })),
+      });
+    }
+  });
+
+  return { allReviews: mapped, complaintReviews: complaints };
+}
+import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/resource/ReviewPreviewModal';
-
-/* ─── helper type for the mapped review ─── */
-interface Review {
-  id: string;
-  customer: string;
-  outletId: string;
-  outletName: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
-
-/* ─── mapped complaint review (extends Review with complaint info) ─── */
-interface ComplaintReview extends Review {
-  complaintQuestions: {
-    questionId: string;
-    answer: string | string[] | number;
-    complaintStatus?: ComplaintStatus;
-  }[];
-}
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import { NoDataFallback } from '../components/common/NoDataFallback';
+import { Button as CommonButton } from '../components/common/Button';
 
 /* ─── scrollable container sx (hidden scrollbar) ─── */
 const scrollableSx = {
@@ -47,107 +95,30 @@ const scrollableSx = {
 
 export default function ReviewsDemo() {
   const { user } = useAuth();
-  const [allReviews, setAllReviews] = useState<Review[]>([]);
-  const [complaintReviews, setComplaintReviews] = useState<ComplaintReview[]>([]);
   const [selectedOutlet, setSelectedOutlet] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [loading, setLoading] = useState(false);
   const [previewReviewId, setPreviewReviewId] = useState<string | null>(null);
-  const [previewReview, setPreviewReview] = useState<ApiReview | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
 
-  /*  LOAD API DATA  */
-  useEffect(() => {
-    const loadReviews = async () => {
-      try {
-        setLoading(true);
-        const data: ApiReview[] = await reviewsApi.getAll();
+  const {
+    data,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useApiQuery(REVIEW_KEYS, () => reviewsApi.getAll());
 
-        const mapped: Review[] = [];
-        const complaints: ComplaintReview[] = [];
+  const { allReviews, complaintReviews } = useMemo(() => {
+    const ratings = data?.data ?? [];
+    return mapRatingsToReviews(ratings);
+  }, [data?.data]);
 
-        data.forEach((r) => {
-          const questionMap = new Map(r.formId?.questions?.map((q) => [q._id, q.type]) ?? []);
-
-          let customerName = 'Anonymous';
-          let commentText = '';
-
-          for (const res of r.response ?? []) {
-            const questionType = questionMap.get(res.questionId);
-            const answer = res.answer;
-
-            if (questionType === 'short_answer') {
-              customerName = Array.isArray(answer)
-                ? (answer[0]?.toString() ?? 'Anonymous')
-                : (answer?.toString() ?? 'Anonymous');
-            }
-
-            if (questionType === 'paragraph') {
-              commentText = Array.isArray(answer)
-                ? (answer[0]?.toString() ?? '')
-                : (answer?.toString() ?? '');
-            }
-          }
-
-          const baseReview: Review = {
-            id: r._id,
-            customer: customerName,
-            outletId: r.outletId?._id ?? '',
-            outletName: r.outletId?.name ?? 'Outlet',
-            rating: r.totalRatings ?? 0,
-            comment: commentText,
-            date: new Date(r.createdAt).toLocaleDateString(),
-          };
-
-          mapped.push(baseReview);
-
-          /* ── check for pending complaints ── */
-          const pendingComplaintQuestions = (r.response ?? []).filter(
-            (res) => res.isComplaint === true && res.complaintStatus === ComplaintStatus.PENDING,
-          );
-
-          if (pendingComplaintQuestions.length > 0) {
-            complaints.push({
-              ...baseReview,
-              complaintQuestions: pendingComplaintQuestions.map((q) => ({
-                questionId: q.questionId,
-                answer: q.answer,
-                complaintStatus: q.complaintStatus,
-              })),
-            });
-          }
-        });
-
-        setAllReviews(mapped);
-        setComplaintReviews(complaints);
-      } catch (err) {
-        console.error('Failed to load reviews', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadReviews();
-  }, []);
-
-  /* ─── Fetch full review when opening preview ─── */
-  useEffect(() => {
-    if (!previewReviewId) {
-      setPreviewReview(null);
-      return;
-    }
-    setPreviewLoading(true);
-    setPreviewReview(null);
-    reviewsApi
-      .getOne(previewReviewId)
-      .then((data) => setPreviewReview(data))
-      .catch(() => setPreviewReview(null))
-      .finally(() => setPreviewLoading(false));
-  }, [previewReviewId]);
+  const { data: previewReview = null, isLoading: previewLoading } = useApiQuery(
+    [...REVIEW_KEYS, 'detail', previewReviewId ?? ''],
+    () => reviewsApi.getOne(previewReviewId!),
+    { enabled: !!previewReviewId },
+  );
 
   const handleClosePreview = () => {
     setPreviewReviewId(null);
-    setPreviewReview(null);
   };
 
   /* ================= FILTER LOGIC ================= */
@@ -228,6 +199,45 @@ export default function ReviewsDemo() {
     console.log('rejection logic not done!');
   };
 
+  if (error) {
+    return (
+      <Box
+        sx={{
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          p: 3,
+          boxSizing: 'border-box',
+        }}
+      >
+        <Box mb={2}>
+          <Typography variant='h4' fontWeight={800}>
+            Reviews
+          </Typography>
+          <Typography variant='body2' color='text.secondary'>
+            Customer feedback grouped by rating
+          </Typography>
+        </Box>
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <NoDataFallback
+            title='Failed to load reviews'
+            description={error.message}
+            action={
+              <CommonButton
+                variant='admin-primary'
+                onClick={() => refetch()}
+                className='rounded-2xl'
+              >
+                Try again
+              </CommonButton>
+            }
+          />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -299,9 +309,9 @@ export default function ReviewsDemo() {
 
       {/* Loading */}
       {loading && (
-        <Typography flexShrink={0} mb={1}>
-          Loading reviews...
-        </Typography>
+        <Box flexShrink={0} mb={1}>
+          <LoadingSpinner />
+        </Box>
       )}
 
       {/* ═══════ SECTIONS CONTAINER ═══════ */}
@@ -541,7 +551,7 @@ export default function ReviewsDemo() {
       <ReviewPreviewModal
         open={!!previewReviewId}
         onClose={handleClosePreview}
-        review={previewReview}
+        review={previewReviewId ? previewReview : null}
         loading={previewLoading}
       />
     </Box>

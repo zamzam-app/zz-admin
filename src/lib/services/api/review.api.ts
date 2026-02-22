@@ -1,9 +1,9 @@
 import apiClient from './axios';
-import type { ApiReview } from '../../types/review';
+import type { ApiReview, RatingsListResponse } from '../../types/review';
 
 export const reviewsApi = {
-  getAll: async (): Promise<ApiReview[]> => {
-    const { data } = await apiClient.get<ApiReview[]>('/rating');
+  getAll: async (): Promise<RatingsListResponse> => {
+    const { data } = await apiClient.get<RatingsListResponse>('/rating');
     return data;
   },
 
