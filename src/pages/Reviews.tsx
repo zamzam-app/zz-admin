@@ -15,6 +15,11 @@ import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
 import type { ApiReview, ComplaintReview, Review } from '../lib/types/review';
 import { ComplaintStatus, REVIEW_KEYS } from '../lib/types/review';
+import { useApiQuery } from '../lib/react-query/use-api-hooks';
+import { ReviewPreviewModal } from '../components/resource/ReviewPreviewModal';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import { NoDataFallback } from '../components/common/NoDataFallback';
+import { Button as CommonButton } from '../components/common/Button';
 
 /** Map API ratings to Review and ComplaintReview lists (pure, for useMemo). */
 function mapRatingsToReviews(ratings: ApiReview[]): {
@@ -79,11 +84,6 @@ function mapRatingsToReviews(ratings: ApiReview[]): {
 
   return { allReviews: mapped, complaintReviews: complaints };
 }
-import { useApiQuery } from '../lib/react-query/use-api-hooks';
-import { ReviewPreviewModal } from '../components/resource/ReviewPreviewModal';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import { NoDataFallback } from '../components/common/NoDataFallback';
-import { Button as CommonButton } from '../components/common/Button';
 
 /* ─── scrollable container sx (hidden scrollbar) ─── */
 const scrollableSx = {
@@ -106,7 +106,7 @@ export default function ReviewsDemo() {
     refetch,
   } = useApiQuery(REVIEW_KEYS, () => reviewsApi.getAll());
 
-  const { allReviews, complaintReviews } = useMemo(() => {
+  const { allReviews } = useMemo(() => {
     const ratings = data?.data ?? [];
     return mapRatingsToReviews(ratings);
   }, [data?.data]);
@@ -138,24 +138,11 @@ export default function ReviewsDemo() {
     return reviews;
   }, [selectedOutlet, user, allReviews]);
 
-  /* ─── Complaint reviews filtered by role & outlet ─── */
-  const filteredComplaints = useMemo(() => {
-    if (!user) return [];
-
-    let reviews = complaintReviews;
-
-    // Manager: only their outlets
-    if (user.role !== 'admin' && Array.isArray(user.outletId) && user.outletId.length > 0) {
-      reviews = reviews.filter((r) => user.outletId!.includes(r.outletId));
-    }
-
-    // Apply outlet filter if selected
-    if (selectedOutlet !== 'all') {
-      reviews = reviews.filter((r) => r.outletId === selectedOutlet);
-    }
-
-    return reviews;
-  }, [user, complaintReviews, selectedOutlet]);
+  /* ─── Complaint box: all reviews with rating < 3 (same filters as main list) ─── */
+  const filteredComplaints = useMemo(
+    () => filteredReviews.filter((r) => r.rating < 3),
+    [filteredReviews],
+  );
 
   const hasComplaints = filteredComplaints.length > 0;
 

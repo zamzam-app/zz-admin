@@ -1,7 +1,9 @@
 import React from 'react';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { Star } from 'lucide-react';
 import { Modal } from '../common/Modal';
+import LoadingSpinner from '../common/LoadingSpinner';
+import { NoDataFallback } from '../common/NoDataFallback';
 import type { ApiReview } from '../../lib/types/review';
 
 const questionTypeLabel: Record<string, string> = {
@@ -41,10 +43,10 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
     <Modal open={open} onClose={onClose} title='Complete Review' maxWidth='md'>
       {loading ? (
         <Box display='flex' justifyContent='center' alignItems='center' py={6}>
-          <CircularProgress size={40} />
+          <LoadingSpinner />
         </Box>
       ) : !review ? (
-        <Typography color='text.secondary'>No review data.</Typography>
+        <NoDataFallback title='No review data.' />
       ) : (
         <Box display='flex' flexDirection='column' gap={2}>
           {/* Meta */}
