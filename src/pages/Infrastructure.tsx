@@ -8,13 +8,13 @@ import Card from '../components/common/Card';
 import { DeleteModal } from '../components/common/DeleteModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
-import { OutletModal, OutletTypesModal, QrCodeModal } from '../components/infrastructure';
+import { OutletModal, OutletTypesModal, QrCodeModal } from '../components/outlet';
 import { outletApi } from '../lib/services/api/outlet.api';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { MANAGER_KEYS, User as ManagerUser } from '../lib/types/manager';
-import type { ManagerOption } from '../components/infrastructure';
+import type { ManagerOption } from '../components/outlet';
 import { Form } from '../lib/types/forms';
 
 function toManagerOption(user: ManagerUser): ManagerOption {
