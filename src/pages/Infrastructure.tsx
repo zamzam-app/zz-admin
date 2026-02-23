@@ -10,12 +10,13 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 import { OutletModal, OutletTypesModal, QrCodeModal } from '../components/outlet';
 import { outletApi } from '../lib/services/api/outlet.api';
+import { formsApi } from '../lib/services/api/forms.api';
 import { OUTLET_KEYS } from '../lib/types/outlet';
+import { FORM_KEYS } from '../lib/types/forms';
 import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { MANAGER_KEYS, User as ManagerUser } from '../lib/types/manager';
 import type { ManagerOption } from '../components/outlet';
-import { Form } from '../lib/types/forms';
 
 function toManagerOption(user: ManagerUser): ManagerOption {
   return {
@@ -41,14 +42,8 @@ export default function Infrastructure() {
   const [outletToDelete, setOutletToDelete] = useState<Outlet | null>(null);
   const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
 
-  const [availableForms] = useState<Form[]>(() => {
-    try {
-      const stored = localStorage.getItem('saved_forms');
-      return stored ? (JSON.parse(stored) as Form[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  const { data: formsData } = useApiQuery(FORM_KEYS, () => formsApi.getForms(), { enabled: true });
+  const availableForms = formsData ?? [];
 
   const handleEdit = (store: Outlet) => {
     setEditingOutlet(store);

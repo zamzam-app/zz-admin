@@ -15,9 +15,10 @@ function questionsForApi(questions: Form['questions']) {
 }
 
 export const formsApi = {
+  /** GET /forms – returns list of forms (response: { data: Form[], meta }) */
   getForms: async (): Promise<Form[]> => {
-    const { data } = await apiClient.get('/forms');
-    return data?.data || data;
+    const { data } = await apiClient.get<{ data: Form[]; meta?: unknown }>('/forms');
+    return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
   },
 
   getForm: async (id: string): Promise<Form> => {
