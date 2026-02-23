@@ -14,7 +14,6 @@ api.interceptors.request.use((config) => {
     const token = sessionData?.token;
 
     if (token) {
-      // Axios v1+ safe way
       config.headers.set('Authorization', `Bearer ${token}`);
     }
   }
@@ -28,14 +27,13 @@ api.interceptors.response.use(
   async (error) => {
     const tokenString = localStorage.getItem('token');
 
-    if (!tokenString || error?.status === 401 || error?.response?.status === 401) {
-      console.log('token failed');
+    // Only redirect if user was already logged in
+    if (error?.response?.status === 401 && tokenString) {
       localStorage.clear();
       window.location.href = '/login';
     }
 
-    // return Promise.reject(error);
-    console.log(error);
+    return Promise.reject(error);
   },
 );
 

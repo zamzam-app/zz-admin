@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
 import { authApi } from '../services/api/auth';
-import type { User } from '../types/user';
-
+import type { User } from '../types/manager';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -50,7 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(normalizedUser);
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(normalizedUser));
-      localStorage.setItem('token',JSON.stringify(normalizedToken));
+      localStorage.setItem('token', JSON.stringify(normalizedToken));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
@@ -60,17 +59,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
-  try {
-    await authApi.logout(); 
-  } catch {
-    // even if backend fails, still logout locally
-  } finally {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setUser(null);
-    setIsAuthenticated(false);
-  }
-};
+    try {
+      await authApi.logout();
+    } catch {
+      // even if backend fails, still logout locally
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading, error }}>

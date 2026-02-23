@@ -8,8 +8,9 @@ interface Props {
   onBack: () => void;
 }
 
+const OTHER_PREFIX = 'other:';
+
 const FormViewer: React.FC<Props> = ({ form, onBack }) => {
-  // FIXED: Replaced 'any' with a union type that matches your possible inputs
   const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({});
 
   return (
@@ -33,12 +34,15 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
       {/* Main Content Area */}
       <div className='space-y-6'>
         {form.questions.map((q, index) => (
-          <Card key={q.id} className='p-8 border border-gray-100 rounded-[28px] bg-white shadow-sm'>
+          <Card
+            key={q._id}
+            className='p-8 border border-gray-100 rounded-[28px] bg-white shadow-sm'
+          >
             {/* Question Header */}
             <div className='flex justify-between items-start mb-6'>
               <div>
                 <span className='text-[10px] text-blue-500 uppercase font-black tracking-widest block mb-1'>
-                  Question {index + 1} {q.required && '• Required'}
+                  Question {index + 1} {q.isRequired && '• Required'}
                 </span>
                 <h3 className='text-xl font-bold text-[#1F2937]'>{q.title}</h3>
               </div>
@@ -51,52 +55,13 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
             )}
             {/* Answer Input Area */}
             <div className='mt-4'>
-              {q.type === 'linear_scale' &&
-                (() => {
-                  const scale = q.scale ?? {
-                    min: 1,
-                    max: 5,
-                    minLabel: '',
-                    maxLabel: '',
-                  };
-
-                  const value = (answers[q.id] as number) ?? null;
-
-                  return (
-                    <div className='space-y-3'>
-                      <div className='flex justify-between text-sm font-medium text-gray-500'>
-                        <span>{scale.minLabel}</span>
-                        <span>{scale.maxLabel}</span>
-                      </div>
-
-                      <div className='flex justify-between gap-2'>
-                        {Array.from(
-                          { length: scale.max - scale.min + 1 },
-                          (_, i) => scale.min + i,
-                        ).map((n) => (
-                          <button
-                            key={n}
-                            type='button'
-                            onClick={() => setAnswers({ ...answers, [q.id]: n })}
-                            className={`w-12 h-12 rounded-full font-bold transition-all
-              ${value === n ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}
-            `}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-
               {q.type === 'short_answer' && (
                 <input
                   type='text'
                   placeholder='Type your response...'
                   className='w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 outline-none transition-all font-medium text-[#1F2937]'
-                  value={(answers[q.id] as string) || ''}
-                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                  value={(answers[q._id] as string) || ''}
+                  onChange={(e) => setAnswers({ ...answers, [q._id]: e.target.value })}
                 />
               )}
               {q.type === 'paragraph' && (
@@ -104,21 +69,21 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                   rows={4}
                   placeholder='Type your detailed response...'
                   className='w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 outline-none transition-all font-medium text-[#1F2937] resize-none'
-                  value={(answers[q.id] as string) || ''}
-                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                  value={(answers[q._id] as string) || ''}
+                  onChange={(e) => setAnswers({ ...answers, [q._id]: e.target.value })}
                 />
               )}
               {q.type === 'rating' && (
                 <div className='flex gap-4 mt-2'>
-                  {[...Array(q.maxRating || 5)].map((_, i) => {
+                  {[...Array(q.maxRatings || 5)].map((_, i) => {
                     const value = i + 1;
-                    const active = value <= ((answers[q.id] as number) || 0);
+                    const active = value <= ((answers[q._id] as number) || 0);
 
                     return (
                       <button
                         key={i}
                         type='button'
-                        onClick={() => setAnswers({ ...answers, [q.id]: value })}
+                        onClick={() => setAnswers({ ...answers, [q._id]: value })}
                         className='transform hover:scale-125 transition-all duration-200'
                       >
                         <Star
@@ -133,24 +98,38 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
 
               {['multiple_choice', 'checkbox'].includes(q.type) && (
                 <div className='flex flex-col gap-3 mt-2'>
-                  {q.options?.map((o) => {
-                    const isOther = o.isOther;
+                  {q.options?.map((o, optIdx) => {
+                    const isOther = o.text === 'Other:';
+                    const optKey = String(optIdx);
 
                     const isChecked =
                       q.type === 'checkbox'
-                        ? ((answers[q.id] as string[]) || []).some((v) => v.startsWith(o.id))
-                        : typeof answers[q.id] === 'string' &&
-                          (answers[q.id] as string).startsWith(o.id);
+                        ? isOther
+                          ? ((answers[q._id] as string[]) || []).some(
+                              (v) => typeof v === 'string' && v.startsWith(OTHER_PREFIX),
+                            )
+                          : ((answers[q._id] as string[]) || []).includes(optKey)
+                        : isOther
+                          ? typeof answers[q._id] === 'string' &&
+                            (answers[q._id] as string).startsWith(OTHER_PREFIX)
+                          : answers[q._id] === optKey;
 
-                    const getOtherValue = (value?: string) => {
-                      if (!value) return '';
-                      const idx = value.indexOf(':');
-                      return idx === -1 ? '' : value.slice(idx + 1);
+                    const getOtherValue = () => {
+                      const raw = answers[q._id];
+                      if (q.type === 'checkbox' && Array.isArray(raw)) {
+                        const other = raw.find(
+                          (v) => typeof v === 'string' && v.startsWith(OTHER_PREFIX),
+                        );
+                        return other ? (other as string).slice(OTHER_PREFIX.length) : '';
+                      }
+                      if (typeof raw === 'string' && raw.startsWith(OTHER_PREFIX))
+                        return raw.slice(OTHER_PREFIX.length);
+                      return '';
                     };
 
                     return (
                       <label
-                        key={o.id}
+                        key={optIdx}
                         className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all w-full cursor-pointer
             ${
               isChecked
@@ -161,22 +140,41 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                       >
                         <input
                           type={q.type === 'checkbox' ? 'checkbox' : 'radio'}
-                          name={q.id}
+                          name={q._id}
                           className='w-5 h-5 accent-blue-600 shrink-0'
                           checked={isChecked}
                           onChange={(e) => {
                             if (q.type === 'checkbox') {
-                              const current = (answers[q.id] as string[]) || [];
+                              const current = (answers[q._id] as string[]) || [];
                               if (e.target.checked) {
-                                setAnswers({ ...answers, [q.id]: [...current, o.id] });
+                                setAnswers({
+                                  ...answers,
+                                  [q._id]: isOther
+                                    ? [
+                                        ...current.filter(
+                                          (v) =>
+                                            !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                        ),
+                                        OTHER_PREFIX,
+                                      ]
+                                    : [...current, optKey],
+                                });
                               } else {
                                 setAnswers({
                                   ...answers,
-                                  [q.id]: current.filter((v) => !v.startsWith(o.id)),
+                                  [q._id]: isOther
+                                    ? current.filter(
+                                        (v) =>
+                                          !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                      )
+                                    : current.filter((v) => v !== optKey),
                                 });
                               }
                             } else {
-                              setAnswers({ ...answers, [q.id]: o.id });
+                              setAnswers({
+                                ...answers,
+                                [q._id]: isOther ? OTHER_PREFIX : optKey,
+                              });
                             }
                           }}
                         />
@@ -188,29 +186,35 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                               type='text'
                               placeholder='Please specify'
                               className='flex-1 border-b border-gray-300 outline-none focus:border-blue-500 bg-transparent'
-                              value={
-                                typeof answers[q.id] === 'string'
-                                  ? getOtherValue(answers[q.id] as string)
-                                  : ''
-                              }
+                              value={getOtherValue()}
                               onChange={(e) => {
-                                const value = `${o.id}:${e.target.value}`;
+                                const value = `${OTHER_PREFIX}${e.target.value}`;
                                 if (q.type === 'checkbox') {
-                                  const current = (answers[q.id] as string[]) || [];
-                                  const filtered = current.filter((v) => !v.startsWith(o.id));
-                                  setAnswers({ ...answers, [q.id]: [...filtered, value] });
+                                  const current = (answers[q._id] as string[]) || [];
+                                  const filtered = current.filter(
+                                    (v) => !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                  );
+                                  setAnswers({ ...answers, [q._id]: [...filtered, value] });
                                 } else {
-                                  setAnswers({ ...answers, [q.id]: value });
+                                  setAnswers({ ...answers, [q._id]: value });
                                 }
                               }}
                               onFocus={() => {
-                                // auto-select Other when typing
                                 if (!isChecked) {
                                   if (q.type === 'checkbox') {
-                                    const current = (answers[q.id] as string[]) || [];
-                                    setAnswers({ ...answers, [q.id]: [...current, o.id] });
+                                    const current = (answers[q._id] as string[]) || [];
+                                    setAnswers({
+                                      ...answers,
+                                      [q._id]: [
+                                        ...current.filter(
+                                          (v) =>
+                                            !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                        ),
+                                        OTHER_PREFIX,
+                                      ],
+                                    });
                                   } else {
-                                    setAnswers({ ...answers, [q.id]: o.id });
+                                    setAnswers({ ...answers, [q._id]: OTHER_PREFIX });
                                   }
                                 }
                               }}

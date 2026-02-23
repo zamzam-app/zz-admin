@@ -1,6 +1,6 @@
 import { storesList } from '../../__mocks__/managers';
-import { Store } from '../../lib/types/types';
+import type { Outlet } from '../../lib/types/outlet';
 
 export const getStoresByOutletId = (outletId: string[]) => {
-  return storesList.filter((store: Store) => outletId.includes(store.outletId));
+  return storesList.filter((outlet: Outlet) => outletId.includes(outlet.outletId));
 };

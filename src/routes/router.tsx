@@ -17,7 +17,7 @@ const Analytics = lazy(() => import('../pages/Analytics'));
 const Reviews = lazy(() => import('../pages/Reviews'));
 const Infrastructure = lazy(() => import('../pages/Infrastructure'));
 const FormBuilder = lazy(() => import('../pages/FormBuilder'));
-const EmployeeManagement = lazy(() => import('../pages/EmployeeManagement'));
+const ManagersPage = lazy(() => import('../pages/Managers'));
 const Orders = lazy(() => import('../pages/Orders'));
 const Studio = lazy(() => import('../pages/Studio'));
 const Validation = lazy(() => import('../pages/Validation'));
@@ -100,7 +100,7 @@ const router = createBrowserRouter([
             path: '/managers',
             element: (
               <RoleGuard allowed={['admin']}>
-                <EmployeeManagement />
+                <ManagersPage />
               </RoleGuard>
             ),
           },

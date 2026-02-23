@@ -13,36 +13,19 @@ export interface Cake {
   category: string;
   image: string;
   description: string;
-  branchIds?: string[]; // IDs of stores where this cake is available
-  isNew?: boolean; // Flag for new menu items
+  branchIds?: string[];
+  isNew?: boolean;
 }
 
 export interface Feedback {
   id: string;
   customerName?: string;
   storeName: string;
-  cakeId?: string; // Link feedback to a specific product
-  rating: number; // 1-5
+  cakeId?: string;
+  rating: number;
   description: string;
   date: string;
   serviceType?: string;
   serviceCategory?: string;
   avatar?: string;
-}
-
-export interface Store {
-  id: string;
-  name: string;
-  outletId: string;
-  category: StoreCategory;
-  rating: number;
-  totalFeedback: number;
-  image?: string;
-  address?: string;
-  managerPhone?: string;
-  formId?: string;
-  formTitle?: string;
-  managerId?: string;
-  managerName?: string;
-  qrToken?: string;
 }
