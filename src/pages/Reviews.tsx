@@ -13,7 +13,7 @@ import { Star, AlertTriangle } from 'lucide-react';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
 import type { Review } from '../lib/types/review';
-import { REVIEW_KEYS } from '../lib/types/review';
+import { ComplaintStatus, REVIEW_KEYS } from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/ratings/ReviewPreviewModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -82,7 +82,12 @@ export default function ReviewsDemo() {
 
   /* ─── Complaint box: all reviews with rating < 3 (same filters as main list) ─── */
   const filteredComplaints = useMemo(
-    () => filteredReviews.filter((r) => r.overallRating < 3),
+    () =>
+      filteredReviews.filter((r) =>
+        (r.userResponses ?? []).some(
+          (ur) => ur.isComplaint === true && ur.complaintStatus === ComplaintStatus.PENDING,
+        ),
+      ),
     [filteredReviews],
   );
 
