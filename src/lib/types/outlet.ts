@@ -2,6 +2,11 @@ import type { StoreCategory } from './types';
 
 export const OUTLET_KEYS = ['outlets'];
 
+export interface OutletMenuItem {
+  productId: string;
+  isAvailable?: boolean;
+}
+
 export interface Outlet {
   id: string;
   name: string;
@@ -21,6 +26,7 @@ export interface Outlet {
   qrToken?: string;
   outletTypeId?: string;
   outletTypeName?: string;
+  menuItems?: OutletMenuItem[];
 }
 
 export interface OutletListMeta {
@@ -46,6 +52,7 @@ export interface CreateOutletPayload {
   managerId?: string | null;
   formId?: string | null;
   productTemplateId?: string | null;
+  menuItems?: OutletMenuItem[];
 }
 
 /** Payload for PATCH /outlet/:id (update) */
@@ -58,4 +65,5 @@ export interface UpdateOutletPayload {
   managerId?: string | null;
   formId?: string | null;
   productTemplateId?: string | null;
+  menuItems?: OutletMenuItem[];
 }

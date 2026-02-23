@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { message, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
+import { TextField, MenuItem } from '@mui/material';
 import { Loader2 } from 'lucide-react';
-import type { Outlet } from '../../lib/types/outlet';
+import type { Outlet, OutletMenuItem } from '../../lib/types/outlet';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
 import Select from '../common/Select';
@@ -10,8 +11,10 @@ import { Modal } from '../common/Modal';
 import { Form } from '../../lib/types/forms';
 import { outletApi } from '../../lib/services/api/outlet.api';
 import { outletTypeApi } from '../../lib/services/api/outlet-type.api';
+import { productApi } from '../../lib/services/api/product.api';
 import { OUTLET_KEYS } from '../../lib/types/outlet';
 import { OUTLET_TYPE_KEYS } from '../../lib/types/outlet-type';
+import { PRODUCT_KEYS } from '../../lib/types/product';
 import { useApiQuery, useApiMutation } from '../../lib/react-query/use-api-hooks';
 import { useImageUpload } from '../../lib/hooks/useImageUpload';
 import type { CreateOutletPayload, UpdateOutletPayload } from '../../lib/types/outlet';
@@ -49,6 +52,10 @@ export function OutletModal({
   );
   const outletTypes = outletTypesData?.data ?? [];
 
+  const { data: products = [] } = useApiQuery(PRODUCT_KEYS, () => productApi.getAll(), {
+    enabled: open,
+  });
+
   const createMutation = useApiMutation(
     (data: CreateOutletPayload) => outletApi.create(data),
     [OUTLET_KEYS],
@@ -85,6 +92,7 @@ export function OutletModal({
             ...editing,
             description: editing.description ?? '',
             images: editing.images ?? [],
+            menuItems: editing.menuItems ?? [],
           }
         : {};
       const t = setTimeout(() => {
@@ -105,6 +113,14 @@ export function OutletModal({
     setError(null);
     if (!form.name?.trim() || !form.outletTypeId) return;
 
+    const menuItems: OutletMenuItem[] | undefined = form.menuItems?.length
+      ? form.menuItems.map((item) => ({
+          productId: typeof item === 'string' ? item : item.productId,
+          isAvailable:
+            typeof item === 'object' && item?.isAvailable !== undefined ? item.isAvailable : true,
+        }))
+      : undefined;
+
     const payload = {
       name: form.name.trim(),
       description: form.description?.trim() || undefined,
@@ -113,6 +129,7 @@ export function OutletModal({
       outletType: form.outletTypeId,
       managerId: form.managerId || undefined,
       formId: form.formId || undefined,
+      menuItems,
     };
 
     const id = getOutletId(editing);
@@ -233,6 +250,36 @@ export function OutletModal({
                 });
               }}
             />
+          </div>
+
+          <div>
+            <TextField
+              select
+              label='Menu items (products)'
+              value={form.menuItems?.map((m) => (typeof m === 'string' ? m : m.productId)) ?? []}
+              onChange={(e) => {
+                const selected = e.target.value;
+                const ids = typeof selected === 'string' ? selected.split(',') : selected;
+                setForm({
+                  ...form,
+                  menuItems: ids.map((productId) => ({ productId, isAvailable: true })),
+                });
+              }}
+              fullWidth
+              SelectProps={{ multiple: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'white',
+                },
+              }}
+            >
+              {products.map((p) => (
+                <MenuItem key={p._id} value={p._id}>
+                  {p.name}
+                </MenuItem>
+              ))}
+            </TextField>
           </div>
 
           <div>
