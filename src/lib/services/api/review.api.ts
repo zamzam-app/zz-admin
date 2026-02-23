@@ -1,5 +1,5 @@
 import apiClient from './axios';
-import type { Review, RatingsListResponse } from '../../types/review';
+import type { Review, RatingsListResponse, ResolveComplaintDto } from '../../types/review';
 
 export const reviewsApi = {
   getAll: async (): Promise<RatingsListResponse> => {
@@ -37,5 +37,10 @@ export const reviewsApi = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/rating/${id}`);
+  },
+
+  resolveComplaint: async (ratingId: string, body: ResolveComplaintDto): Promise<Review> => {
+    const { data } = await apiClient.post<Review>(`/rating/resolve-complaint/${ratingId}`, body);
+    return data;
   },
 };

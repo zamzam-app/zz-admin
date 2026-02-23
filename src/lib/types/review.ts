@@ -78,6 +78,15 @@ export interface RatingsListMeta {
   limit: number;
 }
 
+/** Request body for resolving a complaint (single question in a rating). */
+export interface ResolveComplaintDto {
+  questionId: string;
+  complaintStatus: ComplaintStatus;
+  answer?: string;
+  resolutionNotes?: string;
+  resolvedBy: string;
+}
+
 /** Paginated response for ratings get-all API. */
 export interface RatingsListResponse {
   data: Review[];

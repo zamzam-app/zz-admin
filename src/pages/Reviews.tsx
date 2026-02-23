@@ -8,7 +8,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Button,
 } from '@mui/material';
 import { Star, AlertTriangle } from 'lucide-react';
 import { reviewsApi } from '../lib/services/api/review.api';
@@ -16,7 +15,7 @@ import { useAuth } from '../lib/context/AuthContext';
 import type { Review } from '../lib/types/review';
 import { REVIEW_KEYS } from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
-import { ReviewPreviewModal } from '../components/resource/ReviewPreviewModal';
+import { ReviewPreviewModal } from '../components/ratings/ReviewPreviewModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 import { Button as CommonButton } from '../components/common/Button';
@@ -119,17 +118,6 @@ export default function ReviewsDemo() {
   }, [filteredReviews, sortOrder]);
 
   const ratingOrder = sortOrder === 'asc' ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
-
-  /* ─── placeholder handlers ─── */
-  const handleResolve = () => {
-    // TODO: implement resolve API call
-    console.log('resoluton logic not done!');
-  };
-
-  const handleReject = () => {
-    // TODO: implement reject API call
-    console.log('rejection logic not done!');
-  };
 
   if (error) {
     return (
@@ -344,38 +332,6 @@ export default function ReviewsDemo() {
                   <Typography variant='body2' sx={{ fontSize: 14, color: '#374151' }}>
                     {getReviewComment(review)}
                   </Typography>
-
-                  {/* ── Action buttons ── */}
-                  <Box display='flex' gap={1} mt='auto' onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size='small'
-                      onClick={() => handleResolve()}
-                      sx={{
-                        flex: 1,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        backgroundColor: '#dcfce7',
-                        color: '#16a34a',
-                        '&:hover': { backgroundColor: '#bbf7d0' },
-                      }}
-                    >
-                      Resolve
-                    </Button>
-                    <Button
-                      size='small'
-                      onClick={() => handleReject()}
-                      sx={{
-                        flex: 1,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        backgroundColor: '#fee2e2',
-                        color: '#dc2626',
-                        '&:hover': { backgroundColor: '#fecaca' },
-                      }}
-                    >
-                      Reject
-                    </Button>
-                  </Box>
                 </Box>
               ))}
             </Box>
