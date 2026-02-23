@@ -103,7 +103,17 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
             }}
           >
             {(review.userResponses ?? []).map((res, index) => {
-              const isComplaint = res.isComplaint === true;
+              const isComplaintPending = res.isComplaint === true;
+              const isResolved = res.complaintStatus === 'resolved';
+              const isDismissed = res.complaintStatus === 'dismissed';
+              const isComplaintRelated = isComplaintPending || isResolved || isDismissed;
+              const complaintStatus = isComplaintPending
+                ? 'pending'
+                : isResolved
+                  ? 'resolved'
+                  : isDismissed
+                    ? 'dismissed'
+                    : undefined;
               const qId =
                 typeof res.questionId === 'object' && res.questionId !== null
                   ? res.questionId._id
@@ -114,33 +124,58 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                 'title' in res.questionId
                   ? (res.questionId as { _id: string; title?: string }).title?.trim()
                   : null;
-              const isExpanded = isComplaint && expandedComplaintQuestionId === qId;
+              const isExpanded = isComplaintPending && expandedComplaintQuestionId === qId;
               const isResolving = resolveMutation.isPending;
+
+              const statusLabel =
+                complaintStatus === 'pending'
+                  ? 'Pending'
+                  : complaintStatus === 'resolved'
+                    ? 'Resolved'
+                    : complaintStatus === 'dismissed'
+                      ? 'Dismissed'
+                      : null;
+
+              const boxSx = {
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                outlineOffset: 1,
+                ...(isComplaintRelated
+                  ? {
+                      ...(isResolved && {
+                        borderColor: 'success.light',
+                        outlineColor: 'success.main',
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      }),
+                      ...(isDismissed && {
+                        borderColor: 'error.light',
+                        backgroundColor: 'error.50',
+                      }),
+                      ...(isComplaintPending && {
+                        borderColor: 'error.main',
+                        backgroundColor: 'error.50',
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: 'error.100' },
+                      }),
+                    }
+                  : {
+                      borderColor: 'divider',
+                      backgroundColor: 'transparent',
+                    }),
+              };
 
               return (
                 <Box
                   component='li'
                   key={`${qId}-${index}`}
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: isComplaint ? 'error.main' : 'divider',
-                    outline: isComplaint ? '2px solid' : 'none',
-                    outlineColor: 'error.main',
-                    outlineOffset: 1,
-                    backgroundColor: isComplaint ? 'error.50' : 'transparent',
-                    ...(isComplaint && {
-                      cursor: 'pointer',
-                      '&:hover': { backgroundColor: 'error.100' },
-                    }),
-                  }}
+                  sx={boxSx}
                   onClick={
-                    isComplaint
+                    isComplaintPending
                       ? () => setExpandedComplaintQuestionId((prev) => (prev === qId ? null : qId))
                       : undefined
                   }
-                  role={isComplaint ? 'button' : undefined}
+                  role={isComplaintPending ? 'button' : undefined}
                   aria-expanded={isExpanded}
                 >
                   <Typography
@@ -151,21 +186,56 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                     mb={0.5}
                   >
                     {questionTitle ?? 'Question'}
-                    {isComplaint && (
-                      <Typography
-                        component='span'
-                        variant='caption'
-                        fontWeight={700}
-                        color='error.main'
-                        sx={{ ml: 1 }}
-                      >
-                        (Complaint)
-                      </Typography>
+                    {isComplaintRelated && (
+                      <>
+                        <Typography
+                          component='span'
+                          variant='caption'
+                          fontWeight={700}
+                          color={
+                            isResolved ? 'success.dark' : isDismissed ? 'error.main' : 'error.main'
+                          }
+                          sx={{ ml: 1 }}
+                        >
+                          (Complaint
+                          {statusLabel != null ? ` · ${statusLabel}` : ''})
+                        </Typography>
+                      </>
                     )}
                   </Typography>
                   <Typography variant='body2' color='text.secondary'>
                     {Array.isArray(res.answer) ? res.answer.join(', ') : String(res.answer ?? '—')}
                   </Typography>
+
+                  {(isResolved || isDismissed) && (res.resolutionNotes || res.resolvedAt) && (
+                    <Box
+                      sx={{
+                        mt: 1.5,
+                        p: 1.5,
+                        borderRadius: 1,
+                        backgroundColor: isResolved
+                          ? 'rgba(46, 125, 50, 0.12)'
+                          : 'rgba(211, 47, 47, 0.12)',
+                        borderColor: isResolved ? 'success.light' : 'error.light',
+                      }}
+                    >
+                      {res.resolutionNotes && (
+                        <Typography variant='caption' display='block' color='text.secondary'>
+                          {res.resolutionNotes}
+                        </Typography>
+                      )}
+                      {res.resolvedAt && (
+                        <Typography
+                          variant='caption'
+                          display='block'
+                          color='text.secondary'
+                          sx={{ mt: 0.5, opacity: 0.9 }}
+                        >
+                          Resolved {new Date(res.resolvedAt).toLocaleString()}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
 
                   {isExpanded && (
                     <Box

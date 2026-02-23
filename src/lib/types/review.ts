@@ -31,8 +31,10 @@ interface UserResponse {
   questionId: QuestionRef;
   answer: string[];
   isComplaint: boolean;
-  complaintStatus: 'pending' | 'resolved' | 'rejected';
-  resolutionBy: string | null;
+  complaintStatus?: 'pending' | 'resolved' | 'dismissed';
+  resolutionBy?: string | null;
+  resolutionNotes?: string;
+  resolvedAt?: string;
 }
 
 export interface Review {
