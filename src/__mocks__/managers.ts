@@ -1,11 +1,12 @@
-import { Store as StoreType, StoreCategory } from '../lib/types/types';
+import type { Outlet } from '../lib/types/outlet';
+import { StoreCategory } from '../lib/types/types';
 
 export const MANAGERS = [
   { id: '1', name: 'John Doe', phone: '123-456-7890' },
   { id: '2', name: 'Jane Smith', phone: '098-765-4321' },
 ];
 
-export const storesList: StoreType[] = [
+export const storesList: Outlet[] = [
   {
     id: '1',
     name: 'Outlet 1',

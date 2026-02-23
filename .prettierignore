@@ -1,0 +1,14 @@
+# Lockfiles – avoid parsing/formatting (causes YAML parse errors)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+bun.lockb
+
+# Build output
+dist
+build
+.next
+.vercel
+
+# Dependencies
+node_modules

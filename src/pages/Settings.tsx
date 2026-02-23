@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Box, Typography, Stack } from '@mui/material';
-import { User, Lock, Shield, Mail } from 'lucide-react';
+import { User, Lock, Shield, Mail, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import { Button } from '../components/common/Button';
+import { useApiMutation } from '../lib/react-query/use-api-hooks';
+import { usersApi } from '../lib/services/api/users.api';
+import { ChangePasswordPayload } from '../lib/types/manager';
+import { message } from 'antd';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -14,19 +18,43 @@ export default function Settings() {
     confirmPassword: '',
   });
 
+  const passwordMutation = useApiMutation(
+    (data: { id: string; payload: ChangePasswordPayload }) =>
+      usersApi.changePassword(data.id, data.payload),
+    [],
+    {
+      onSuccess: () => {
+        message.success('Password updated successfully');
+        setPasswordForm({ currPassword: '', newPassword: '', confirmPassword: '' });
+      },
+      onError: () => {
+        message.error('Failed to update password');
+      },
+    },
+  );
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Logic to update password would go here
+    const id = user?._id || user?.id;
+
+    if (!id) return;
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
-    alert('Password updated successfully (mock)');
-    setPasswordForm({ currPassword: '', newPassword: '', confirmPassword: '' });
+
+    passwordMutation.mutate({
+      id,
+      payload: {
+        oldPassword: passwordForm.currPassword,
+        newPassword: passwordForm.newPassword,
+      },
+    });
   };
 
   return (
@@ -166,8 +194,20 @@ export default function Settings() {
             />
 
             <div className='pt-2 flex justify-end'>
-              <Button type='submit' variant='admin-primary'>
-                Update Password
+              <Button
+                type='submit'
+                variant='admin-primary'
+                disabled={passwordMutation.isPending}
+                className='flex items-center gap-2'
+              >
+                {passwordMutation.isPending ? (
+                  <>
+                    <Loader2 size={18} className='animate-spin' />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
               </Button>
             </div>
           </form>

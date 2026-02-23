@@ -1,45 +1,44 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/context/AuthContext';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { message } from 'antd';
-
 
 const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  //  console.log('Login submit clicked');
-  if (!email) {
-    message.error('Please enter your email');
-    return;
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    //  console.log('Login submit clicked');
+    if (!email) {
+      message.error('Please enter your email');
+      return;
+    }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    message.error('Enter a valid email');
-    return;
-  }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      message.error('Enter a valid email');
+      return;
+    }
 
-  if (!password) {
-    message.error('Please enter your password');
-    return;
-  }
+    if (!password) {
+      message.error('Please enter your password');
+      return;
+    }
 
-  try {
-    await login(email, password);
-    message.success('Login successful'); 
-    navigate('/overview');
-  } catch {
-    message.error('Login failed. Please check your credentials.');
-  }
-  
-};
+    try {
+      await login(email, password);
+      message.success('Login successful');
+      navigate('/overview');
+    } catch {
+      message.error('Login failed. Please check your credentials.');
+    }
+  };
 
   return (
     <div className='min-h-screen bg-[#111827] flex items-center justify-center p-4 px-4 sm:px-6 relative overflow-hidden w-full h-full'>
@@ -74,20 +73,30 @@ const handleSubmit = async (e: React.FormEvent) => {
 
           <div className='relative'>
             <Lock size={18} className='absolute left-4 top-1/2 -translate-y-1/2 text-gray-400' />
+
             <input
-              type='password'
+              type={showPassword ? 'text' : 'password'}
+              autoComplete='new-password'
               placeholder='Password'
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className='w-full pl-12 pr-4 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-sm sm:text-base'
+              className='w-full pl-12 pr-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-sm sm:text-base'
             />
+
+            <button
+              type='button'
+              onClick={() => setShowPassword((prev) => !prev)}
+              className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white'
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           <button
             type='submit'
-            className='w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-[#D4AF37] text-[#1F2937] font-black hover:bg-[#c4a132] transition-all active:scale-[0.98] text-sm sm:text-base'
+            className='w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-[#D4AF37] text-[#1F2937] font-black hover:bg-[#c4a132] cursor-pointer transition-all active:scale-[0.98] text-sm sm:text-base'
           >
-            Sign In
+            Login
           </button>
         </form>
 

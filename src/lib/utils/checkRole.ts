@@ -1,8 +1,6 @@
-//get Stores as input and return true if user roles
-import { Store } from '../../lib/types/types';
+// get Outlets as input and return role strings
+import type { Outlet } from '../../lib/types/outlet';
 
-export const checkRole = (stores: Store[]) => {
-  //return map of role as string
-  const roles = stores.map((store) => store.category.toString().toLowerCase());
-  return roles;
+export const checkRole = (outlets: Outlet[]) => {
+  return outlets.map((outlet) => outlet.category.toString().toLowerCase());
 };
