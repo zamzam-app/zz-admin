@@ -6,12 +6,20 @@ import type {
   OutletListResponse,
   CreateOutletPayload,
   UpdateOutletPayload,
+  OutletMenuItem,
 } from '../../types/outlet';
 
 /** Shape of populated refs in the API response (e.g. outletType, managerId) */
 interface ApiPopulatedRef {
   _id: string;
   name?: string;
+}
+
+/** Populated menu item from API (product ref with _id, name, isAvailable) */
+export interface ApiOutletMenuItem {
+  _id: string;
+  name?: string;
+  isAvailable?: boolean;
 }
 
 /** Raw outlet item as returned by the API (GET /outlet) */
@@ -28,7 +36,7 @@ export interface ApiOutletItem {
   formTitle?: string | null;
   qrToken?: string | null;
   address?: string | null;
-  menuItems?: unknown[];
+  menuItems?: ApiOutletMenuItem[];
   tables?: unknown[];
   createdAt?: string;
   updatedAt?: string;
@@ -61,7 +69,15 @@ function parseRef(ref: unknown): { id: string | undefined; name: string | undefi
   return { id: undefined, name: undefined };
 }
 
-/** Map API response item to Outlet (flat id/name for outletType and managerId) */
+function parseMenuItems(raw: ApiOutletItem['menuItems']): OutletMenuItem[] {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  return raw.map((m) => ({
+    productId: String(m._id),
+    isAvailable: m.isAvailable ?? true,
+  }));
+}
+
+/** Map API response item to Outlet (flat id/name for outletType and managerId, menuItems populated) */
 function toOutlet(item: ApiOutletItem): Outlet {
   const id = item._id;
   const outletType = parseRef(item.outletType);
@@ -71,6 +87,7 @@ function toOutlet(item: ApiOutletItem): Outlet {
   const address = item.address ?? undefined;
   const description = item.description ?? undefined;
   const qrToken = item.qrToken ?? undefined;
+  const menuItems = parseMenuItems(item.menuItems);
 
   return {
     id,
@@ -90,6 +107,7 @@ function toOutlet(item: ApiOutletItem): Outlet {
     outletTypeName: outletType.name,
     description: description || undefined,
     images,
+    menuItems,
   };
 }
 

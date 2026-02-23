@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { message, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { TextField, MenuItem } from '@mui/material';
+import { Box, Checkbox, FormControlLabel, FormGroup } from '@mui/material';
 import { Loader2 } from 'lucide-react';
 import type { Outlet, OutletMenuItem } from '../../lib/types/outlet';
 import { Button } from '../common/Button';
@@ -253,33 +253,61 @@ export function OutletModal({
           </div>
 
           <div>
-            <TextField
-              select
-              label='Menu items (products)'
-              value={form.menuItems?.map((m) => (typeof m === 'string' ? m : m.productId)) ?? []}
-              onChange={(e) => {
-                const selected = e.target.value;
-                const ids = typeof selected === 'string' ? selected.split(',') : selected;
-                setForm({
-                  ...form,
-                  menuItems: ids.map((productId) => ({ productId, isAvailable: true })),
-                });
-              }}
-              fullWidth
-              SelectProps={{ multiple: true }}
+            <label className='block text-sm font-medium text-gray-700 mb-2'>
+              Menu items (products)
+            </label>
+            <Box
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 3,
-                  bgcolor: 'white',
-                },
+                borderRadius: 2,
+                bgcolor: 'white',
+                border: '1px solid',
+                borderColor: 'divider',
+                p: 2,
+                maxHeight: 240,
+                overflowY: 'auto',
               }}
             >
-              {products.map((p) => (
-                <MenuItem key={p._id} value={p._id}>
-                  {p.name}
-                </MenuItem>
-              ))}
-            </TextField>
+              <FormGroup>
+                {products.map((p) => {
+                  const selectedIds =
+                    form.menuItems?.map((m) => (typeof m === 'string' ? m : m.productId)) ?? [];
+                  const checked = selectedIds.includes(p._id);
+                  return (
+                    <FormControlLabel
+                      key={p._id}
+                      control={
+                        <Checkbox
+                          checked={checked}
+                          onChange={(_, isChecked) => {
+                            setForm((prev) => {
+                              const current = prev.menuItems ?? [];
+                              if (isChecked) {
+                                return {
+                                  ...prev,
+                                  menuItems: [
+                                    ...current.filter(
+                                      (m) => (typeof m === 'string' ? m : m.productId) !== p._id,
+                                    ),
+                                    { productId: p._id, isAvailable: true },
+                                  ],
+                                };
+                              }
+                              return {
+                                ...prev,
+                                menuItems: current.filter(
+                                  (m) => (typeof m === 'string' ? m : m.productId) !== p._id,
+                                ),
+                              };
+                            });
+                          }}
+                        />
+                      }
+                      label={p.name}
+                    />
+                  );
+                })}
+              </FormGroup>
+            </Box>
           </div>
 
           <div>
