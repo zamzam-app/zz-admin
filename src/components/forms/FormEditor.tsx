@@ -1,5 +1,5 @@
-import React from 'react';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { message, Popconfirm } from 'antd';
 import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus } from 'lucide-react';
 import { Form, Question, QuestionType } from '../../lib/types/forms';
 import { Button } from '../common/Button';
@@ -20,6 +20,31 @@ const FormEditor: React.FC<Props> = ({
   onCancel,
   onPreview,
 }) => {
+  const validate = (): boolean => {
+    const errors: string[] = [];
+
+    if (!currentForm.title?.trim()) {
+      errors.push('Form title is required');
+    }
+
+    currentForm.questions.forEach((q, idx) => {
+      if (!q.title?.trim()) {
+        errors.push(`Question ${idx + 1}: title is required`);
+      }
+    });
+
+    if (errors.length > 0) {
+      message.error(errors[0]);
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = () => {
+    if (!validate()) return;
+    onSave();
+  };
+
   useEffect(() => {
     if (currentForm.questions.length === 0) {
       const ratingQuestion: Question = {
@@ -75,13 +100,7 @@ const FormEditor: React.FC<Props> = ({
         q._id === qId
           ? {
               ...q,
-              options: [
-                ...(q.options || []),
-                {
-                  _id: Date.now().toString(),
-                  text: `Option ${(q.options?.length || 0) + 1}`,
-                },
-              ],
+              options: [...(q.options || []), { text: `Option ${(q.options?.length || 0) + 1}` }],
             }
           : q,
       ),
@@ -93,20 +112,36 @@ const FormEditor: React.FC<Props> = ({
       ...currentForm,
       questions: currentForm.questions.map((q) => {
         if (q._id !== qId) return q;
-
-        // prevent duplicate "Other"
-        if (q.options?.some((o) => o.isOther)) return q;
-
+        if (q.options?.some((o) => o.text === 'Other:')) return q;
         return {
           ...q,
-          options: [
-            ...(q.options || []),
-            {
-              _id: 'other',
-              text: 'Other:',
-              isOther: true,
-            },
-          ],
+          options: [...(q.options || []), { text: 'Other:' }],
+        };
+      }),
+    });
+  };
+
+  const updateOption = (qId: string, optionIndex: number, text: string) => {
+    setCurrentForm({
+      ...currentForm,
+      questions: currentForm.questions.map((q) => {
+        if (q._id !== qId || !q.options) return q;
+        return {
+          ...q,
+          options: q.options.map((opt, i) => (i === optionIndex ? { ...opt, text } : opt)),
+        };
+      }),
+    });
+  };
+
+  const removeOption = (qId: string, optionIndex: number) => {
+    setCurrentForm({
+      ...currentForm,
+      questions: currentForm.questions.map((q) => {
+        if (q._id !== qId || !q.options) return q;
+        return {
+          ...q,
+          options: q.options.filter((_, i) => i !== optionIndex),
         };
       }),
     });
@@ -116,15 +151,24 @@ const FormEditor: React.FC<Props> = ({
     <div className='space-y-8'>
       <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
         <div className='flex items-center gap-4'>
-          <button
-            onClick={onCancel}
-            className='p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition shadow-sm'
+          <Popconfirm
+            title='Are you sure you want to leave the form creation?'
+            onConfirm={onCancel}
+            okText='Yes'
+            cancelText='No'
+            getPopupContainer={() => document.body}
+            styles={{ root: { zIndex: 10000 } }}
           >
-            <ArrowLeft size={20} className='text-[#1F2937]' />
-          </button>
-          <div>
+            <button
+              type='button'
+              className='p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition shadow-sm cursor-pointer'
+            >
+              <ArrowLeft size={20} className='text-[#1F2937]' />
+            </button>
+          </Popconfirm>
+          <div className='flex-1 min-w-0'>
             <input
-              className='text-2xl font-black text-[#1F2937] outline-none bg-transparent border-b-2 border-transparent focus:border-blue-500 w-full md:w-auto'
+              className='text-2xl font-black text-[#1F2937] outline-none bg-transparent border-b-2 border-transparent focus:border-blue-500 w-full md:w-auto transition-colors'
               value={currentForm.title}
               placeholder='Untitled Form'
               onChange={(e) => setCurrentForm({ ...currentForm, title: e.target.value })}
@@ -144,7 +188,7 @@ const FormEditor: React.FC<Props> = ({
           </Button>
           <Button
             variant='admin-primary'
-            onClick={onSave}
+            onClick={handleSave}
             className='rounded-2xl px-8 py-4 shadow-lg flex items-center gap-3'
           >
             <Save size={18} />
@@ -166,12 +210,14 @@ const FormEditor: React.FC<Props> = ({
                   <span className='flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-500 font-black text-xs'>
                     {idx + 1}
                   </span>
-                  <input
-                    className='w-full text-lg font-black text-[#1F2937] bg-transparent outline-none border-b-2 border-gray-50 focus:border-blue-500 py-1 transition-all'
-                    placeholder='Enter your question here...'
-                    value={q.title}
-                    onChange={(e) => updateQuestion(q._id, { title: e.target.value })}
-                  />
+                  <div className='flex-1 min-w-0'>
+                    <input
+                      className='w-full text-lg font-black text-[#1F2937] bg-transparent outline-none border-b-2 border-gray-50 focus:border-blue-500 py-1 transition-all'
+                      placeholder='Enter your question here...'
+                      value={q.title}
+                      onChange={(e) => updateQuestion(q._id, { title: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className='flex items-center gap-2 px-1 text-gray-400'>
@@ -209,12 +255,12 @@ const FormEditor: React.FC<Props> = ({
             <div className='pl-11'>
               {['multiple_choice', 'checkbox'].includes(q.type) ? (
                 <div className='space-y-3'>
-                  {q.options?.map((o) => (
-                    <div key={o._id} className='flex items-center gap-3 group'>
+                  {q.options?.map((o, optIdx) => (
+                    <div key={optIdx} className='flex items-center gap-3 group'>
                       <div
                         className={`w-4 h-4 rounded-full border-2 ${q.type === 'checkbox' ? 'rounded-md' : 'rounded-full'} border-gray-200`}
                       />
-                      {o.isOther ? (
+                      {o.text === 'Other:' ? (
                         <div className='flex items-center gap-2 flex-1'>
                           <span className='font-medium text-gray-600 whitespace-nowrap'>
                             Other:
@@ -229,21 +275,11 @@ const FormEditor: React.FC<Props> = ({
                         <input
                           className='flex-1 border-b border-gray-100 outline-none py-1 focus:border-blue-400 text-[#1F2937] font-medium'
                           value={o.text}
-                          onChange={(e) =>
-                            updateQuestion(q._id, {
-                              options: q.options?.map((opt) =>
-                                opt._id === o._id ? { ...opt, text: e.target.value } : opt,
-                              ),
-                            })
-                          }
+                          onChange={(e) => updateOption(q._id, optIdx, e.target.value)}
                         />
                       )}
                       <button
-                        onClick={() =>
-                          updateQuestion(q._id, {
-                            options: q.options?.filter((opt) => opt._id !== o._id),
-                          })
-                        }
+                        onClick={() => removeOption(q._id, optIdx)}
                         className='p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition'
                       >
                         <X size={16} />

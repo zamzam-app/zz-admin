@@ -1,84 +1,121 @@
-import { useState, useEffect } from 'react';
-import { Form } from '../lib/types/forms';
+import { useState } from 'react';
+import { Form, FORM_KEYS } from '../lib/types/forms';
 import { formsApi } from '../lib/services/api/forms.api';
 import { message } from 'antd';
+import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import FormDashboard from '../components/forms/FormDashboard';
 import FormEditor from '../components/forms/FormEditor';
 import FormViewer from '../components/forms/FormViewer';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import { NoDataFallback } from '../components/common/NoDataFallback';
+import { Button } from '../components/common/Button';
 
 type ViewMode = 'dashboard' | 'builder' | 'viewer' | 'preview';
 export default function FormBuilderPage() {
   const [view, setView] = useState<ViewMode>('dashboard');
-  const [savedForms, setSavedForms] = useState<Form[]>([]);
-  const [loading, setLoading] = useState(false);
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
+  const [isNewForm, setIsNewForm] = useState(false);
 
-  // Load Forms on Mount
-  useEffect(() => {
-    const fetchForms = async () => {
-      setLoading(true);
-      try {
-        const data = await formsApi.getForms();
-        setSavedForms(data);
-      } catch {
-        message.error('Could not load forms');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchForms();
-  }, []);
+  const {
+    data: savedForms = [],
+    isLoading,
+    error,
+    refetch,
+  } = useApiQuery(FORM_KEYS, formsApi.getForms);
 
-  const handleCreateNew = async () => {
-    try {
-      const newForm = await formsApi.createForm();
-      setCurrentForm(newForm);
-      setSavedForms((prev) => [...prev, newForm]);
-      setView('builder');
-    } catch {
-      message.error('Failed to create form');
-    }
+  const createMutation = useApiMutation<Form, void>(() => formsApi.createForm(), [FORM_KEYS], {
+    onError: () => message.error('Failed to create form'),
+  });
+
+  const updateMutation = useApiMutation(
+    ({ id, payload }: { id: string; payload: { title: string; questions: Form['questions'] } }) =>
+      formsApi.updateForm(id, payload),
+    [FORM_KEYS],
+    {
+      onSuccess: () => {
+        message.success('Form saved successfully');
+        setView('dashboard');
+      },
+      onError: () => message.error('Update failed'),
+    },
+  );
+
+  const deleteMutation = useApiMutation((id: string) => formsApi.deleteForm(id), [FORM_KEYS], {
+    onSuccess: () => message.success('Form deleted'),
+    onError: () => message.error('Delete failed'),
+  });
+
+  const DRAFT_FORM_ID = 'draft';
+
+  const handleCreateNew = () => {
+    setCurrentForm({
+      _id: DRAFT_FORM_ID,
+      title: 'Untitled Form',
+      questions: [],
+    });
+    setIsNewForm(true);
+    setView('builder');
   };
 
   const handleEdit = async (form: Form) => {
     try {
       const fullForm = await formsApi.getForm(form._id);
       setCurrentForm(fullForm);
+      setIsNewForm(false);
       setView('builder');
     } catch {
       message.error('Failed to load form details');
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!currentForm) return;
-
-    try {
-      const updated = await formsApi.updateForm(currentForm._id, {
-        title: currentForm.title,
-        questions: currentForm.questions,
+    if (isNewForm && currentForm._id === DRAFT_FORM_ID) {
+      createMutation.mutate(undefined, {
+        onSuccess: (newForm) => {
+          updateMutation.mutate(
+            {
+              id: newForm._id,
+              payload: { title: currentForm.title, questions: currentForm.questions },
+            },
+            {
+              onSuccess: () => {
+                setCurrentForm(null);
+                setIsNewForm(false);
+              },
+            },
+          );
+        },
       });
-
-      setSavedForms((prev) => prev.map((f) => (f._id === updated._id ? updated : f)));
-
-      message.success('Form saved successfully');
-      setView('dashboard');
-    } catch {
-      message.error('Update failed');
+    } else {
+      updateMutation.mutate({
+        id: currentForm._id,
+        payload: { title: currentForm.title, questions: currentForm.questions },
+      });
     }
   };
 
-  const handleDelete = async (form: Form) => {
-    try {
-      await formsApi.deleteForm(form._id);
-      setSavedForms((prev) => prev.filter((f) => f._id !== form._id));
-      message.success('Form deleted');
-    } catch {
-      message.error('Delete failed');
-    }
+  const handleDelete = (form: Form) => {
+    deleteMutation.mutate(form._id);
   };
 
-  if (loading && view === 'dashboard') return <div>Loading...</div>;
+  if (error && view === 'dashboard') {
+    return (
+      <div className='space-y-8'>
+        <NoDataFallback
+          title='Failed to load forms'
+          description={error.message}
+          action={
+            <Button variant='admin-primary' onClick={() => refetch()} className='rounded-2xl'>
+              Try again
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  if (isLoading && view === 'dashboard') return <LoadingSpinner />;
 
   return (
     <div className='space-y-8'>
@@ -107,7 +144,24 @@ export default function FormBuilderPage() {
           currentForm={currentForm}
           setCurrentForm={setCurrentForm as React.Dispatch<React.SetStateAction<Form | null>>}
           onSave={handleSave}
-          onCancel={() => setView('dashboard')}
+          onCancel={() => {
+            if (isNewForm && currentForm._id === DRAFT_FORM_ID) {
+              setView('dashboard');
+              setCurrentForm(null);
+              setIsNewForm(false);
+            } else if (isNewForm) {
+              deleteMutation.mutate(currentForm._id, {
+                onSuccess: () => {
+                  setView('dashboard');
+                  setCurrentForm(null);
+                  setIsNewForm(false);
+                },
+              });
+            } else {
+              setView('dashboard');
+              setCurrentForm(null);
+            }
+          }}
           onPreview={() => setView('preview')}
         />
       )}

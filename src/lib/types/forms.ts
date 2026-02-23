@@ -1,10 +1,10 @@
+export const FORM_KEYS = ['forms'];
+
 export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'checkbox' | 'rating';
 
 export interface Option {
-  _id?: string;
   text: string;
   selected?: boolean;
-  isOther?: boolean;
 }
 
 export interface Question {
@@ -15,6 +15,7 @@ export interface Question {
   hint?: string;
   options?: Option[];
   maxRatings?: number;
+  starStep?: number;
 }
 
 export interface Form {

@@ -8,8 +8,9 @@ interface Props {
   onBack: () => void;
 }
 
+const OTHER_PREFIX = 'other:';
+
 const FormViewer: React.FC<Props> = ({ form, onBack }) => {
-  // FIXED: Replaced 'any' with a union type that matches your possible inputs
   const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({});
 
   return (
@@ -97,24 +98,38 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
 
               {['multiple_choice', 'checkbox'].includes(q.type) && (
                 <div className='flex flex-col gap-3 mt-2'>
-                  {q.options?.map((o) => {
-                    const isOther = o.isOther;
+                  {q.options?.map((o, optIdx) => {
+                    const isOther = o.text === 'Other:';
+                    const optKey = String(optIdx);
 
                     const isChecked =
                       q.type === 'checkbox'
-                        ? ((answers[q._id] as string[]) || []).some((v) => v.startsWith(o._id!))
-                        : typeof answers[q._id] === 'string' &&
-                          (answers[q._id] as string).startsWith(o._id!);
+                        ? isOther
+                          ? ((answers[q._id] as string[]) || []).some(
+                              (v) => typeof v === 'string' && v.startsWith(OTHER_PREFIX),
+                            )
+                          : ((answers[q._id] as string[]) || []).includes(optKey)
+                        : isOther
+                          ? typeof answers[q._id] === 'string' &&
+                            (answers[q._id] as string).startsWith(OTHER_PREFIX)
+                          : answers[q._id] === optKey;
 
-                    const getOtherValue = (value?: string) => {
-                      if (!value) return '';
-                      const idx = value.indexOf(':');
-                      return idx === -1 ? '' : value.slice(idx + 1);
+                    const getOtherValue = () => {
+                      const raw = answers[q._id];
+                      if (q.type === 'checkbox' && Array.isArray(raw)) {
+                        const other = raw.find(
+                          (v) => typeof v === 'string' && v.startsWith(OTHER_PREFIX),
+                        );
+                        return other ? (other as string).slice(OTHER_PREFIX.length) : '';
+                      }
+                      if (typeof raw === 'string' && raw.startsWith(OTHER_PREFIX))
+                        return raw.slice(OTHER_PREFIX.length);
+                      return '';
                     };
 
                     return (
                       <label
-                        key={o._id!}
+                        key={optIdx}
                         className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all w-full cursor-pointer
             ${
               isChecked
@@ -132,15 +147,34 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                             if (q.type === 'checkbox') {
                               const current = (answers[q._id] as string[]) || [];
                               if (e.target.checked) {
-                                setAnswers({ ...answers, [q._id]: [...current, o._id!] });
+                                setAnswers({
+                                  ...answers,
+                                  [q._id]: isOther
+                                    ? [
+                                        ...current.filter(
+                                          (v) =>
+                                            !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                        ),
+                                        OTHER_PREFIX,
+                                      ]
+                                    : [...current, optKey],
+                                });
                               } else {
                                 setAnswers({
                                   ...answers,
-                                  [q._id]: current.filter((v) => !v.startsWith(o._id!)),
+                                  [q._id]: isOther
+                                    ? current.filter(
+                                        (v) =>
+                                          !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                      )
+                                    : current.filter((v) => v !== optKey),
                                 });
                               }
                             } else {
-                              setAnswers({ ...answers, [q._id]: o._id! });
+                              setAnswers({
+                                ...answers,
+                                [q._id]: isOther ? OTHER_PREFIX : optKey,
+                              });
                             }
                           }}
                         />
@@ -152,29 +186,35 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
                               type='text'
                               placeholder='Please specify'
                               className='flex-1 border-b border-gray-300 outline-none focus:border-blue-500 bg-transparent'
-                              value={
-                                typeof answers[q._id] === 'string'
-                                  ? getOtherValue(answers[q._id] as string)
-                                  : ''
-                              }
+                              value={getOtherValue()}
                               onChange={(e) => {
-                                const value = `${o._id!}:${e.target.value}`;
+                                const value = `${OTHER_PREFIX}${e.target.value}`;
                                 if (q.type === 'checkbox') {
                                   const current = (answers[q._id] as string[]) || [];
-                                  const filtered = current.filter((v) => !v.startsWith(o._id!));
+                                  const filtered = current.filter(
+                                    (v) => !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                  );
                                   setAnswers({ ...answers, [q._id]: [...filtered, value] });
                                 } else {
                                   setAnswers({ ...answers, [q._id]: value });
                                 }
                               }}
                               onFocus={() => {
-                                // auto-select Other when typing
                                 if (!isChecked) {
                                   if (q.type === 'checkbox') {
                                     const current = (answers[q._id] as string[]) || [];
-                                    setAnswers({ ...answers, [q._id]: [...current, o._id!] });
+                                    setAnswers({
+                                      ...answers,
+                                      [q._id]: [
+                                        ...current.filter(
+                                          (v) =>
+                                            !(typeof v === 'string' && v.startsWith(OTHER_PREFIX)),
+                                        ),
+                                        OTHER_PREFIX,
+                                      ],
+                                    });
                                   } else {
-                                    setAnswers({ ...answers, [q._id]: o._id! });
+                                    setAnswers({ ...answers, [q._id]: OTHER_PREFIX });
                                   }
                                 }
                               }}

@@ -1,10 +1,24 @@
 import apiClient from './axios';
 import { Form } from '../../types/forms';
 
+/** Strip client-only fields and send only properties allowed by the backend QuestionDto. */
+function questionsForApi(questions: Form['questions']) {
+  return questions.map((q) => ({
+    type: q.type,
+    title: q.title,
+    isRequired: q.isRequired,
+    ...(q.hint != null && { hint: q.hint }),
+    ...(q.options != null && { options: q.options }),
+    ...(q.maxRatings != null && { maxRatings: q.maxRatings }),
+    ...(q.starStep != null && { starStep: q.starStep }),
+  }));
+}
+
 export const formsApi = {
+  /** GET /forms – returns list of forms (response: { data: Form[], meta }) */
   getForms: async (): Promise<Form[]> => {
-    const { data } = await apiClient.get('/forms');
-    return data?.data || data;
+    const { data } = await apiClient.get<{ data: Form[]; meta?: unknown }>('/forms');
+    return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
   },
 
   getForm: async (id: string): Promise<Form> => {
@@ -21,7 +35,9 @@ export const formsApi = {
   },
 
   updateForm: async (id: string, form: Partial<Form>): Promise<Form> => {
-    const { data } = await apiClient.patch(`/forms/${id}`, form);
+    const payload =
+      form.questions != null ? { ...form, questions: questionsForApi(form.questions) } : form;
+    const { data } = await apiClient.patch(`/forms/${id}`, payload);
     return data?.data || data;
   },
 

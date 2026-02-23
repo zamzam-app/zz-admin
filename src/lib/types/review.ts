@@ -1,3 +1,5 @@
+export const REVIEW_KEYS = ['reviews'];
+
 export enum RatingType {
   COMPLAINT = 'complaint',
   REVIEW = 'review',
@@ -9,33 +11,52 @@ export enum ComplaintStatus {
   DISMISSED = 'dismissed',
 }
 
-export interface ApiReview {
+interface UserRef {
   _id: string;
+  name: string;
+}
+
+interface OutletRef {
+  _id: string;
+  name: string;
+}
+
+interface QuestionRef {
+  _id: string;
+  title: string;
+}
+
+interface UserResponse {
+  _id: string;
+  questionId: QuestionRef;
+  answer: string[];
+  isComplaint: boolean;
+  complaintStatus?: 'pending' | 'resolved' | 'dismissed';
+  resolutionBy?: string | null;
+  resolutionNotes?: string;
+  resolvedAt?: string;
+}
+
+export interface Review {
+  _id: string;
+  isActive: boolean;
+  isDeleted: boolean;
+  userId: UserRef;
+  outletId: OutletRef;
+  userResponses: UserResponse[];
+  overallRating: number;
+  type: 'review' | 'complaint';
+  formId: string;
   createdAt: string;
-  totalRatings: number;
-  userId: string;
-  type?: RatingType;
+  updatedAt: string;
+}
 
-  outletId?: {
-    _id: string;
-    name: string;
-  };
-
-  formId: {
-    questions: {
-      _id: string;
-      type: string;
-      title?: string;
-    }[];
-  };
-
-  response: {
-    questionId: string;
+/** Mapped complaint review (extends Review with complaint info). */
+export interface ComplaintReview extends Review {
+  complaintQuestions: {
+    questionId: string | { _id: string; title?: string };
     answer: string | string[] | number;
-    isComplaint?: boolean;
     complaintStatus?: ComplaintStatus;
-    complaintResolvedAt?: Date | string;
-    complaintManagerNotes?: string;
   }[];
 }
 
@@ -48,4 +69,28 @@ export interface ReviewUI {
   date: string;
   rating: number;
   comment: string;
+}
+
+/** Pagination meta for ratings list API. */
+export interface RatingsListMeta {
+  total: number;
+  currentPage: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  limit: number;
+}
+
+/** Request body for resolving a complaint (single question in a rating). */
+export interface ResolveComplaintDto {
+  questionId: string;
+  complaintStatus: ComplaintStatus;
+  answer?: string;
+  resolutionNotes?: string;
+  resolvedBy: string;
+}
+
+/** Paginated response for ratings get-all API. */
+export interface RatingsListResponse {
+  data: Review[];
+  meta: RatingsListMeta;
 }
