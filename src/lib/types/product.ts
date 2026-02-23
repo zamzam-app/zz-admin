@@ -1,3 +1,5 @@
+export const PRODUCT_KEYS = ['products'];
+
 export interface Product {
   _id: string;
   name: string;
