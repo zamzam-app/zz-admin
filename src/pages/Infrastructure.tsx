@@ -17,6 +17,15 @@ import { usersApi } from '../lib/services/api/users.api';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { MANAGER_KEYS, User as ManagerUser } from '../lib/types/manager';
 import type { ManagerOption } from '../components/outlet';
+import { TablesModal } from '../components/outlet';
+import { AddTableModal } from '../components/outlet/AddTableModal'; 
+// import {
+//   getOutletTables,
+//   createOutletTable,
+//   deleteOutletTable,
+// } from '../lib/services/api/outletTable.api';
+
+// import type { IOutletTable } from '../lib/types/outletTable';
 
 function toManagerOption(user: ManagerUser): ManagerOption {
   return {
@@ -41,6 +50,15 @@ export default function Infrastructure() {
   const [selectedQrStore, setSelectedQrStore] = useState<Outlet | null>(null);
   const [outletToDelete, setOutletToDelete] = useState<Outlet | null>(null);
   const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
+  const [tablesOpen, setTablesOpen] = useState(false);
+const [addTableOpen, setAddTableOpen] = useState(false);
+const [selectedOutletForTables, setSelectedOutletForTables] =
+  useState<Outlet | null>(null);
+
+const [tables, setTables] = useState([
+  { id: '1', name: 'Table 1' },
+  { id: '2', name: 'Table 2' },
+]);
 
   const { data: formsData } = useApiQuery(FORM_KEYS, () => formsApi.getForms(), { enabled: true });
   const availableForms = formsData ?? [];
@@ -54,6 +72,11 @@ export default function Infrastructure() {
     setEditingOutlet(null);
     setOutletModalOpen(true);
   };
+
+  const handleOpenTables = (store: Outlet) => {
+  setSelectedOutletForTables(store);
+  setTablesOpen(true);
+};
 
   const setStoresInCache = (updater: (prev: Outlet[]) => Outlet[]) => {
     queryClient.setQueryData<Outlet[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
@@ -240,6 +263,12 @@ export default function Infrastructure() {
                 <QrCode size={16} /> QR Code
               </button>
               <button
+  onClick={() => handleOpenTables(store)}
+                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
+              >
+                Tables
+              </button>
+              <button
                 onClick={() => handleEdit(store)}
                 className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
               >
@@ -278,6 +307,33 @@ export default function Infrastructure() {
         availableForms={availableForms}
         managers={managers}
       />
+      <TablesModal
+  open={tablesOpen}
+  outletName={selectedOutletForTables?.name}
+  tables={tables}
+  onClose={() => setTablesOpen(false)}
+  onAddClick={() => setAddTableOpen(true)}
+  onEdit={(table) => {
+    console.log('Edit table', table);
+  }}
+  onDelete={(table) => {
+    setTables((prev) => prev.filter((t) => t.id !== table.id));
+  }}
+/>
+<AddTableModal
+  open={addTableOpen}
+  onClose={() => setAddTableOpen(false)}
+  onSave={(payload) => {
+    if (!selectedOutletForTables) return;
+
+    setTables((prev) => [
+      ...prev,
+      { id: Date.now().toString(), name: payload.name },
+    ]);
+
+    setAddTableOpen(false);
+  }}
+/>
     </div>
   );
 }
