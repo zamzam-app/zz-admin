@@ -2,30 +2,30 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Store, MapPin, QrCode, Trash2, User, Layers } from 'lucide-react';
 import { nanoid } from 'nanoid';
+
 import type { Outlet } from '../lib/types/outlet';
+import type { IOutletTable } from '../lib/types/outletTable';
+import type { ManagerOption } from '../components/outlet';
+import { User as ManagerUser } from '../lib/types/manager';
+
 import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
 import { DeleteModal } from '../components/common/DeleteModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
-import { OutletModal, OutletTypesModal, QrCodeModal } from '../components/outlet';
+
+import { OutletModal, OutletTypesModal, QrCodeModal, TablesModal } from '../components/outlet';
+import { AddTableModal } from '../components/outlet/AddTableModal';
+
 import { outletApi } from '../lib/services/api/outlet.api';
+import { outletTableApi } from '../lib/services/api/outletTable.api';
 import { formsApi } from '../lib/services/api/forms.api';
+import { usersApi } from '../lib/services/api/users.api';
+
+import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { FORM_KEYS } from '../lib/types/forms';
-import { usersApi } from '../lib/services/api/users.api';
-import { useApiQuery } from '../lib/react-query/use-api-hooks';
-import { MANAGER_KEYS, User as ManagerUser } from '../lib/types/manager';
-import type { ManagerOption } from '../components/outlet';
-import { TablesModal } from '../components/outlet';
-import { AddTableModal } from '../components/outlet/AddTableModal'; 
-// import {
-//   getOutletTables,
-//   createOutletTable,
-//   deleteOutletTable,
-// } from '../lib/services/api/outletTable.api';
-
-// import type { IOutletTable } from '../lib/types/outletTable';
+import { MANAGER_KEYS } from '../lib/types/manager';
 
 function toManagerOption(user: ManagerUser): ManagerOption {
   return {
@@ -37,31 +37,42 @@ function toManagerOption(user: ManagerUser): ManagerOption {
 
 export default function Infrastructure() {
   const queryClient = useQueryClient();
+  const CURRENT_USER_ID = JSON.parse(localStorage.getItem('user')!);
+
   const {
     data: stores = [],
     isLoading,
     error,
   } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
+
   const { data: managersList = [] } = useApiQuery(MANAGER_KEYS, usersApi.getManagers);
+  const { data: formsData } = useApiQuery(FORM_KEYS, () => formsApi.getForms(), { enabled: true });
+
   const managers: ManagerOption[] = managersList.map(toManagerOption);
+  const availableForms = formsData ?? [];
+
   const [outletModalOpen, setOutletModalOpen] = useState(false);
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedQrStore, setSelectedQrStore] = useState<Outlet | null>(null);
   const [outletToDelete, setOutletToDelete] = useState<Outlet | null>(null);
   const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
+
   const [tablesOpen, setTablesOpen] = useState(false);
-const [addTableOpen, setAddTableOpen] = useState(false);
-const [selectedOutletForTables, setSelectedOutletForTables] =
-  useState<Outlet | null>(null);
+  const [addTableOpen, setAddTableOpen] = useState(false);
+  const [selectedOutletForTables, setSelectedOutletForTables] = useState<Outlet | null>(null);
+  const [editingTable, setEditingTable] = useState<IOutletTable | null>(null);
 
-const [tables, setTables] = useState([
-  { id: '1', name: 'Table 1' },
-  { id: '2', name: 'Table 2' },
-]);
+  const { data: tablesResponse } = useApiQuery(
+    ['outlet-tables', selectedOutletForTables?.id],
+    () => outletTableApi.getTables(selectedOutletForTables!.id),
+    { enabled: !!selectedOutletForTables },
+  );
+  const tables: IOutletTable[] = tablesResponse?.data?.data ?? [];
 
-  const { data: formsData } = useApiQuery(FORM_KEYS, () => formsApi.getForms(), { enabled: true });
-  const availableForms = formsData ?? [];
+  const setStoresInCache = (updater: (prev: Outlet[]) => Outlet[]) => {
+    queryClient.setQueryData<Outlet[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
+  };
 
   const handleEdit = (store: Outlet) => {
     setEditingOutlet(store);
@@ -71,20 +82,6 @@ const [tables, setTables] = useState([
   const handleOpenAdd = () => {
     setEditingOutlet(null);
     setOutletModalOpen(true);
-  };
-
-  const handleOpenTables = (store: Outlet) => {
-  setSelectedOutletForTables(store);
-  setTablesOpen(true);
-};
-
-  const setStoresInCache = (updater: (prev: Outlet[]) => Outlet[]) => {
-    queryClient.setQueryData<Outlet[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
-  };
-
-  const handleOutletSuccess = () => {
-    setOutletModalOpen(false);
-    setEditingOutlet(null);
   };
 
   const handleGenerateQr = (store: Outlet) => {
@@ -103,6 +100,21 @@ const [tables, setTables] = useState([
     setOutletToDelete(null);
   };
 
+  const handleOpenTables = (store: Outlet) => {
+    setSelectedOutletForTables(store);
+    setTablesOpen(true);
+  };
+
+  const createTable = async (payload: {
+    outletId: string;
+    createdBy: string;
+    name: string;
+    capacity?: number;
+  }) => {
+    await outletTableApi.createTable(payload);
+    queryClient.invalidateQueries({ queryKey: ['outlet-tables', payload.outletId] });
+  };
+
   const header = (
     <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
       <div>
@@ -116,8 +128,7 @@ const [tables, setTables] = useState([
           onClick={() => setOutletTypesModalOpen(true)}
           className='rounded-2xl px-6 py-4'
         >
-          <Layers size={18} className='mr-2' />
-          Outlet Types
+          <Layers size={18} className='mr-2' /> Outlet Types
         </Button>
         <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl px-6 py-4'>
           <Plus size={18} /> Add Outlet
@@ -130,17 +141,15 @@ const [tables, setTables] = useState([
     return (
       <div className='space-y-8'>
         {header}
-        <div className='rounded-2xl border border-gray-100 bg-white overflow-hidden'>
-          <NoDataFallback
-            title='No outlets found'
-            description='Try adding a new outlet to get started'
-            action={
-              <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl'>
-                Add Outlet
-              </Button>
-            }
-          />
-        </div>
+        <NoDataFallback
+          title='No outlets found'
+          description='Try adding a new outlet to get started'
+          action={
+            <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl'>
+              Add Outlet
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -152,60 +161,6 @@ const [tables, setTables] = useState([
         <div className='min-h-[400px] relative'>
           <LoadingSpinner />
         </div>
-      </div>
-    );
-  }
-
-  if (stores.length === 0) {
-    return (
-      <div className='space-y-8'>
-        {header}
-        <div className='rounded-2xl border border-gray-100 bg-white overflow-hidden min-h-[400px] flex items-center justify-center'>
-          <NoDataFallback
-            title='No outlets found'
-            description='Try adding a new outlet to get started'
-            action={
-              <Button
-                type='button'
-                variant='admin-primary'
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleOpenAdd();
-                }}
-                className='rounded-2xl'
-              >
-                Add Outlet
-              </Button>
-            }
-          />
-        </div>
-        <OutletModal
-          open={outletModalOpen}
-          onClose={() => {
-            setOutletModalOpen(false);
-            setEditingOutlet(null);
-          }}
-          editing={editingOutlet}
-          onSuccess={handleOutletSuccess}
-          availableForms={availableForms}
-          managers={managers}
-        />
-        <QrCodeModal open={qrOpen} onClose={() => setQrOpen(false)} store={selectedQrStore} />
-        <DeleteModal
-          open={!!outletToDelete}
-          onClose={() => setOutletToDelete(null)}
-          title='Delete Outlet?'
-          entityName={outletToDelete?.name}
-          confirmId={outletToDelete?.id}
-          onConfirm={handleConfirmDelete}
-        />
-        <OutletTypesModal
-          open={outletTypesModalOpen}
-          onClose={() => setOutletTypesModalOpen(false)}
-          availableForms={availableForms}
-          managers={managers}
-        />
       </div>
     );
   }
@@ -233,7 +188,6 @@ const [tables, setTables] = useState([
                   </p>
                 </div>
               </div>
-
               <div className='flex gap-2'>
                 <button
                   onClick={() => setOutletToDelete(store)}
@@ -263,7 +217,7 @@ const [tables, setTables] = useState([
                 <QrCode size={16} /> QR Code
               </button>
               <button
-  onClick={() => handleOpenTables(store)}
+                onClick={() => handleOpenTables(store)}
                 className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
               >
                 Tables
@@ -279,6 +233,7 @@ const [tables, setTables] = useState([
         ))}
       </div>
 
+      {/* MODALS */}
       <OutletModal
         open={outletModalOpen}
         onClose={() => {
@@ -286,12 +241,63 @@ const [tables, setTables] = useState([
           setEditingOutlet(null);
         }}
         editing={editingOutlet}
-        onSuccess={handleOutletSuccess}
+        onSuccess={() => {
+          setOutletModalOpen(false);
+          setEditingOutlet(null);
+        }}
         availableForms={availableForms}
         managers={managers}
       />
 
       <QrCodeModal open={qrOpen} onClose={() => setQrOpen(false)} store={selectedQrStore} />
+
+      <TablesModal
+        open={tablesOpen}
+        outletName={selectedOutletForTables?.name}
+        tables={tables}
+        onClose={() => setTablesOpen(false)}
+        onAddClick={() => setAddTableOpen(true)}
+        onEdit={(table) => {
+          setEditingTable(table);
+          setAddTableOpen(true);
+        }}
+        onDelete={async (table) => {
+          if (!table._id || !selectedOutletForTables) return;
+          await outletTableApi.deleteTable(table._id);
+          queryClient.invalidateQueries({
+            queryKey: ['outlet-tables', selectedOutletForTables.id],
+          });
+        }}
+      />
+
+      <AddTableModal
+        open={addTableOpen}
+        editing={editingTable}
+        onClose={() => {
+          setAddTableOpen(false);
+          setEditingTable(null);
+        }}
+        onSave={async (payload) => {
+          if (!selectedOutletForTables) return;
+
+          if (editingTable) {
+            await outletTableApi.updateTable(editingTable._id!, payload);
+          } else {
+            await createTable({
+              outletId: selectedOutletForTables.id,
+              createdBy: CURRENT_USER_ID.id,
+              ...payload,
+            });
+          }
+
+          queryClient.invalidateQueries({
+            queryKey: ['outlet-tables', selectedOutletForTables.id],
+          });
+
+          setEditingTable(null);
+          setAddTableOpen(false);
+        }}
+      />
 
       <DeleteModal
         open={!!outletToDelete}
@@ -301,39 +307,13 @@ const [tables, setTables] = useState([
         confirmId={outletToDelete?.id}
         onConfirm={handleConfirmDelete}
       />
+
       <OutletTypesModal
         open={outletTypesModalOpen}
         onClose={() => setOutletTypesModalOpen(false)}
         availableForms={availableForms}
         managers={managers}
       />
-      <TablesModal
-  open={tablesOpen}
-  outletName={selectedOutletForTables?.name}
-  tables={tables}
-  onClose={() => setTablesOpen(false)}
-  onAddClick={() => setAddTableOpen(true)}
-  onEdit={(table) => {
-    console.log('Edit table', table);
-  }}
-  onDelete={(table) => {
-    setTables((prev) => prev.filter((t) => t.id !== table.id));
-  }}
-/>
-<AddTableModal
-  open={addTableOpen}
-  onClose={() => setAddTableOpen(false)}
-  onSave={(payload) => {
-    if (!selectedOutletForTables) return;
-
-    setTables((prev) => [
-      ...prev,
-      { id: Date.now().toString(), name: payload.name },
-    ]);
-
-    setAddTableOpen(false);
-  }}
-/>
     </div>
   );
 }

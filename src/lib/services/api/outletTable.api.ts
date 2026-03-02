@@ -1,53 +1,23 @@
-import api from './axios';
+import api  from './axios';
+import { OUTLET_TABLE } from './endpoints';
 import {
   CreateOutletTableDto,
-  UpdateOutletTableDto,
   OutletTableListResponse,
-  IOutletTable,
+  UpdateOutletTableDto,
 } from '../../types/outletTable';
 
-/* --------------------------------
-   CREATE
---------------------------------- */
-export const createOutletTable = (payload: CreateOutletTableDto) => {
-  return api.post<IOutletTable>('/api/outlet-table', payload);
-};
+export const outletTableApi = {
+  getTables: (outletId: string) =>
+    api.get<OutletTableListResponse>(OUTLET_TABLE.BASE, {
+      params: { outletId },
+    }),
 
-/* --------------------------------
-   LIST (with filters)
---------------------------------- */
-export const getOutletTables = (params?: {
-  page?: number;
-  limit?: number;
-  outletId?: string;
-  status?: string;
-  name?: string;
-}) => {
-  return api.get<OutletTableListResponse>('/api/outlet-table', {
-    params,
-  });
-};
+  createTable: (payload: CreateOutletTableDto) =>
+    api.post(OUTLET_TABLE.BASE, payload),
 
-/* --------------------------------
-   GET BY ID
---------------------------------- */
-export const getOutletTableById = (id: string) => {
-  return api.get<IOutletTable>(`/api/outlet-table/${id}`);
-};
+  updateTable: (id: string, payload: UpdateOutletTableDto) =>
+    api.patch(OUTLET_TABLE.BY_ID(id), payload),
 
-/* --------------------------------
-   UPDATE
---------------------------------- */
-export const updateOutletTable = (
-  id: string,
-  payload: UpdateOutletTableDto
-) => {
-  return api.patch<IOutletTable>(`/api/outlet-table/${id}`, payload);
-};
-
-/* --------------------------------
-   DELETE (Soft delete)
---------------------------------- */
-export const deleteOutletTable = (id: string) => {
-  return api.delete(`/api/outlet-table/${id}`);
+  deleteTable: (id: string) =>
+    api.delete(OUTLET_TABLE.BY_ID(id)),
 };

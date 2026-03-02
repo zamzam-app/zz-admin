@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '../common/Button';
 import Card from '../common/Card';
+import type { IOutletTable } from '../../lib/types/outletTable';
 
 type CreateTablePayload = {
   name: string;
@@ -10,17 +11,22 @@ type CreateTablePayload = {
 
 interface AddTableModalProps {
   open: boolean;
+  editing?: IOutletTable | null;
   onClose: () => void;
   onSave: (payload: CreateTablePayload) => void;
 }
 
 export function AddTableModal({
   open,
+  editing,
   onClose,
   onSave,
 }: AddTableModalProps) {
-  const [name, setName] = useState('');
-  const [capacity, setCapacity] = useState('');
+
+  const [name, setName] = useState(editing?.name ?? '');
+  const [capacity, setCapacity] = useState(
+    editing?.capacity ? String(editing.capacity) : ''
+  );
 
   if (!open) return null;
 
@@ -31,20 +37,16 @@ export function AddTableModal({
       name: name.trim(),
       capacity: capacity ? Number(capacity) : undefined,
     });
-
-    setName('');
-    setCapacity('');
-    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center">
       <Card className="w-full max-w-md rounded-3xl p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-[#1F2937]">
-            Add Table
+          <h2 className="text-xl font-bold">
+            {editing ? 'Edit Table' : 'Add Table'}
           </h2>
+
           <button
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-gray-100"
@@ -53,7 +55,6 @@ export function AddTableModal({
           </button>
         </div>
 
-        {/* Form */}
         <div className="space-y-4">
           <input
             value={name}
@@ -74,8 +75,9 @@ export function AddTableModal({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
+
             <Button variant="admin-primary" onClick={handleSave}>
-              Save Table
+              {editing ? 'Update Table' : 'Save Table'}
             </Button>
           </div>
         </div>
