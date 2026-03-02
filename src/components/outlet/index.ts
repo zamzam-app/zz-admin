@@ -4,3 +4,4 @@ export { QrCodeModal } from './QrCodeModal';
 export type { QrCodeModalProps } from './QrCodeModal';
 export { OutletTypesModal } from './OutletTypesModal';
 export type { OutletTypesModalProps } from './OutletTypesModal';
+export { TablesModal } from './TableModal';
