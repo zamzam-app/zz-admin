@@ -271,6 +271,7 @@ export default function Infrastructure() {
       />
 
       <AddTableModal
+      key={editingTable?._id ?? 'new'}
         open={addTableOpen}
         editing={editingTable}
         onClose={() => {

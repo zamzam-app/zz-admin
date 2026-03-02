@@ -73,13 +73,13 @@ export function TablesModal({
 
                     <div className='flex gap-1'>
                       {onEdit && (
-  <button
-    onClick={() => onEdit(table)}
-    className="p-2 rounded-lg hover:bg-gray-100"
-  >
-    <Edit2 size={14} />
-  </button>
-)}
+                        <button
+                          onClick={() => onEdit(table)}
+                          className='p-2 rounded-lg hover:bg-gray-100'
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      )}
                       <button
                         onClick={() => onDelete(table)}
                         className='p-2 rounded-lg hover:bg-red-50 text-red-500'
