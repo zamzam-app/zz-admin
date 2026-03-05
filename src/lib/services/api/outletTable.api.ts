@@ -1,4 +1,4 @@
-import api  from './axios';
+import api from './axios';
 import { OUTLET_TABLE } from './endpoints';
 import {
   CreateOutletTableDto,
@@ -12,12 +12,10 @@ export const outletTableApi = {
       params: { outletId },
     }),
 
-  createTable: (payload: CreateOutletTableDto) =>
-    api.post(OUTLET_TABLE.BASE, payload),
+  createTable: (payload: CreateOutletTableDto) => api.post(OUTLET_TABLE.BASE, payload),
 
   updateTable: (id: string, payload: UpdateOutletTableDto) =>
     api.patch(OUTLET_TABLE.BY_ID(id), payload),
 
-  deleteTable: (id: string) =>
-    api.delete(OUTLET_TABLE.BY_ID(id)),
+  deleteTable: (id: string) => api.delete(OUTLET_TABLE.BY_ID(id)),
 };

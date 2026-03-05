@@ -16,17 +16,9 @@ interface AddTableModalProps {
   onSave: (payload: CreateTablePayload) => void;
 }
 
-export function AddTableModal({
-  open,
-  editing,
-  onClose,
-  onSave,
-}: AddTableModalProps) {
-
+export function AddTableModal({ open, editing, onClose, onSave }: AddTableModalProps) {
   const [name, setName] = useState(editing?.name ?? '');
-  const [capacity, setCapacity] = useState(
-    editing?.capacity ? String(editing.capacity) : ''
-  );
+  const [capacity, setCapacity] = useState(editing?.capacity ? String(editing.capacity) : '');
 
   if (!open) return null;
 
@@ -40,43 +32,38 @@ export function AddTableModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center">
-      <Card className="w-full max-w-md rounded-3xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold">
-            {editing ? 'Edit Table' : 'Add Table'}
-          </h2>
+    <div className='fixed inset-0 z-[60] bg-black/40 flex items-center justify-center'>
+      <Card className='w-full max-w-md rounded-3xl p-6'>
+        <div className='flex items-center justify-between mb-6'>
+          <h2 className='text-xl font-bold'>{editing ? 'Edit Table' : 'Add Table'}</h2>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-gray-100"
-          >
+          <button onClick={onClose} className='p-2 rounded-xl hover:bg-gray-100'>
             <X size={18} />
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className='space-y-4'>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Table name"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            placeholder='Table name'
+            className='w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black'
           />
 
           <input
-            type="number"
+            type='number'
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
-            placeholder="Capacity (optional)"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            placeholder='Capacity (optional)'
+            className='w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black'
           />
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={onClose}>
+          <div className='flex justify-end gap-2 pt-2'>
+            <Button variant='ghost' onClick={onClose}>
               Cancel
             </Button>
 
-            <Button variant="admin-primary" onClick={handleSave}>
+            <Button variant='admin-primary' onClick={handleSave}>
               {editing ? 'Update Table' : 'Save Table'}
             </Button>
           </div>
