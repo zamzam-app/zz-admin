@@ -149,4 +149,9 @@ export const outletApi = {
     const res = await api.patch<ApiOutletItem>(OUTLET.BY_ID(id), data);
     return toOutlet(res.data);
   },
+
+  /** DELETE /outlet/:id — delete outlet */
+  delete: async (id: string): Promise<void> => {
+    await api.delete(OUTLET.BY_ID(id));
+  },
 };
