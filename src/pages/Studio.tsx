@@ -52,8 +52,8 @@ const Studio = () => {
       <div>
         <div className='flex justify-between items-center mb-8'>
           <div>
-            <h3 className='font-black text-3xl text-[#1F2937] tracking-tight'>Product Catalog</h3>
-            <p className='text-gray-500 text-sm mt-1'>Create new products</p>
+            <h3 className='font-black text-3xl text-[#1F2937] tracking-tight'>Cake Catalog</h3>
+            <p className='text-gray-500 text-sm mt-1'>Add your cakes</p>
           </div>
         </div>
         <div className='bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden'>
@@ -76,8 +76,8 @@ const Studio = () => {
       {/* Header */}
       <div className='flex justify-between items-center mb-8'>
         <div>
-          <h3 className='font-black text-3xl text-[#1F2937] tracking-tight'>Product Catalog</h3>
-          <p className='text-gray-500 text-sm mt-1'>Create new products</p>
+          <h3 className='font-black text-3xl text-[#1F2937] tracking-tight'>Cake Studio</h3>
+          <p className='text-gray-500 text-sm mt-1'>Manage your cake catalog</p>
         </div>
         <Button
           variant='admin-primary'
@@ -181,7 +181,7 @@ const Studio = () => {
                   </td>
                   <td className='px-8 py-6 text-center'>
                     <div className='inline-block px-3 py-1 bg-emerald-50 text-[#10B981] rounded-lg font-black text-sm'>
-                      ${product.price}
+                      ₹{product.price}
                     </div>
                   </td>
                   <td className='px-8 py-6 text-right'>

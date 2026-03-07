@@ -22,7 +22,7 @@ import { outletTableApi } from '../lib/services/api/outletTable.api';
 import { formsApi } from '../lib/services/api/forms.api';
 import { usersApi } from '../lib/services/api/users.api';
 
-import { useApiQuery } from '../lib/react-query/use-api-hooks';
+import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { FORM_KEYS } from '../lib/types/forms';
 import { MANAGER_KEYS } from '../lib/types/manager';
@@ -70,6 +70,10 @@ export default function Infrastructure() {
   );
   const tables: IOutletTable[] = tablesResponse?.data?.data ?? [];
 
+  const deleteMutation = useApiMutation((id: string) => outletApi.delete(id), [OUTLET_KEYS], {
+    onSuccess: () => setOutletToDelete(null),
+  });
+
   const setStoresInCache = (updater: (prev: Outlet[]) => Outlet[]) => {
     queryClient.setQueryData<Outlet[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
   };
@@ -96,8 +100,7 @@ export default function Infrastructure() {
   };
 
   const handleConfirmDelete = (id: string) => {
-    setStoresInCache((prev) => prev.filter((s) => s.id !== id));
-    setOutletToDelete(null);
+    deleteMutation.mutate(id);
   };
 
   const handleOpenTables = (store: Outlet) => {
@@ -307,7 +310,9 @@ export default function Infrastructure() {
         entityName={outletToDelete?.name}
         confirmId={outletToDelete?.id}
         onConfirm={handleConfirmDelete}
+        isPending={deleteMutation.isPending}
       />
+
       <OutletTypesModal
         open={outletTypesModalOpen}
         onClose={() => setOutletTypesModalOpen(false)}

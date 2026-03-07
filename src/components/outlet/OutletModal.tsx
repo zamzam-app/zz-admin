@@ -34,6 +34,38 @@ function getOutletId(outlet: Outlet | null | undefined): string | undefined {
   return outlet ? (outlet.id ?? (outlet as { _id?: string })._id) : undefined;
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null) {
+    const maybeAxiosError = error as {
+      response?: { data?: { message?: unknown; error?: unknown } | string };
+      message?: string;
+    };
+
+    const responseData = maybeAxiosError.response?.data;
+    if (typeof responseData === 'string' && responseData.trim()) {
+      return responseData;
+    }
+    if (responseData && typeof responseData === 'object') {
+      const message = responseData.message;
+      if (typeof message === 'string' && message.trim()) return message;
+      if (Array.isArray(message) && message.length > 0) {
+        const firstMessage = message.find((item) => typeof item === 'string' && item.trim());
+        if (typeof firstMessage === 'string') return firstMessage;
+      }
+      if (typeof responseData.error === 'string' && responseData.error.trim()) {
+        return responseData.error;
+      }
+    }
+
+    if (typeof maybeAxiosError.message === 'string' && maybeAxiosError.message.trim()) {
+      return maybeAxiosError.message;
+    }
+  }
+
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
+}
+
 export function OutletModal({
   open,
   onClose,
@@ -43,7 +75,6 @@ export function OutletModal({
   managers,
 }: OutletModalProps) {
   const [form, setForm] = useState<Partial<Outlet>>({});
-  const [error, setError] = useState<string | null>(null);
 
   const { data: outletTypesData } = useApiQuery(
     OUTLET_TYPE_KEYS,
@@ -61,7 +92,7 @@ export function OutletModal({
     [OUTLET_KEYS],
     {
       onSuccess: () => onSuccess(),
-      onError: (err) => setError(err.message ?? 'Failed to create outlet'),
+      onError: (err) => message.error(getErrorMessage(err, 'Failed to create outlet')),
     },
   );
 
@@ -70,7 +101,7 @@ export function OutletModal({
     [OUTLET_KEYS],
     {
       onSuccess: () => onSuccess(),
-      onError: (err) => setError(err.message ?? 'Failed to update outlet'),
+      onError: (err) => message.error(getErrorMessage(err, 'Failed to update outlet')),
     },
   );
 
@@ -97,21 +128,25 @@ export function OutletModal({
         : {};
       const t = setTimeout(() => {
         setForm(next);
-        setError(null);
       }, 0);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => {
       setForm({});
-      setError(null);
     }, 0);
     return () => clearTimeout(t);
   }, [open, editing]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    if (!form.name?.trim() || !form.outletTypeId) return;
+    if (!form.name?.trim() || !form.outletTypeId) {
+      message.error('Please fill all required fields.');
+      return;
+    }
+    if (!editing && !form.images?.length) {
+      message.error('Please upload at least one image.');
+      return;
+    }
 
     const menuItems: OutletMenuItem[] | undefined = form.menuItems?.length
       ? form.menuItems.map((item) => ({
@@ -165,15 +200,6 @@ export function OutletModal({
     >
       <div className='-mx-2 px-2 pt-4'>
         <form onSubmit={handleSubmit} className='space-y-6'>
-          {error && (
-            <p
-              className='text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3'
-              role='alert'
-            >
-              {error}
-            </p>
-          )}
-
           <div>
             <Input
               label='Outlet Name'
