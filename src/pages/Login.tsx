@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/context/AuthContext';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { Logo } from '../components/common/Logo';
 import { message } from 'antd';
 
 const Login: React.FC = () => {
@@ -49,7 +48,7 @@ const Login: React.FC = () => {
       <div className='w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-6 sm:p-10 shadow-2xl z-10'>
         {/* Logo */}
         <div className='flex flex-col items-center mb-8 sm:mb-10'>
-          <Logo className='w-20 h-20 sm:w-24 sm:h-24 mb-6' />
+          <img src='/zz-logo.png' alt='ZamZam' />
           <h1 className='text-2xl sm:text-3xl font-black text-white tracking-tight text-center'>
             ZamZam Admin
           </h1>
