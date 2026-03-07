@@ -101,7 +101,9 @@ export default function ReviewsDemo() {
       base = base.filter((r) => r.outletId && user.outletId!.includes(r.outletId._id));
     }
 
-    const entries = base.map((r): [string, string] => [r.outletId._id, r.outletId.name]);
+    const entries = base
+      .filter((r) => r.outletId)
+      .map((r): [string, string] => [r.outletId!._id, r.outletId!.name ?? '']);
     return Array.from(new Map(entries).entries());
   }, [user, allReviews]);
 
