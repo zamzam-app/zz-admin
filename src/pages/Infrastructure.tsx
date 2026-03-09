@@ -71,10 +71,6 @@ export default function Infrastructure() {
     onSuccess: () => setOutletToDelete(null),
   });
 
-  const setStoresInCache = (updater: (prev: Outlet[]) => Outlet[]) => {
-    queryClient.setQueryData<Outlet[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
-  };
-
   const handleEdit = (store: Outlet) => {
     setEditingOutlet(store);
     setOutletModalOpen(true);
