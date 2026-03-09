@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Store, MapPin, QrCode, Trash2, User, Layers } from 'lucide-react';
-import { nanoid } from 'nanoid';
+import { Plus, Store, MapPin, Trash2, User, Layers } from 'lucide-react';
 
 import type { Outlet } from '../lib/types/outlet';
 import type { IOutletTable } from '../lib/types/outletTable';
@@ -14,7 +13,7 @@ import { DeleteModal } from '../components/common/DeleteModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 
-import { OutletModal, OutletTypesModal, QrCodeModal, TablesModal } from '../components/outlet';
+import { OutletModal, OutletTypesModal, TablesModal } from '../components/outlet';
 import { AddTableModal } from '../components/outlet/AddTableModal';
 
 import { outletApi } from '../lib/services/api/outlet.api';
@@ -53,8 +52,6 @@ export default function Infrastructure() {
 
   const [outletModalOpen, setOutletModalOpen] = useState(false);
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
-  const [qrOpen, setQrOpen] = useState(false);
-  const [selectedQrStore, setSelectedQrStore] = useState<Outlet | null>(null);
   const [outletToDelete, setOutletToDelete] = useState<Outlet | null>(null);
   const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
 
@@ -86,17 +83,6 @@ export default function Infrastructure() {
   const handleOpenAdd = () => {
     setEditingOutlet(null);
     setOutletModalOpen(true);
-  };
-
-  const handleGenerateQr = (store: Outlet) => {
-    if (!store.qrToken) {
-      const updatedStore = { ...store, qrToken: nanoid(10) };
-      setStoresInCache((prev) => prev.map((s) => (s.id === store.id ? updatedStore : s)));
-      setSelectedQrStore(updatedStore);
-    } else {
-      setSelectedQrStore(store);
-    }
-    setQrOpen(true);
   };
 
   const handleConfirmDelete = (id: string) => {
@@ -181,9 +167,17 @@ export default function Infrastructure() {
           >
             <div className='flex items-start justify-between mb-6'>
               <div className='flex items-center gap-4'>
-                <div className='w-12 h-12 rounded-2xl bg-[#1F2937] text-[#D4AF37] flex items-center justify-center'>
-                  <Store size={22} />
-                </div>
+                {store.images?.[0] ? (
+                  <img
+                    src={store.images[0]}
+                    alt={store.name}
+                    className='w-12 h-12 rounded-2xl object-cover'
+                  />
+                ) : (
+                  <div className='w-12 h-12 rounded-2xl bg-[#1F2937] text-[#D4AF37] flex items-center justify-center'>
+                    <Store size={22} />
+                  </div>
+                )}
                 <div>
                   <h4 className='font-black text-lg text-[#1F2937]'>{store.name}</h4>
                   <p className='text-[10px] text-gray-400 uppercase font-bold tracking-widest'>
@@ -214,20 +208,14 @@ export default function Infrastructure() {
 
             <div className='flex gap-3 mt-6'>
               <button
-                onClick={() => handleGenerateQr(store)}
-                className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer'
-              >
-                <QrCode size={16} /> QR Code
-              </button>
-              <button
                 onClick={() => handleOpenTables(store)}
-                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
+                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 active:text-white focus:text-white cursor-pointer'
               >
                 Tables
               </button>
               <button
                 onClick={() => handleEdit(store)}
-                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
+                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 active:text-white focus:text-white cursor-pointer'
               >
                 Edit
               </button>
@@ -251,8 +239,6 @@ export default function Infrastructure() {
         availableForms={availableForms}
         managers={managers}
       />
-
-      <QrCodeModal open={qrOpen} onClose={() => setQrOpen(false)} store={selectedQrStore} />
 
       <TablesModal
         open={tablesOpen}
