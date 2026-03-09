@@ -36,7 +36,7 @@ export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {
       open={open}
       onClose={onClose}
       title={store?.name || 'Outlet QR Code'}
-      maxWidth='md'
+      maxWidth='sm'
       className='text-center'
     >
       <div className='flex flex-row items-start justify-center gap-12 p-6'>

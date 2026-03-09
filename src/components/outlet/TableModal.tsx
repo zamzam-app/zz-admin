@@ -1,4 +1,5 @@
 import { X, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Popconfirm } from 'antd';
 import { Button } from '../common/Button';
 import Card from '../common/Card';
 import type { IOutletTable } from '../../lib/types/outletTable';
@@ -45,7 +46,7 @@ export function TablesModal({
                 Add Table
               </Button>
 
-              <button onClick={onClose} className='p-2 rounded-xl hover:bg-gray-100'>
+              <button onClick={onClose} className='p-2 rounded-xl hover:bg-gray-100 cursor-pointer'>
                 <X size={18} />
               </button>
             </div>
@@ -75,17 +76,24 @@ export function TablesModal({
                       {onEdit && (
                         <button
                           onClick={() => onEdit(table)}
-                          className='p-2 rounded-lg hover:bg-gray-100'
+                          className='p-2 rounded-lg hover:bg-gray-100 cursor-pointer'
                         >
                           <Edit2 size={14} />
                         </button>
                       )}
-                      <button
-                        onClick={() => onDelete(table)}
-                        className='p-2 rounded-lg hover:bg-red-50 text-red-500'
+                      <Popconfirm
+                        title='Delete table'
+                        description='Are you sure you want to delete this table?'
+                        onConfirm={() => onDelete(table)}
+                        okText='Yes'
+                        cancelText='No'
+                        okButtonProps={{ danger: true }}
+                        zIndex={2000}
                       >
-                        <Trash2 size={14} />
-                      </button>
+                        <button className='p-2 rounded-lg hover:bg-red-50 text-red-500 cursor-pointer'>
+                          <Trash2 size={14} />
+                        </button>
+                      </Popconfirm>
                     </div>
                   </div>
                 ))}
