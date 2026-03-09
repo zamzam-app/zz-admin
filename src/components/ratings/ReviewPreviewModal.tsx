@@ -72,8 +72,10 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
   const isComplaintDismissed =
     review?.isComplaint === true && review?.complaintStatus === ComplaintStatus.DISMISSED;
 
+  const isComplaint = review?.isComplaint === true;
+
   return (
-    <Modal open={open} onClose={onClose} title='Complete Review' maxWidth='md'>
+    <Modal open={open} onClose={onClose} title='Complete Review' maxWidth='md' scrollableContent>
       {loading ? (
         <Box display='flex' justifyContent='center' alignItems='center' py={6}>
           <LoadingSpinner />
@@ -140,6 +142,26 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
             })}
           </Box>
 
+          {/* Complaint raised by user (shown for any complaint: pending, resolved, or dismissed) */}
+          {isComplaint && (review.complaintReason ?? '').trim() && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'warning.light',
+                backgroundColor: 'warning.50',
+              }}
+            >
+              <Typography variant='subtitle2' fontWeight={700} color='warning.dark' sx={{ mb: 1 }}>
+                Complaint raised by user
+              </Typography>
+              <Typography variant='body2' color='text.secondary'>
+                {review.complaintReason}
+              </Typography>
+            </Box>
+          )}
+
           {/* Review-level resolution (when complaint was resolved or dismissed) */}
           {(isComplaintResolved || isComplaintDismissed) &&
             (review.resolutionNotes || review.resolvedAt) && (
@@ -181,15 +203,16 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                 mt: 1,
                 pt: 2,
                 borderTop: '1px solid',
-                borderColor: 'divider',
+                borderTopColor: 'divider',
                 p: 2,
                 borderRadius: 2,
                 border: '1px solid',
+                borderColor: 'error.main',
                 backgroundColor: 'error.50',
               }}
             >
               <Typography variant='subtitle2' fontWeight={700} color='error.main' sx={{ mb: 1 }}>
-                Pending complaint
+                Pending complaint — resolution
               </Typography>
               <TextField
                 fullWidth

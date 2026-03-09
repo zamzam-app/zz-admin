@@ -13,6 +13,8 @@ type ModalProps = {
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   contentClassName?: string;
+  /** When true, modal has max height 90vh and content scrolls with no visible scrollbar */
+  scrollableContent?: boolean;
 };
 
 export const Modal: React.FC<ModalProps> = ({
@@ -25,6 +27,7 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = 'sm',
   className = '',
   contentClassName = 'p-8 cursor-default',
+  scrollableContent = false,
 }) => {
   const widthMap = {
     xs: 320,
@@ -62,6 +65,9 @@ export const Modal: React.FC<ModalProps> = ({
             position: 'relative',
             width: '100%',
             maxWidth: widthMap[maxWidth],
+            maxHeight: scrollableContent ? '90vh' : undefined,
+            display: scrollableContent ? 'flex' : 'block',
+            flexDirection: scrollableContent ? 'column' : undefined,
             bgcolor: 'background.paper',
             borderRadius: '28px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -109,7 +115,23 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
 
           {/* Content Section */}
-          <div className={contentClassName}>{children}</div>
+          {scrollableContent ? (
+            <Box
+              className={contentClassName}
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                '&::-webkit-scrollbar': { display: 'none' },
+              }}
+            >
+              {children}
+            </Box>
+          ) : (
+            <div className={contentClassName}>{children}</div>
+          )}
         </Box>
       </Fade>
     </MUIModal>
