@@ -298,8 +298,6 @@ export default function Infrastructure() {
       <OutletTypesModal
         open={outletTypesModalOpen}
         onClose={() => setOutletTypesModalOpen(false)}
-        availableForms={availableForms}
-        managers={managers}
       />
     </div>
   );

@@ -10,8 +10,6 @@ import { outletTypeApi } from '../../lib/services/api/outlet-type.api';
 import { OUTLET_TYPE_KEYS } from '../../lib/types/outlet-type';
 import { useApiQuery } from '../../lib/react-query/use-api-hooks';
 import type { OutletType } from '../../lib/types/outlet-type';
-import type { Form } from '../../lib/types/forms';
-import type { ManagerOption } from './OutletModal';
 import { AddOutletTypeModal } from './AddOutletTypeModal';
 
 const TABLE_SCROLL_Y = 360;
@@ -19,16 +17,9 @@ const TABLE_SCROLL_Y = 360;
 export type OutletTypesModalProps = {
   open: boolean;
   onClose: () => void;
-  availableForms: Form[];
-  managers: ManagerOption[];
 };
 
-export function OutletTypesModal({
-  open,
-  onClose,
-  availableForms,
-  managers,
-}: OutletTypesModalProps) {
+export function OutletTypesModal({ open, onClose }: OutletTypesModalProps) {
   const queryClient = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingType, setEditingType] = useState<OutletType | null>(null);
@@ -71,7 +62,7 @@ export function OutletTypesModal({
         <div className='flex items-center gap-2'>
           <button
             onClick={() => handleEdit(record)}
-            className='p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
+            className='p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer'
           >
             <Edit2 size={16} />
           </button>
@@ -82,8 +73,9 @@ export function OutletTypesModal({
             okText='Yes'
             cancelText='No'
             okButtonProps={{ danger: true }}
+            zIndex={2000}
           >
-            <button className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'>
+            <button className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer'>
               <Trash2 size={16} />
             </button>
           </Popconfirm>
@@ -142,8 +134,6 @@ export function OutletTypesModal({
           setAddModalOpen(false);
           setEditingType(null);
         }}
-        availableForms={availableForms}
-        managers={managers}
         editing={editingType}
       />
     </>
