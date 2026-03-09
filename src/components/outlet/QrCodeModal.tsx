@@ -23,24 +23,20 @@ type QrCodeData = {
 export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {
   const slug = store?.name?.replace(/\s+/g, '-').toLowerCase() ?? 'outlet';
   const reviewUrl = store?.qrToken ? `${userBaseUrl}/review/${store.formId}` : '';
-  const menuUrl = `${userBaseUrl}/`;
 
   const openInNewTab = (url: string) => {
     if (!url) return;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const data: QrCodeData[] = [
-    { name: 'Scan to access review page', url: reviewUrl, id: 'review' },
-    { name: 'Scan to access menu page', url: menuUrl, id: 'menu' },
-  ];
+  const data: QrCodeData[] = [{ name: 'Scan to access review page', url: reviewUrl, id: 'review' }];
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={store?.name || 'Outlet QR Code'}
-      maxWidth='xl'
+      maxWidth='sm'
       className='text-center'
     >
       <div className='flex flex-row items-start justify-center gap-12 p-6'>
