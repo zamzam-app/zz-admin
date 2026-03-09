@@ -23,7 +23,6 @@ type QrCodeData = {
 export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {
   const slug = store?.name?.replace(/\s+/g, '-').toLowerCase() ?? 'outlet';
   const reviewUrl = store?.qrToken ? `${userBaseUrl}/review/${store.formId}` : '';
-  const menuUrl = `${userBaseUrl}/`;
 
   const openInNewTab = (url: string) => {
     if (!url) return;
@@ -32,7 +31,6 @@ export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {
 
   const data: QrCodeData[] = [
     { name: 'Scan to access review page', url: reviewUrl, id: 'review' },
-    { name: 'Scan to access menu page', url: menuUrl, id: 'menu' },
   ];
 
   return (

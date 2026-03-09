@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Store, MapPin, Trash2, User, Layers } from 'lucide-react';
+import { Plus, Store, MapPin, QrCode, Trash2, User, Layers } from 'lucide-react';
+import { nanoid } from 'nanoid';
 
 import type { Outlet } from '../lib/types/outlet';
 import type { IOutletTable } from '../lib/types/outletTable';
@@ -13,7 +14,7 @@ import { DeleteModal } from '../components/common/DeleteModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 
-import { OutletModal, OutletTypesModal, TablesModal } from '../components/outlet';
+import { OutletModal, OutletTypesModal, QrCodeModal, TablesModal } from '../components/outlet';
 import { AddTableModal } from '../components/outlet/AddTableModal';
 
 import { outletApi } from '../lib/services/api/outlet.api';
@@ -52,6 +53,8 @@ export default function Infrastructure() {
 
   const [outletModalOpen, setOutletModalOpen] = useState(false);
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [selectedQrStore, setSelectedQrStore] = useState<Outlet | null>(null);
   const [outletToDelete, setOutletToDelete] = useState<Outlet | null>(null);
   const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
 
@@ -71,6 +74,10 @@ export default function Infrastructure() {
     onSuccess: () => setOutletToDelete(null),
   });
 
+  const setStoresInCache = (updater: (prev: Outlet[]) => Outlet[]) => {
+    queryClient.setQueryData<Outlet[]>(OUTLET_KEYS, (prev) => updater(prev ?? []));
+  };
+
   const handleEdit = (store: Outlet) => {
     setEditingOutlet(store);
     setOutletModalOpen(true);
@@ -79,6 +86,17 @@ export default function Infrastructure() {
   const handleOpenAdd = () => {
     setEditingOutlet(null);
     setOutletModalOpen(true);
+  };
+
+  const handleGenerateQr = (store: Outlet) => {
+    if (!store.qrToken) {
+      const updatedStore = { ...store, qrToken: nanoid(10) };
+      setStoresInCache((prev) => prev.map((s) => (s.id === store.id ? updatedStore : s)));
+      setSelectedQrStore(updatedStore);
+    } else {
+      setSelectedQrStore(store);
+    }
+    setQrOpen(true);
   };
 
   const handleConfirmDelete = (id: string) => {
@@ -204,6 +222,12 @@ export default function Infrastructure() {
 
             <div className='flex gap-3 mt-6'>
               <button
+                onClick={() => handleGenerateQr(store)}
+                className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer'
+              >
+                <QrCode size={16} /> QR Code
+              </button>
+              <button
                 onClick={() => handleOpenTables(store)}
                 className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 active:text-white focus:text-white cursor-pointer'
               >
@@ -235,6 +259,8 @@ export default function Infrastructure() {
         availableForms={availableForms}
         managers={managers}
       />
+
+      <QrCodeModal open={qrOpen} onClose={() => setQrOpen(false)} store={selectedQrStore} />
 
       <TablesModal
         open={tablesOpen}
