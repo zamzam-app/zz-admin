@@ -67,7 +67,7 @@ export default function ReviewsDemo() {
     setPreviewReviewId(null);
   };
 
-  /* ================= FILTER LOGIC ================= */
+  /* ================= FILTER LOGIC (client-side) ================= */
   const filteredReviews = useMemo(() => {
     if (!user) return [];
 
@@ -98,11 +98,11 @@ export default function ReviewsDemo() {
 
   const hasComplaints = filteredComplaints.length > 0;
 
-  /*  OUTLET LIST  */
+  /*  OUTLET LIST for filter dropdown (derived from reviews, filtered by role) */
   const outlets = useMemo((): [string, string][] => {
     let base = allReviews;
 
-    if (user?.role !== 'admin' && Array.isArray(user?.outletId)) {
+    if (user?.role !== 'admin' && Array.isArray(user?.outletId) && user.outletId.length > 0) {
       base = base.filter((r) => {
         const id = getOutletId(r);
         return id != null && user.outletId!.includes(id);
