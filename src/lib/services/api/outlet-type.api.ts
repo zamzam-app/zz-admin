@@ -4,6 +4,7 @@ import type {
   OutletType,
   OutletTypeListResponse,
   CreateOutletTypePayload,
+  UpdateOutletTypePayload,
 } from '../../types/outlet-type';
 
 export const outletTypeApi = {
@@ -29,5 +30,16 @@ export const outletTypeApi = {
   create: async (data: CreateOutletTypePayload): Promise<OutletType> => {
     const res = await api.post<OutletType>(OUTLET_TYPE.BASE, data);
     return res.data;
+  },
+
+  /** PATCH /outlet-type/:id — update outlet type */
+  update: async (id: string, data: UpdateOutletTypePayload): Promise<OutletType> => {
+    const res = await api.patch<OutletType>(OUTLET_TYPE.BY_ID(id), data);
+    return res.data;
+  },
+
+  /** DELETE /outlet-type/:id — delete outlet type */
+  delete: async (id: string): Promise<void> => {
+    await api.delete(OUTLET_TYPE.BY_ID(id));
   },
 };

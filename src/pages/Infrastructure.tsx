@@ -181,9 +181,17 @@ export default function Infrastructure() {
           >
             <div className='flex items-start justify-between mb-6'>
               <div className='flex items-center gap-4'>
-                <div className='w-12 h-12 rounded-2xl bg-[#1F2937] text-[#D4AF37] flex items-center justify-center'>
-                  <Store size={22} />
-                </div>
+                {store.images?.[0] ? (
+                  <img
+                    src={store.images[0]}
+                    alt={store.name}
+                    className='w-12 h-12 rounded-2xl object-cover'
+                  />
+                ) : (
+                  <div className='w-12 h-12 rounded-2xl bg-[#1F2937] text-[#D4AF37] flex items-center justify-center'>
+                    <Store size={22} />
+                  </div>
+                )}
                 <div>
                   <h4 className='font-black text-lg text-[#1F2937]'>{store.name}</h4>
                   <p className='text-[10px] text-gray-400 uppercase font-bold tracking-widest'>
@@ -221,13 +229,13 @@ export default function Infrastructure() {
               </button>
               <button
                 onClick={() => handleOpenTables(store)}
-                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
+                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 active:text-white focus:text-white cursor-pointer'
               >
                 Tables
               </button>
               <button
                 onClick={() => handleEdit(store)}
-                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 cursor-pointer'
+                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 active:text-white focus:text-white cursor-pointer'
               >
                 Edit
               </button>
@@ -316,8 +324,6 @@ export default function Infrastructure() {
       <OutletTypesModal
         open={outletTypesModalOpen}
         onClose={() => setOutletTypesModalOpen(false)}
-        availableForms={availableForms}
-        managers={managers}
       />
     </div>
   );
