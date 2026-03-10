@@ -1,8 +1,11 @@
-import { X, Plus, Edit2, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { X, Plus, Edit2, Trash2, QrCode } from 'lucide-react';
 import { Popconfirm } from 'antd';
 import { Button } from '../common/Button';
 import Card from '../common/Card';
 import type { IOutletTable } from '../../lib/types/outletTable';
+import { userBaseUrl } from '../../lib/config/userBaseUrl';
+import { QrCodeModal } from './QrCodeModal';
 
 interface TablesModalProps {
   open: boolean;
@@ -23,7 +26,17 @@ export function TablesModal({
   onEdit,
   onDelete,
 }: TablesModalProps) {
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrModalUrl, setQrModalUrl] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<IOutletTable | null>(null);
+
   if (!open) return null;
+
+  const handleQrClick = (table: IOutletTable) => {
+    setSelectedTable(table);
+    setQrModalUrl(`${userBaseUrl}/review/${table.tableToken}`);
+    setQrModalOpen(true);
+  };
 
   return (
     <div className='fixed inset-0 z-50 bg-black/40 flex items-center justify-center'>
@@ -73,6 +86,12 @@ export function TablesModal({
                     <span className='text-sm font-medium text-[#1F2937]'>{table.name}</span>
 
                     <div className='flex gap-1'>
+                      <button
+                        onClick={() => handleQrClick(table)}
+                        className='p-2 rounded-lg hover:bg-gray-100 cursor-pointer'
+                      >
+                        <QrCode size={14} />
+                      </button>
                       {onEdit && (
                         <button
                           onClick={() => onEdit(table)}
@@ -102,6 +121,18 @@ export function TablesModal({
           </Card>
         </div>
       </Card>
+
+      <QrCodeModal
+        open={qrModalOpen}
+        onClose={() => {
+          setQrModalOpen(false);
+          setQrModalUrl(null);
+          setSelectedTable(null);
+        }}
+        store={null}
+        titleOverride={`${outletName} - Table: ${selectedTable?.name}`}
+        urlOverride={qrModalUrl ?? ''}
+      />
     </div>
   );
 }
