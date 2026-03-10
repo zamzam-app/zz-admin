@@ -11,53 +11,45 @@ export enum ComplaintStatus {
   DISMISSED = 'dismissed',
 }
 
-interface UserRef {
-  _id: string;
-  name: string;
+export type ComplaintStatusValue = 'pending' | 'resolved' | 'dismissed';
+
+/** One answered question (no per-response complaint fields). */
+export interface UserResponse {
+  questionId: string;
+  answer: string | string[] | number;
 }
 
-interface OutletRef {
+/** Populated user reference (list/detail). */
+export interface UserRef {
   _id: string;
-  name: string;
+  name?: string;
 }
 
-interface QuestionRef {
+/** Populated outlet reference (list/detail). */
+export interface OutletRef {
   _id: string;
-  title: string;
-}
-
-interface UserResponse {
-  _id: string;
-  questionId: QuestionRef;
-  answer: string[];
-  isComplaint: boolean;
-  complaintStatus?: 'pending' | 'resolved' | 'dismissed';
-  resolutionBy?: string | null;
-  resolutionNotes?: string;
-  resolvedAt?: string;
+  name?: string;
+  address?: string;
+  outletType?: unknown;
 }
 
 export interface Review {
   _id: string;
   isActive: boolean;
   isDeleted: boolean;
-  userId: UserRef;
-  outletId: OutletRef;
+  userId: string | UserRef;
+  outletId: string | OutletRef;
   userResponses: UserResponse[];
   overallRating: number;
-  type: 'review' | 'complaint';
-  formId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/** Mapped complaint review (extends Review with complaint info). */
-export interface ComplaintReview extends Review {
-  complaintQuestions: {
-    questionId: string | { _id: string; title?: string };
-    answer: string | string[] | number;
-    complaintStatus?: ComplaintStatus;
-  }[];
+  formId?: string;
+  isComplaint?: boolean;
+  complaintStatus?: ComplaintStatusValue;
+  complaintReason?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ReviewUI {
@@ -71,8 +63,8 @@ export interface ReviewUI {
   comment: string;
 }
 
-/** Pagination meta for ratings list API. */
-export interface RatingsListMeta {
+/** Pagination meta for review list API. */
+export interface ReviewListMeta {
   total: number;
   currentPage: number;
   hasPrevPage: boolean;
@@ -80,17 +72,41 @@ export interface RatingsListMeta {
   limit: number;
 }
 
-/** Request body for resolving a complaint (single question in a rating). */
+/** Request body for resolving a complaint (review-level only). */
 export interface ResolveComplaintDto {
-  questionId: string;
   complaintStatus: ComplaintStatus;
-  answer?: string;
-  resolutionNotes?: string;
   resolvedBy: string;
+  resolutionNotes?: string;
 }
 
-/** Paginated response for ratings get-all API. */
-export interface RatingsListResponse {
+/** Paginated response for review list API. */
+export interface ReviewListResponse {
   data: Review[];
-  meta: RatingsListMeta;
+  meta: ReviewListMeta;
+}
+
+/** Get outlet ID from review (string or populated object). */
+export function getOutletId(review: { outletId?: string | OutletRef }): string | undefined {
+  if (review.outletId == null) return undefined;
+  return typeof review.outletId === 'string' ? review.outletId : review.outletId._id;
+}
+
+/** Get outlet name from review (string or populated object). */
+export function getOutletName(review: { outletId?: string | OutletRef }): string {
+  if (review.outletId == null) return 'Outlet';
+  if (typeof review.outletId === 'string') return 'Outlet';
+  return review.outletId.name ?? 'Outlet';
+}
+
+/** Get user ID from review (string or populated object). */
+export function getUserId(review: { userId?: string | UserRef }): string | undefined {
+  if (review.userId == null) return undefined;
+  return typeof review.userId === 'string' ? review.userId : review.userId._id;
+}
+
+/** Get user display name from review (string or populated object). */
+export function getUserName(review: { userId?: string | UserRef }): string {
+  if (review.userId == null) return 'Anonymous';
+  if (typeof review.userId === 'string') return 'Anonymous';
+  return review.userId.name ?? 'Anonymous';
 }

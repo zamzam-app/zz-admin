@@ -28,7 +28,7 @@ export function QrCodeModal({
   urlOverride,
 }: QrCodeModalProps) {
   const slug = store?.name?.replace(/\s+/g, '-').toLowerCase() ?? 'outlet';
-  const reviewUrl = urlOverride || (store?.qrToken ? `${userBaseUrl}/review/${store.formId}` : '');
+  const reviewUrl = urlOverride || (store?.qrToken ? `${userBaseUrl}/review/${store.qrToken}` : '');
 
   const openInNewTab = (url: string) => {
     if (!url) return;

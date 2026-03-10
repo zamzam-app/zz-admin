@@ -29,6 +29,9 @@ export function AddTableModal({ open, editing, onClose, onSave }: AddTableModalP
       name: name.trim(),
       capacity: capacity ? Number(capacity) : undefined,
     });
+
+    setName('');
+    setCapacity('');
   };
 
   return (
