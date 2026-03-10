@@ -6,12 +6,14 @@ import { Button } from '../common/Button';
 import { Modal } from '../common/Modal';
 
 const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-const userBaseUrl = import.meta.env.VITE_USER_BASE_URL ?? baseUrl;
+export const userBaseUrl = import.meta.env.VITE_USER_BASE_URL ?? baseUrl;
 
 export type QrCodeModalProps = {
   open: boolean;
   onClose: () => void;
   store: Outlet | null;
+  titleOverride?: string;
+  urlOverride?: string;
 };
 
 type QrCodeData = {
@@ -20,9 +22,15 @@ type QrCodeData = {
   url: string;
 };
 
-export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {
+export function QrCodeModal({
+  open,
+  onClose,
+  store,
+  titleOverride,
+  urlOverride,
+}: QrCodeModalProps) {
   const slug = store?.name?.replace(/\s+/g, '-').toLowerCase() ?? 'outlet';
-  const reviewUrl = store?.qrToken ? `${userBaseUrl}/review/${store.formId}` : '';
+  const reviewUrl = urlOverride || (store?.qrToken ? `${userBaseUrl}/review/${store.formId}` : '');
 
   const openInNewTab = (url: string) => {
     if (!url) return;
@@ -35,7 +43,7 @@ export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {
     <Modal
       open={open}
       onClose={onClose}
-      title={store?.name || 'Outlet QR Code'}
+      title={titleOverride || store?.name || 'Outlet QR Code'}
       maxWidth='sm'
       className='text-center'
     >
@@ -43,7 +51,7 @@ export function QrCodeModal({ open, onClose, store }: QrCodeModalProps) {
         {data.map((item) => (
           <div key={item.id} className='flex flex-col items-center flex-1 min-w-0'>
             <div className='bg-white p-4 rounded-xl border-2 border-dashed border-gray-200 mb-3'>
-              {store?.qrToken && (
+              {(urlOverride || store?.qrToken) && (
                 <QRCode id={`qr-code-${item.id}-svg`} value={item.url} size={200} />
               )}
             </div>
