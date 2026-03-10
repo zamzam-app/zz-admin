@@ -27,10 +27,12 @@ export function TablesModal({
 }: TablesModalProps) {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrModalUrl, setQrModalUrl] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<IOutletTable | null>(null);
 
   if (!open) return null;
 
   const handleQrClick = (table: IOutletTable) => {
+    setSelectedTable(table);
     setQrModalUrl(`${userBaseUrl}/review/${table.tableToken}`);
     setQrModalOpen(true);
   };
@@ -124,9 +126,10 @@ export function TablesModal({
         onClose={() => {
           setQrModalOpen(false);
           setQrModalUrl(null);
+          setSelectedTable(null);
         }}
         store={null}
-        titleOverride='Table review link'
+        titleOverride={`${outletName ? `${outletName} - ` : ''}${selectedTable?.name || 'Table'} review link`}
         urlOverride={qrModalUrl ?? ''}
       />
     </div>
