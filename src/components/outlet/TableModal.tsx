@@ -4,7 +4,8 @@ import { Popconfirm } from 'antd';
 import { Button } from '../common/Button';
 import Card from '../common/Card';
 import type { IOutletTable } from '../../lib/types/outletTable';
-import { QrCodeModal, userBaseUrl } from './QrCodeModal';
+import { userBaseUrl } from '../../lib/config/userBaseUrl';
+import { QrCodeModal } from './QrCodeModal';
 
 interface TablesModalProps {
   open: boolean;
@@ -129,7 +130,7 @@ export function TablesModal({
           setSelectedTable(null);
         }}
         store={null}
-        titleOverride={`${outletName ? `${outletName} - ` : ''}${selectedTable?.name || 'Table'} review link`}
+        titleOverride={`${outletName} - Table: ${selectedTable?.name}`}
         urlOverride={qrModalUrl ?? ''}
       />
     </div>

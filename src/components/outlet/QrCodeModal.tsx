@@ -1,12 +1,10 @@
 import { Download, ExternalLink } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import type { Outlet } from '../../lib/types/outlet';
+import { userBaseUrl } from '../../lib/config/userBaseUrl';
 import { downloadQrFromSvg } from '../../lib/utils/downloadQrFromSvg';
 import { Button } from '../common/Button';
 import { Modal } from '../common/Modal';
-
-const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-export const userBaseUrl = import.meta.env.VITE_USER_BASE_URL ?? baseUrl;
 
 export type QrCodeModalProps = {
   open: boolean;

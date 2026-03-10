@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
@@ -25,15 +25,15 @@ export function AddOutletTypeModal({ open, onClose, onSuccess, editing }: AddOut
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setName(editing?.name ?? '');
     setDescription(editing?.description ?? '');
     setError(null);
-  };
+  }, [editing]);
 
   useEffect(() => {
     if (open) resetForm();
-  }, [open, editing]);
+  }, [open, resetForm]);
 
   const handleClose = () => {
     resetForm();
