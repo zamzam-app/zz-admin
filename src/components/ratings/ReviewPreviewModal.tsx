@@ -10,7 +10,12 @@ import { useAuth } from '../../lib/context/AuthContext';
 import { useApiMutation } from '../../lib/react-query/use-api-hooks';
 import { reviewsApi } from '../../lib/services/api/review.api';
 import { REVIEW_KEYS } from '../../lib/types/review';
-import { type Review, type ResolveComplaintDto, ComplaintStatus } from '../../lib/types/review';
+import {
+  type Review,
+  type ResolveComplaintDto,
+  ComplaintStatus,
+  getOutletName,
+} from '../../lib/types/review';
 
 type ReviewPreviewModalProps = {
   open: boolean;
@@ -28,23 +33,18 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
   onResolved,
 }) => {
   const { user } = useAuth();
-  const [expandedComplaintQuestionId, setExpandedComplaintQuestionId] = useState<string | null>(
+  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [pendingAction, setPendingAction] = useState<{ complaintStatus: ComplaintStatus } | null>(
     null,
   );
-  const [resolutionNotes, setResolutionNotes] = useState('');
-  const [pendingAction, setPendingAction] = useState<{
-    questionId: string;
-    complaintStatus: ComplaintStatus;
-  } | null>(null);
 
   const resolveMutation = useApiMutation(
-    ({ ratingId, body }: { ratingId: string; body: ResolveComplaintDto }) =>
-      reviewsApi.resolveComplaint(ratingId, body),
+    ({ reviewId, body }: { reviewId: string; body: ResolveComplaintDto }) =>
+      reviewsApi.resolveComplaint(reviewId, body),
     [REVIEW_KEYS],
     {
       onSuccess: () => {
         message.success('Complaint updated.');
-        setExpandedComplaintQuestionId(null);
         setResolutionNotes('');
         setPendingAction(null);
         onResolved?.();
@@ -55,21 +55,27 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
     },
   );
 
-  const handleResolve = (questionId: string, complaintStatus: ComplaintStatus) => {
+  const handleResolve = (complaintStatus: ComplaintStatus) => {
     if (!review || !user?.id) return;
-    resolveMutation.mutate({
-      ratingId: review._id,
-      body: {
-        questionId,
-        complaintStatus,
-        resolutionNotes: resolutionNotes.trim() || undefined,
-        resolvedBy: user.id,
-      },
-    });
+    const body: ResolveComplaintDto = {
+      complaintStatus,
+      resolvedBy: user.id,
+      resolutionNotes: resolutionNotes.trim() || undefined,
+    };
+    resolveMutation.mutate({ reviewId: review._id, body });
   };
 
+  const isComplaintPending =
+    review?.isComplaint === true && review?.complaintStatus === ComplaintStatus.PENDING;
+  const isComplaintResolved =
+    review?.isComplaint === true && review?.complaintStatus === ComplaintStatus.RESOLVED;
+  const isComplaintDismissed =
+    review?.isComplaint === true && review?.complaintStatus === ComplaintStatus.DISMISSED;
+
+  const isComplaint = review?.isComplaint === true;
+
   return (
-    <Modal open={open} onClose={onClose} title='Complete Review' maxWidth='md'>
+    <Modal open={open} onClose={onClose} title='Complete Review' maxWidth='md' scrollableContent>
       {loading ? (
         <Box display='flex' justifyContent='center' alignItems='center' py={6}>
           <LoadingSpinner />
@@ -81,12 +87,10 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
           {/* Meta */}
           <Box display='flex' flexWrap='wrap' gap={2} alignItems='center'>
             <Typography variant='body2' fontWeight={600} color='text.secondary'>
-              {typeof review.outletId === 'object' && review.outletId?.name
-                ? review.outletId.name
-                : 'Outlet'}
+              {getOutletName(review)}
             </Typography>
             <Typography variant='body2' color='text.secondary'>
-              {new Date(review.createdAt).toLocaleDateString()}
+              {new Date(review.createdAt ?? '').toLocaleDateString()}
             </Typography>
           </Box>
 
@@ -103,80 +107,23 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
             }}
           >
             {(review.userResponses ?? []).map((res, index) => {
-              const isComplaintPending = res.isComplaint === true;
-              const isResolved = res.complaintStatus === 'resolved';
-              const isDismissed = res.complaintStatus === 'dismissed';
-              const isComplaintRelated = isComplaintPending || isResolved || isDismissed;
-              const complaintStatus = isComplaintPending
-                ? 'pending'
-                : isResolved
-                  ? 'resolved'
-                  : isDismissed
-                    ? 'dismissed'
-                    : undefined;
-              const qId =
-                typeof res.questionId === 'object' && res.questionId !== null
-                  ? res.questionId._id
-                  : String(res.questionId);
-              const questionTitle =
-                typeof res.questionId === 'object' &&
-                res.questionId !== null &&
-                'title' in res.questionId
-                  ? (res.questionId as { _id: string; title?: string }).title?.trim()
-                  : null;
-              const isExpanded = isComplaintPending && expandedComplaintQuestionId === qId;
-              const isResolving = resolveMutation.isPending;
-
-              const statusLabel =
-                complaintStatus === 'pending'
-                  ? 'Pending'
-                  : complaintStatus === 'resolved'
-                    ? 'Resolved'
-                    : complaintStatus === 'dismissed'
-                      ? 'Dismissed'
-                      : null;
-
-              const boxSx = {
-                p: 2,
-                borderRadius: 2,
-                border: '1px solid',
-                outlineOffset: 1,
-                ...(isComplaintRelated
-                  ? {
-                      ...(isResolved && {
-                        borderColor: 'success.light',
-                        outlineColor: 'success.main',
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                      }),
-                      ...(isDismissed && {
-                        borderColor: 'error.light',
-                        backgroundColor: 'error.50',
-                      }),
-                      ...(isComplaintPending && {
-                        borderColor: 'error.main',
-                        backgroundColor: 'error.50',
-                        cursor: 'pointer',
-                        '&:hover': { backgroundColor: 'error.100' },
-                      }),
-                    }
-                  : {
-                      borderColor: 'divider',
-                      backgroundColor: 'transparent',
-                    }),
-              };
-
+              const qId = res.questionId;
+              const answerDisplay = Array.isArray(res.answer)
+                ? res.answer.join(', ')
+                : typeof res.answer === 'number'
+                  ? String(res.answer)
+                  : String(res.answer ?? '—');
               return (
                 <Box
                   component='li'
                   key={`${qId}-${index}`}
-                  sx={boxSx}
-                  onClick={
-                    isComplaintPending
-                      ? () => setExpandedComplaintQuestionId((prev) => (prev === qId ? null : qId))
-                      : undefined
-                  }
-                  role={isComplaintPending ? 'button' : undefined}
-                  aria-expanded={isExpanded}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    backgroundColor: 'transparent',
+                  }}
                 >
                   <Typography
                     variant='subtitle2'
@@ -185,123 +132,129 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                     display='block'
                     mb={0.5}
                   >
-                    {questionTitle ?? 'Question'}
-                    {isComplaintRelated && (
-                      <>
-                        <Typography
-                          component='span'
-                          variant='caption'
-                          fontWeight={700}
-                          color={
-                            isResolved ? 'success.dark' : isDismissed ? 'error.main' : 'error.main'
-                          }
-                          sx={{ ml: 1 }}
-                        >
-                          (Complaint
-                          {statusLabel != null ? ` · ${statusLabel}` : ''})
-                        </Typography>
-                      </>
-                    )}
+                    Question
                   </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    {Array.isArray(res.answer) ? res.answer.join(', ') : String(res.answer ?? '—')}
+                    {answerDisplay}
                   </Typography>
-
-                  {(isResolved || isDismissed) && (res.resolutionNotes || res.resolvedAt) && (
-                    <Box
-                      sx={{
-                        mt: 1.5,
-                        p: 1.5,
-                        borderRadius: 1,
-                        backgroundColor: isResolved
-                          ? 'rgba(46, 125, 50, 0.12)'
-                          : 'rgba(211, 47, 47, 0.12)',
-                        borderColor: isResolved ? 'success.light' : 'error.light',
-                      }}
-                    >
-                      {res.resolutionNotes && (
-                        <Typography variant='caption' display='block' color='text.secondary'>
-                          {res.resolutionNotes}
-                        </Typography>
-                      )}
-                      {res.resolvedAt && (
-                        <Typography
-                          variant='caption'
-                          display='block'
-                          color='text.secondary'
-                          sx={{ mt: 0.5, opacity: 0.9 }}
-                        >
-                          Resolved {new Date(res.resolvedAt).toLocaleString()}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-
-                  {isExpanded && (
-                    <Box
-                      mt={2}
-                      pt={2}
-                      borderTop='1px solid'
-                      borderColor='divider'
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <TextField
-                        fullWidth
-                        size='small'
-                        label='Resolution notes'
-                        placeholder='Describe the resolution or dismissal'
-                        value={resolutionNotes}
-                        onChange={(e) => setResolutionNotes(e.target.value)}
-                        multiline
-                        minRows={2}
-                        sx={{ mb: 2 }}
-                      />
-                      <Box display='flex' gap={1} flexWrap='wrap'>
-                        <Button
-                          variant='contained'
-                          color='success'
-                          size='small'
-                          disabled={isResolving || !user?.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPendingAction({
-                              questionId: qId,
-                              complaintStatus: ComplaintStatus.RESOLVED,
-                            });
-                          }}
-                        >
-                          Mark as resolved
-                        </Button>
-                        <Button
-                          variant='outlined'
-                          color='error'
-                          size='small'
-                          disabled={isResolving || !user?.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPendingAction({
-                              questionId: qId,
-                              complaintStatus: ComplaintStatus.DISMISSED,
-                            });
-                          }}
-                        >
-                          Mark as rejected
-                        </Button>
-                      </Box>
-                    </Box>
-                  )}
                 </Box>
               );
             })}
           </Box>
 
-          {/* Overall Ratings - at bottom, bigger stars */}
+          {/* Complaint raised by user (shown for any complaint: pending, resolved, or dismissed) */}
+          {isComplaint && (review.complaintReason ?? '').trim() && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'warning.light',
+                backgroundColor: 'warning.50',
+              }}
+            >
+              <Typography variant='subtitle2' fontWeight={700} color='warning.dark' sx={{ mb: 1 }}>
+                Complaint raised by user
+              </Typography>
+              <Typography variant='body2' color='text.secondary'>
+                {review.complaintReason}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Review-level resolution (when complaint was resolved or dismissed) */}
+          {(isComplaintResolved || isComplaintDismissed) &&
+            (review.resolutionNotes || review.resolvedAt) && (
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1,
+                  backgroundColor: isComplaintResolved
+                    ? 'rgba(46, 125, 50, 0.12)'
+                    : 'rgba(211, 47, 47, 0.12)',
+                  border: '1px solid',
+                  borderColor: isComplaintResolved ? 'success.light' : 'error.light',
+                }}
+              >
+                {review.resolutionNotes && (
+                  <Typography variant='caption' display='block' color='text.secondary'>
+                    {review.resolutionNotes}
+                  </Typography>
+                )}
+                {review.resolvedAt && (
+                  <Typography
+                    variant='caption'
+                    display='block'
+                    color='text.secondary'
+                    sx={{ mt: 0.5, opacity: 0.9 }}
+                  >
+                    {isComplaintResolved ? 'Resolved' : 'Dismissed'}{' '}
+                    {new Date(review.resolvedAt).toLocaleString()}
+                    {review.resolvedBy ? ` by ${review.resolvedBy}` : ''}
+                  </Typography>
+                )}
+              </Box>
+            )}
+
+          {/* Resolve complaint section (review-level, only when pending) */}
+          {isComplaintPending && (
+            <Box
+              sx={{
+                mt: 1,
+                pt: 2,
+                borderTop: '1px solid',
+                borderTopColor: 'divider',
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'error.main',
+                backgroundColor: 'error.50',
+              }}
+            >
+              <Typography variant='subtitle2' fontWeight={700} color='error.main' sx={{ mb: 1 }}>
+                Pending complaint — resolution
+              </Typography>
+              <TextField
+                fullWidth
+                size='small'
+                label='Resolution notes'
+                placeholder='Describe the resolution or dismissal'
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+                multiline
+                minRows={2}
+                sx={{ mb: 2 }}
+              />
+              <Box display='flex' gap={1} flexWrap='wrap'>
+                <Button
+                  variant='contained'
+                  color='success'
+                  size='small'
+                  disabled={resolveMutation.isPending || !user?.id}
+                  onClick={() => setPendingAction({ complaintStatus: ComplaintStatus.RESOLVED })}
+                >
+                  Mark as resolved
+                </Button>
+                <Button
+                  variant='outlined'
+                  color='error'
+                  size='small'
+                  disabled={resolveMutation.isPending || !user?.id}
+                  onClick={() => setPendingAction({ complaintStatus: ComplaintStatus.DISMISSED })}
+                >
+                  Mark as rejected
+                </Button>
+              </Box>
+            </Box>
+          )}
+
+          {/* Overall rating */}
           <Box mt={1}>
             <Typography variant='body2' fontWeight={700} sx={{ mb: 1 }}>
-              Overall Ratings
+              Overall rating
             </Typography>
             <Box display='flex' gap={0.75} alignItems='center'>
-              {[...Array(review.overallRating ?? 0)].map((_, i) => (
+              {[...Array(Math.round(review.overallRating ?? 0))].map((_, i) => (
                 <Star key={i} size={28} fill='#D4AF37' color='#D4AF37' />
               ))}
             </Box>
@@ -328,7 +281,7 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
         cancelLabel='Cancel'
         onConfirm={() => {
           if (pendingAction) {
-            handleResolve(pendingAction.questionId, pendingAction.complaintStatus);
+            handleResolve(pendingAction.complaintStatus);
           }
         }}
         loading={resolveMutation.isPending}

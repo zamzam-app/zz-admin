@@ -1,44 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
 import { Modal } from '../common/Modal';
 import { outletTypeApi } from '../../lib/services/api/outlet-type.api';
 import { OUTLET_TYPE_KEYS } from '../../lib/types/outlet-type';
-import type { CreateOutletTypePayload } from '../../lib/types/outlet-type';
-import type { Form } from '../../lib/types/forms';
-import type { ManagerOption } from './OutletModal';
+import type {
+  CreateOutletTypePayload,
+  OutletType,
+  UpdateOutletTypePayload,
+} from '../../lib/types/outlet-type';
 
 export type AddOutletTypeModalProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  availableForms: Form[];
-  managers: ManagerOption[];
+  editing?: OutletType | null;
 };
 
-export function AddOutletTypeModal({ open, onClose, onSuccess }: AddOutletTypeModalProps) {
+export function AddOutletTypeModal({ open, onClose, onSuccess, editing }: AddOutletTypeModalProps) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [menuIds, setMenuIds] = useState('');
-  const [formId, setFormId] = useState('');
-  const [defaultManager, setDefaultManager] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetForm = () => {
-    setName('');
-    setDescription('');
-    setMenuIds('');
-    setFormId('');
-    setDefaultManager('');
+  const resetForm = useCallback(() => {
+    setName(editing?.name ?? '');
+    setDescription(editing?.description ?? '');
     setError(null);
-  };
+  }, [editing]);
 
   useEffect(() => {
     if (open) resetForm();
-  }, [open]);
+  }, [open, resetForm]);
 
   const handleClose = () => {
     resetForm();
@@ -52,33 +47,43 @@ export function AddOutletTypeModal({ open, onClose, onSuccess }: AddOutletTypeMo
       setError('Name and description are required.');
       return;
     }
-    const payload: CreateOutletTypePayload = {
-      name: name.trim(),
-      description: description.trim(),
-    };
-    const menu = menuIds
-      .split(/[\s,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (menu.length > 0) payload.menu = menu;
-    if (formId) payload.formId = formId;
-    if (defaultManager) payload.defaultManager = defaultManager;
 
     setIsSubmitting(true);
     try {
-      await outletTypeApi.create(payload);
+      if (editing) {
+        const payload: UpdateOutletTypePayload = {
+          name: name.trim(),
+          description: description.trim(),
+        };
+        await outletTypeApi.update(editing._id, payload);
+      } else {
+        const payload: CreateOutletTypePayload = {
+          name: name.trim(),
+          description: description.trim(),
+        };
+        await outletTypeApi.create(payload);
+      }
       await queryClient.invalidateQueries({ queryKey: OUTLET_TYPE_KEYS });
       handleClose();
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create outlet type');
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${editing ? 'update' : 'create'} outlet type`,
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title='Add Outlet Type' maxWidth='md'>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title={editing ? 'Edit Outlet Type' : 'Add Outlet Type'}
+      maxWidth='md'
+    >
       <form onSubmit={handleSubmit} className='flex flex-col gap-6'>
         {error && (
           <p

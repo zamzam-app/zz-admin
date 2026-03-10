@@ -32,3 +32,11 @@ export interface CreateOutletTypePayload {
   formId?: string;
   defaultManager?: string;
 }
+
+export interface UpdateOutletTypePayload {
+  name?: string;
+  description?: string;
+  menu?: string[];
+  formId?: string;
+  defaultManager?: string;
+}

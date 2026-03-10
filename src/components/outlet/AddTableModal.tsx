@@ -29,15 +29,18 @@ export function AddTableModal({ open, editing, onClose, onSave }: AddTableModalP
       name: name.trim(),
       capacity: capacity ? Number(capacity) : undefined,
     });
+
+    setName('');
+    setCapacity('');
   };
 
   return (
-    <div className='fixed inset-0 z-[60] bg-black/40 flex items-center justify-center'>
+    <div className='fixed inset-0 z-60 bg-black/40 flex items-center justify-center'>
       <Card className='w-full max-w-md rounded-3xl p-6'>
         <div className='flex items-center justify-between mb-6'>
           <h2 className='text-xl font-bold'>{editing ? 'Edit Table' : 'Add Table'}</h2>
 
-          <button onClick={onClose} className='p-2 rounded-xl hover:bg-gray-100'>
+          <button onClick={onClose} className='p-2 rounded-xl hover:bg-gray-100 cursor-pointer'>
             <X size={18} />
           </button>
         </div>
