@@ -5,6 +5,7 @@ import type {
   GlobalCsatPeriod,
   IncidentsOverviewResponse,
   OutletFeedbackSummaryResponse,
+  QuickInsightsResponse,
   QueryIncidentsOverviewParams,
   QueryGlobalCsatParams,
   Review,
@@ -107,6 +108,13 @@ export const reviewsApi = {
   ): Promise<OutletFeedbackSummaryResponse> => {
     const { data } = await apiClient.get<OutletFeedbackSummaryResponse>(
       `/review/analytics/outlet-feedback-summary?period=${period}`,
+    );
+    return data;
+  },
+
+  getQuickInsights: async (period: GlobalCsatPeriod): Promise<QuickInsightsResponse> => {
+    const { data } = await apiClient.get<QuickInsightsResponse>(
+      `/review/analytics/quick-insights?period=${period}`,
     );
     return data;
   },

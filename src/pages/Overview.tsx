@@ -11,35 +11,19 @@ import {
   YAxis,
 } from 'recharts';
 import { useAuth } from '../lib/context/AuthContext';
-import { storesList } from '../__mocks__/managers';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import {
   CSAT_TRENDLINE_KEYS,
-  ComplaintStatus,
-  type ComplaintStatusValue,
   GLOBAL_CSAT_KEYS,
   OUTLET_FEEDBACK_SUMMARY_KEYS,
-  REVIEW_KEYS,
+  QUICK_INSIGHTS_KEYS,
   type GlobalCsatPeriod,
-  type Review,
   type OutletFeedbackSummaryItem,
-  getOutletId,
-  getOutletName,
+  type QuickInsightsResponse,
 } from '../lib/types/review';
 
 type Period = GlobalCsatPeriod;
-type IncidentStatus = ComplaintStatusValue | 'none';
-
-type IncidentRecord = {
-  outletId: string;
-  rating: number;
-  createdAt: string;
-  isComplaint: boolean;
-  status: IncidentStatus;
-  resolvedAt?: string;
-};
-
 type OutletCount = {
   outletId: string;
   outletName: string;
@@ -57,17 +41,6 @@ const PERIOD_OPTIONS: { label: string; value: Period }[] = [
   { label: 'Weekly', value: 'weekly' },
   { label: 'Monthly', value: 'monthly' },
 ];
-
-const INCIDENT_TIME_SLOTS = [
-  { startHour: 0, endHour: 3, label: '00:00 - 03:00', context: 'Late Night' },
-  { startHour: 3, endHour: 6, label: '03:00 - 06:00', context: 'Early Morning' },
-  { startHour: 6, endHour: 9, label: '06:00 - 09:00', context: 'Breakfast Rush' },
-  { startHour: 9, endHour: 12, label: '09:00 - 12:00', context: 'Morning Window' },
-  { startHour: 12, endHour: 15, label: '12:00 - 15:00', context: 'Lunch Rush' },
-  { startHour: 15, endHour: 18, label: '15:00 - 18:00', context: 'Afternoon Window' },
-  { startHour: 18, endHour: 21, label: '18:00 - 21:00', context: 'Dinner Rush' },
-  { startHour: 21, endHour: 24, label: '21:00 - 24:00', context: 'Late Evening' },
-] as const;
 
 const PERIOD_META: Record<
   Period,
@@ -155,68 +128,8 @@ function getIstHourIndex(value: string): number | null {
   return hour;
 }
 
-function startOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
-function endOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
-}
-
-function shiftDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function average(values: number[]) {
-  if (values.length === 0) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
-}
-
-function isBetween(source: string, start: Date, end: Date) {
-  if (!source) return false;
-  const date = new Date(source);
-  if (Number.isNaN(date.getTime())) return false;
-  return date >= start && date <= end;
-}
-
-function getIncidentSlotIndex(source: string) {
-  if (!source) return 0;
-  const date = new Date(source);
-  if (Number.isNaN(date.getTime())) return 0;
-  const hour = date.getHours();
-  const matchIndex = INCIDENT_TIME_SLOTS.findIndex(
-    (slot) => hour >= slot.startHour && hour < slot.endHour,
-  );
-  return matchIndex >= 0 ? matchIndex : 0;
-}
-
-function normalizeReviews(reviews: Review[]): IncidentRecord[] {
-  return reviews.map((review) => {
-    let status: IncidentStatus = 'none';
-    const isComplaint = review.isComplaint === true || review.complaintStatus != null;
-    if (isComplaint) {
-      status = review.complaintStatus ?? ComplaintStatus.PENDING;
-    }
-
-    return {
-      outletId: getOutletId(review) ?? 'unknown-outlet',
-      rating: review.overallRating || 0,
-      createdAt: review.createdAt ?? '',
-      isComplaint,
-      status,
-      resolvedAt: review.resolvedAt,
-    };
-  });
 }
 
 function LegendItem({ color, label }: { color: string; label: string }) {
@@ -375,51 +288,9 @@ function IncidentSummaryCard({
 }
 
 export default function Overview() {
-  const { user } = useAuth();
+  useAuth();
   const [period, setPeriod] = useState<Period>('weekly');
 
-  const referenceDate = useMemo(() => startOfDay(new Date()), []);
-
-  const { data } = useApiQuery(REVIEW_KEYS, () => reviewsApi.getAll(), { retry: false });
-
-  const visibleStores = useMemo(() => {
-    if (!user) return [];
-    if (user.role === 'admin') return storesList;
-    return storesList.filter((store) => user.outletId?.includes(store.outletId) ?? false);
-  }, [user]);
-
-  const visibleOutletIds = useMemo(() => {
-    if (user?.role === 'admin') return null;
-    if (user?.outletId && user.outletId.length > 0) return new Set(user.outletId);
-    if (visibleStores.length > 0) return new Set(visibleStores.map((store) => store.outletId));
-    return null;
-  }, [user, visibleStores]);
-
-  const apiRecords = useMemo(() => normalizeReviews(data?.data ?? []), [data?.data]);
-
-  const scopedRecords = useMemo(() => {
-    if (!visibleOutletIds) return apiRecords;
-    return apiRecords.filter((record) => visibleOutletIds.has(record.outletId));
-  }, [apiRecords, visibleOutletIds]);
-
-  const outletNameLookup = useMemo(() => {
-    const map = new Map<string, string>();
-
-    storesList.forEach((store) => {
-      map.set(store.outletId, store.name);
-    });
-
-    (data?.data ?? []).forEach((review) => {
-      const outletId = getOutletId(review);
-      if (outletId) {
-        map.set(outletId, getOutletName(review));
-      }
-    });
-
-    return map;
-  }, [data?.data]);
-
-  const periodMeta = PERIOD_META[period];
   const trendlineTitle =
     period === 'daily'
       ? 'CSAT Trendline (Today)'
@@ -428,21 +299,6 @@ export default function Overview() {
         : 'CSAT Trendline (Last 30 Days)';
   const periodDescriptor =
     period === 'daily' ? 'today' : period === 'weekly' ? 'last seven days' : 'last 30 days';
-
-  const currentRangeStart = useMemo(
-    () => startOfDay(shiftDays(referenceDate, -(periodMeta.rangeInDays - 1))),
-    [periodMeta.rangeInDays, referenceDate],
-  );
-  const currentRangeEnd = useMemo(() => endOfDay(referenceDate), [referenceDate]);
-
-  const previousRangeStart = useMemo(
-    () => shiftDays(currentRangeStart, -periodMeta.rangeInDays),
-    [currentRangeStart, periodMeta.rangeInDays],
-  );
-  const previousRangeEnd = useMemo(
-    () => shiftDays(currentRangeEnd, -periodMeta.rangeInDays),
-    [currentRangeEnd, periodMeta.rangeInDays],
-  );
 
   const {
     data: globalCsat,
@@ -472,6 +328,22 @@ export default function Overview() {
     { retry: false },
   );
 
+  const {
+    data: quickInsightsData,
+    isLoading: isQuickInsightsLoading,
+    isError: isQuickInsightsError,
+    error: quickInsightsError,
+  } = useApiQuery([...QUICK_INSIGHTS_KEYS, period], () => reviewsApi.getQuickInsights(period), {
+    retry: false,
+  });
+
+  const [lastQuickInsights, setLastQuickInsights] = useState<QuickInsightsResponse | null>(
+    quickInsightsData ?? null,
+  );
+  if (quickInsightsData && quickInsightsData !== lastQuickInsights) {
+    setLastQuickInsights(quickInsightsData);
+  }
+
   const outletFeedbackItems = useMemo<OutletFeedbackSummaryItem[]>(
     () => outletFeedbackSummary?.items ?? [],
     [outletFeedbackSummary?.items],
@@ -479,37 +351,49 @@ export default function Overview() {
 
   const negativeFeedbackByOutlet = useMemo<OutletCount[]>(
     () =>
-      outletFeedbackItems.map((item) => ({
-        outletId: item.outletId,
-        outletName: item.outletName,
-        count: item.negativeFeedbacks ?? 0,
-      })),
+      outletFeedbackItems
+        .map((item) => ({
+          outletId: item.outletId,
+          outletName: item.outletName,
+          count: item.negativeFeedbacks ?? 0,
+        }))
+        .sort((first, second) => second.count - first.count),
     [outletFeedbackItems],
   );
 
   const totalFeedbackByOutlet = useMemo<OutletCount[]>(
     () =>
-      outletFeedbackItems.map((item) => ({
-        outletId: item.outletId,
-        outletName: item.outletName,
-        count: item.totalFeedbacks ?? 0,
-      })),
+      outletFeedbackItems
+        .map((item) => ({
+          outletId: item.outletId,
+          outletName: item.outletName,
+          count: item.totalFeedbacks ?? 0,
+        }))
+        .sort((first, second) => second.count - first.count),
     [outletFeedbackItems],
   );
 
   const resolvedFeedbackByOutlet = useMemo<OutletCount[]>(
     () =>
-      outletFeedbackItems.map((item) => ({
-        outletId: item.outletId,
-        outletName: item.outletName,
-        count: item.resolvedFeedbacks ?? 0,
-      })),
+      outletFeedbackItems
+        .map((item) => ({
+          outletId: item.outletId,
+          outletName: item.outletName,
+          count: item.resolvedFeedbacks ?? 0,
+        }))
+        .sort((first, second) => second.count - first.count),
     [outletFeedbackItems],
   );
 
   const isOutletFeedbackLoadingState = isOutletFeedbackLoading || isOutletFeedbackFetching;
   const outletFeedbackErrorMessage = isOutletFeedbackError
     ? (outletFeedbackError?.message ?? 'Failed to load data.')
+    : null;
+
+  const quickInsightsSource = quickInsightsData ?? lastQuickInsights;
+  const isQuickInsightsLoadingState = isQuickInsightsLoading && !quickInsightsSource;
+  const quickInsightsErrorMessage = isQuickInsightsError
+    ? (quickInsightsError?.message ?? 'Failed to load quick insights.')
     : null;
 
   const bucketLabels = useMemo(
@@ -598,137 +482,43 @@ export default function Overview() {
         : `${totalGlobalRatings.toLocaleString()} ratings ${periodDescriptor}`;
   const scoreMetaColor = isGlobalCsatError ? '#B91C1C' : '#6B7280';
 
-  const peakIncidentTime = useMemo(() => {
-    const pendingRecords = scopedRecords.filter(
-      (record) =>
-        record.isComplaint &&
-        record.status === ComplaintStatus.PENDING &&
-        isBetween(record.createdAt, currentRangeStart, currentRangeEnd),
-    );
+  const quickInsights = useMemo(() => {
+    const peakIncident = quickInsightsSource?.peakIncidentTime;
+    const mostImproved = quickInsightsSource?.mostImprovedOutlet;
+    const criticalFocus = quickInsightsSource?.criticalFocusArea;
 
-    if (pendingRecords.length === 0) return 'No open incidents in selected period';
+    const peakValue = peakIncident?.label ?? 'No data';
+    const mostImprovedValue = mostImproved
+      ? `${mostImproved.outletName ?? 'Unknown Outlet'} (${mostImproved.improvement >= 0 ? '+' : ''}${mostImproved.improvement.toFixed(1)} CSAT)`
+      : 'No data';
+    const criticalValue = criticalFocus
+      ? `${criticalFocus.outletName ?? 'Unknown Outlet'} (${criticalFocus.criticalIssues} critical ${criticalFocus.criticalIssues === 1 ? 'issue' : 'issues'})`
+      : 'No data';
 
-    const slotCounts = Array.from({ length: INCIDENT_TIME_SLOTS.length }, () => 0);
-    pendingRecords.forEach((record) => {
-      slotCounts[getIncidentSlotIndex(record.createdAt)] += 1;
-    });
-
-    const peakIndex = slotCounts.reduce(
-      (bestIndex, count, index, source) => (count > source[bestIndex] ? index : bestIndex),
-      0,
-    );
-
-    const slot = INCIDENT_TIME_SLOTS[peakIndex];
-    return `${slot.label} (${slot.context})`;
-  }, [currentRangeEnd, currentRangeStart, scopedRecords]);
-
-  const mostImprovedOutlet = useMemo(() => {
-    const outletIds = Array.from(new Set(scopedRecords.map((record) => record.outletId)));
-
-    if (outletIds.length === 0) return 'Not enough trend data yet';
-
-    let bestOutletId = '';
-    let bestDelta = Number.NEGATIVE_INFINITY;
-
-    outletIds.forEach((outletId) => {
-      const currentRatings = scopedRecords
-        .filter(
-          (record) =>
-            record.outletId === outletId &&
-            isBetween(record.createdAt, currentRangeStart, currentRangeEnd),
-        )
-        .map((record) => record.rating);
-
-      const previousRatings = scopedRecords
-        .filter(
-          (record) =>
-            record.outletId === outletId &&
-            isBetween(record.createdAt, previousRangeStart, previousRangeEnd),
-        )
-        .map((record) => record.rating);
-
-      if (currentRatings.length === 0 && previousRatings.length === 0) return;
-
-      const currentAverage = currentRatings.length > 0 ? average(currentRatings) : 0;
-      const previousAverage =
-        previousRatings.length > 0 ? average(previousRatings) : currentAverage;
-      const delta = currentAverage - previousAverage;
-
-      if (delta > bestDelta) {
-        bestDelta = delta;
-        bestOutletId = outletId;
-      }
-    });
-
-    if (!bestOutletId || !Number.isFinite(bestDelta)) return 'Not enough trend data yet';
-
-    const outletName = outletNameLookup.get(bestOutletId) ?? 'Unknown Outlet';
-    return `${outletName} (${bestDelta >= 0 ? '+' : ''}${bestDelta.toFixed(1)} CSAT)`;
-  }, [
-    currentRangeEnd,
-    currentRangeStart,
-    outletNameLookup,
-    previousRangeEnd,
-    previousRangeStart,
-    scopedRecords,
-  ]);
-
-  const criticalFocusArea = useMemo(() => {
-    const criticalByOutlet = new Map<string, number>();
-
-    scopedRecords.forEach((record) => {
-      if (
-        record.isComplaint &&
-        record.status === ComplaintStatus.PENDING &&
-        record.rating < 2 &&
-        isBetween(record.createdAt, currentRangeStart, currentRangeEnd)
-      ) {
-        criticalByOutlet.set(record.outletId, (criticalByOutlet.get(record.outletId) ?? 0) + 1);
-      }
-    });
-
-    if (criticalByOutlet.size === 0) return 'No critical incidents in selected period';
-
-    let focusOutletId = '';
-    let maxIssues = 0;
-
-    criticalByOutlet.forEach((issues, outletId) => {
-      if (issues > maxIssues) {
-        maxIssues = issues;
-        focusOutletId = outletId;
-      }
-    });
-
-    const outletName = outletNameLookup.get(focusOutletId) ?? 'Unknown Outlet';
-    return `${outletName} (${maxIssues} critical ${maxIssues === 1 ? 'issue' : 'issues'})`;
-  }, [currentRangeEnd, currentRangeStart, outletNameLookup, scopedRecords]);
-
-  const quickInsights = useMemo(
-    () => [
+    return [
       {
         label: 'Peak Incident Time',
-        value: peakIncidentTime,
+        value: peakValue,
         border: '#FED7AA',
         background: 'linear-gradient(180deg, #FFF9F0 0%, #FFF7ED 100%)',
         accent: '#EA580C',
       },
       {
         label: 'Most Improved Outlet',
-        value: mostImprovedOutlet,
+        value: mostImprovedValue,
         border: '#BBF7D0',
         background: 'linear-gradient(180deg, #F3FFF8 0%, #ECFDF5 100%)',
         accent: '#16A34A',
       },
       {
         label: 'Critical Focus Area',
-        value: criticalFocusArea,
+        value: criticalValue,
         border: '#FECDD3',
         background: 'linear-gradient(180deg, #FFF5F7 0%, #FFF1F2 100%)',
         accent: '#E11D48',
       },
-    ],
-    [criticalFocusArea, mostImprovedOutlet, peakIncidentTime],
-  );
+    ];
+  }, [quickInsightsSource]);
 
   const isTrendlineAllZero = trendData.every(
     (point) => point.current === 0 && point.previous === 0,
@@ -1019,46 +809,71 @@ export default function Overview() {
           Quick Insights
         </Typography>
 
-        <Stack spacing={2} mt={2.5}>
-          {quickInsights.map((insight) => (
-            <Box
-              key={insight.label}
-              sx={{
-                px: { xs: 2.25, md: 2.75 },
-                py: { xs: 2, md: 2.25 },
-                borderRadius: '16px',
-                border: `1px solid ${insight.border}`,
-                background: insight.background,
-              }}
-            >
-              <Stack direction='row' spacing={1.2} alignItems='center'>
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    bgcolor: insight.accent,
-                    flexShrink: 0,
-                  }}
-                />
-                <Typography fontSize={{ xs: 13, md: 15 }} fontWeight={700} color='#6B7280'>
-                  {insight.label}
-                </Typography>
-              </Stack>
-              <Typography
-                mt={0.6}
-                fontSize={{ xs: 15, md: 18 }}
-                lineHeight={1.35}
-                fontWeight={800}
-                color='#111827'
-                sx={{ wordBreak: 'break-word' }}
+        {quickInsightsErrorMessage && (
+          <Typography mt={1} fontSize={12} color='#B91C1C' fontWeight={600}>
+            {quickInsightsErrorMessage}
+          </Typography>
+        )}
+
+        {isQuickInsightsLoadingState ? (
+          <Stack spacing={2} mt={2.5}>
+            {Array.from({ length: 3 }, (_, index) => (
+              <Box
+                key={index}
+                sx={{
+                  px: { xs: 2.25, md: 2.75 },
+                  py: { xs: 2, md: 2.25 },
+                  borderRadius: '16px',
+                  border: '1px solid #E5E7EB',
+                  bgcolor: '#F8FAFC',
+                }}
               >
-                {insight.label}
-                {insight.value}
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
+                <Skeleton variant='text' width='40%' height={18} />
+                <Skeleton variant='text' width='70%' height={22} />
+              </Box>
+            ))}
+          </Stack>
+        ) : (
+          <Stack spacing={2} mt={2.5}>
+            {quickInsights.map((insight) => (
+              <Box
+                key={insight.label}
+                sx={{
+                  px: { xs: 2.25, md: 2.75 },
+                  py: { xs: 2, md: 2.25 },
+                  borderRadius: '16px',
+                  border: `1px solid ${insight.border}`,
+                  background: insight.background,
+                }}
+              >
+                <Stack direction='row' spacing={1.2} alignItems='center'>
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      bgcolor: insight.accent,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography fontSize={{ xs: 13, md: 15 }} fontWeight={700} color='#6B7280'>
+                    {insight.label}
+                  </Typography>
+                </Stack>
+                <Typography
+                  mt={0.6}
+                  fontSize={{ xs: 15, md: 18 }}
+                  lineHeight={1.35}
+                  fontWeight={800}
+                  color='#111827'
+                  sx={{ wordBreak: 'break-word' }}
+                >
+                  {insight.value}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        )}
       </Box>
     </Box>
   );
