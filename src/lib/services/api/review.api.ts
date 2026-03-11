@@ -4,6 +4,7 @@ import type {
   GlobalCsatResponse,
   GlobalCsatPeriod,
   IncidentsOverviewResponse,
+  OutletFeedbackSummaryResponse,
   QueryIncidentsOverviewParams,
   QueryGlobalCsatParams,
   Review,
@@ -97,6 +98,15 @@ export const reviewsApi = {
       query
         ? `/review/analytics/incidents-overview?${query}`
         : '/review/analytics/incidents-overview',
+    );
+    return data;
+  },
+
+  getOutletFeedbackSummary: async (
+    period: GlobalCsatPeriod,
+  ): Promise<OutletFeedbackSummaryResponse> => {
+    const { data } = await apiClient.get<OutletFeedbackSummaryResponse>(
+      `/review/analytics/outlet-feedback-summary?period=${period}`,
     );
     return data;
   },

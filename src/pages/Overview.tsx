@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo, useState } from 'react';
-import { Box, ButtonBase, Grid, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Grid, Skeleton, Stack, Typography } from '@mui/material';
 import { AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import {
   CartesianGrid,
@@ -19,10 +19,11 @@ import {
   ComplaintStatus,
   type ComplaintStatusValue,
   GLOBAL_CSAT_KEYS,
-  INCIDENTS_OVERVIEW_KEYS,
+  OUTLET_FEEDBACK_SUMMARY_KEYS,
   REVIEW_KEYS,
   type GlobalCsatPeriod,
   type Review,
+  type OutletFeedbackSummaryItem,
   getOutletId,
   getOutletName,
 } from '../lib/types/review';
@@ -37,6 +38,12 @@ type IncidentRecord = {
   isComplaint: boolean;
   status: IncidentStatus;
   resolvedAt?: string;
+};
+
+type OutletCount = {
+  outletId: string;
+  outletName: string;
+  count: number;
 };
 
 type TrendPoint = {
@@ -181,19 +188,23 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-function IncidentCard({
+function IncidentSummaryCard({
   icon,
   title,
-  value,
   description,
+  items,
+  loading,
+  errorMessage,
   background,
   borderColor,
   accentColor,
 }: {
   icon: ReactNode;
   title: string;
-  value: number;
   description: string;
+  items: OutletCount[];
+  loading: boolean;
+  errorMessage?: string | null;
   background: string;
   borderColor: string;
   accentColor: string;
@@ -202,7 +213,7 @@ function IncidentCard({
     <Box
       sx={{
         p: 3,
-        minHeight: 158,
+        minHeight: 260,
         borderRadius: '20px',
         border: `1px solid ${borderColor}`,
         background,
@@ -210,7 +221,7 @@ function IncidentCard({
         flexDirection: 'column',
       }}
     >
-      <Stack direction='row' justifyContent='space-between' alignItems='flex-start'>
+      <Stack direction='row' alignItems='center' spacing={1.5}>
         <Box
           sx={{
             width: 36,
@@ -225,26 +236,90 @@ function IncidentCard({
         >
           {icon}
         </Box>
-        <Typography
-          sx={{
-            fontSize: { xs: 34, md: 42 },
-            lineHeight: 1,
-            fontWeight: 900,
-            letterSpacing: '-0.03em',
-            color: accentColor,
-          }}
-        >
-          {value}
-        </Typography>
-      </Stack>
-
-      <Box mt='auto'>
         <Typography fontSize={18} fontWeight={800} color='#111827'>
           {title}
         </Typography>
-        <Typography mt={0.75} fontSize={13} color='#6B7280'>
-          {description}
+      </Stack>
+
+      <Typography mt={1.5} fontSize={13} color='#6B7280'>
+        {description}
+      </Typography>
+
+      {errorMessage && (
+        <Typography mt={1} fontSize={12} color='#B91C1C' fontWeight={600}>
+          {errorMessage}
         </Typography>
+      )}
+
+      <Box
+        sx={{
+          mt: 2,
+          borderRadius: '16px',
+          border: '1px solid #E5E7EB',
+          bgcolor: '#ffffff',
+          px: 1.5,
+          py: 1,
+          maxHeight: 180,
+          overflowY: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+        }}
+      >
+        {loading ? (
+          <Stack spacing={1} py={0.5}>
+            {Array.from({ length: 3 }, (_, index) => (
+              <Stack
+                key={index}
+                direction='row'
+                justifyContent='space-between'
+                alignItems='center'
+                py={0.5}
+              >
+                <Skeleton variant='text' width='65%' height={18} />
+                <Skeleton variant='rounded' width={32} height={26} />
+              </Stack>
+            ))}
+          </Stack>
+        ) : items.length === 0 ? (
+          <Typography py={1} fontSize={13} color='#9CA3AF'>
+            No data
+          </Typography>
+        ) : (
+          <Stack spacing={0}>
+            {items.map((item, index) => (
+              <Stack
+                key={item.outletId}
+                direction='row'
+                justifyContent='space-between'
+                alignItems='center'
+                py={0.75}
+                borderBottom={index === items.length - 1 ? 'none' : '1px solid #F3F4F6'}
+              >
+                <Typography fontSize={13} fontWeight={700} color='#374151'>
+                  {item.outletName}
+                </Typography>
+                <Box
+                  sx={{
+                    minWidth: 32,
+                    height: 26,
+                    borderRadius: '999px',
+                    border: `1px solid ${borderColor}`,
+                    bgcolor: '#ffffff',
+                    color: accentColor,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    display: 'grid',
+                    placeItems: 'center',
+                    px: 1,
+                  }}
+                >
+                  {item.count}
+                </Box>
+              </Stack>
+            ))}
+          </Stack>
+        )}
       </Box>
     </Box>
   );
@@ -252,7 +327,7 @@ function IncidentCard({
 
 export default function Overview() {
   const { user } = useAuth();
-  const [period, setPeriod] = useState<Period>('monthly');
+  const [period, setPeriod] = useState<Period>('weekly');
 
   const referenceDate = useMemo(() => startOfDay(new Date()), []);
 
@@ -328,6 +403,58 @@ export default function Overview() {
     retry: false,
   });
 
+  const {
+    data: outletFeedbackSummary,
+    isLoading: isOutletFeedbackLoading,
+    isFetching: isOutletFeedbackFetching,
+    isError: isOutletFeedbackError,
+    error: outletFeedbackError,
+  } = useApiQuery(
+    [...OUTLET_FEEDBACK_SUMMARY_KEYS, period],
+    () => reviewsApi.getOutletFeedbackSummary(period),
+    { retry: false },
+  );
+
+  const outletFeedbackItems = useMemo<OutletFeedbackSummaryItem[]>(
+    () => outletFeedbackSummary?.items ?? [],
+    [outletFeedbackSummary?.items],
+  );
+
+  const negativeFeedbackByOutlet = useMemo<OutletCount[]>(
+    () =>
+      outletFeedbackItems.map((item) => ({
+        outletId: item.outletId,
+        outletName: item.outletName,
+        count: item.negativeFeedbacks ?? 0,
+      })),
+    [outletFeedbackItems],
+  );
+
+  const totalFeedbackByOutlet = useMemo<OutletCount[]>(
+    () =>
+      outletFeedbackItems.map((item) => ({
+        outletId: item.outletId,
+        outletName: item.outletName,
+        count: item.totalFeedbacks ?? 0,
+      })),
+    [outletFeedbackItems],
+  );
+
+  const resolvedFeedbackByOutlet = useMemo<OutletCount[]>(
+    () =>
+      outletFeedbackItems.map((item) => ({
+        outletId: item.outletId,
+        outletName: item.outletName,
+        count: item.resolvedFeedbacks ?? 0,
+      })),
+    [outletFeedbackItems],
+  );
+
+  const isOutletFeedbackLoadingState = isOutletFeedbackLoading || isOutletFeedbackFetching;
+  const outletFeedbackErrorMessage = isOutletFeedbackError
+    ? (outletFeedbackError?.message ?? 'Failed to load data.')
+    : null;
+
   const trendData = useMemo<TrendPoint[]>(() => {
     const labels = trendline?.currentPeriod.labels ?? [];
     const currentValues = trendline?.currentPeriod.values ?? [];
@@ -361,27 +488,6 @@ export default function Overview() {
         ? 'No ratings in selected period'
         : `${totalGlobalRatings.toLocaleString()} ratings in selected period`;
   const scoreMetaColor = isGlobalCsatError ? '#B91C1C' : '#6B7280';
-
-  const {
-    data: incidentsOverview,
-    isLoading: isIncidentsOverviewLoading,
-    isError: isIncidentsOverviewError,
-  } = useApiQuery(
-    [...INCIDENTS_OVERVIEW_KEYS, period],
-    () => reviewsApi.getIncidentsOverview({ period }),
-    { retry: false },
-  );
-
-  const totalOpenIncidents = incidentsOverview?.totalOpenIncidents ?? 0;
-  const totalCriticalIssues = incidentsOverview?.criticalIssues ?? 0;
-  const totalResolvedToday = incidentsOverview?.incidentsResolvedToday ?? 0;
-  const resolvedTodayDateLabel =
-    incidentsOverview?.resolvedTodayDate ?? referenceDate.toISOString().slice(0, 10);
-  const incidentsOverviewStatus = isIncidentsOverviewError
-    ? 'Failed to load incidents overview.'
-    : isIncidentsOverviewLoading
-      ? 'Loading incidents overview...'
-      : null;
 
   const peakIncidentTime = useMemo(() => {
     const pendingRecords = scopedRecords.filter(
@@ -727,35 +833,39 @@ export default function Overview() {
 
       <Grid container spacing={3} mb={5}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <IncidentCard
+          <IncidentSummaryCard
             icon={<AlertCircle size={20} />}
-            title='Total Open Incidents'
-            value={totalOpenIncidents}
-            description={incidentsOverviewStatus ?? 'Pending complaints in the selected period.'}
+            title='Total Negative Feedbacks'
+            description='Negative feedbacks recorded in the selected period.'
+            items={negativeFeedbackByOutlet}
+            loading={isOutletFeedbackLoadingState}
+            errorMessage={outletFeedbackErrorMessage}
             background='linear-gradient(180deg, #FFF5F7 0%, #FFF1F2 100%)'
             borderColor='#FECDD3'
             accentColor='#E11D48'
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <IncidentCard
+          <IncidentSummaryCard
             icon={<AlertTriangle size={20} />}
-            title='Critical Issues (< 2 Stars)'
-            value={totalCriticalIssues}
-            description={
-              incidentsOverviewStatus ?? 'High-risk complaints requiring immediate action.'
-            }
+            title='Total Feedback Received'
+            description='All feedback recorded in the selected period.'
+            items={totalFeedbackByOutlet}
+            loading={isOutletFeedbackLoadingState}
+            errorMessage={outletFeedbackErrorMessage}
             background='linear-gradient(180deg, #FFF9F0 0%, #FFF7ED 100%)'
             borderColor='#FED7AA'
             accentColor='#EA580C'
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <IncidentCard
+          <IncidentSummaryCard
             icon={<CheckCircle2 size={20} />}
-            title='Incidents Resolved Today'
-            value={totalResolvedToday}
-            description={incidentsOverviewStatus ?? `Resolved on ${resolvedTodayDateLabel}.`}
+            title='Total Feedbacks Resolved'
+            description='Resolved feedbacks in the selected period.'
+            items={resolvedFeedbackByOutlet}
+            loading={isOutletFeedbackLoadingState}
+            errorMessage={outletFeedbackErrorMessage}
             background='linear-gradient(180deg, #F3FFF8 0%, #ECFDF5 100%)'
             borderColor='#BBF7D0'
             accentColor='#16A34A'
