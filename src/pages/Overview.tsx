@@ -48,8 +48,8 @@ type OutletCount = {
 
 type TrendPoint = {
   label: string;
-  current: number;
-  previous: number;
+  current: number | null;
+  previous: number | null;
 };
 
 const PERIOD_OPTIONS: { label: string; value: Period }[] = [
@@ -89,12 +89,12 @@ const PERIOD_META: Record<
     rangeInDays: 7,
   },
   weekly: {
-    title: 'CSAT Trendline (8 Weeks)',
-    compareLabel: 'vs previous 8 weeks',
-    offsets: [-49, -42, -35, -28, -21, -14, -7, 0],
-    bucketLength: 7,
-    previousOffset: 56,
-    rangeInDays: 56,
+    title: 'CSAT Trendline (7 Days)',
+    compareLabel: 'vs previous 7 days',
+    offsets: [-6, -5, -4, -3, -2, -1, 0],
+    bucketLength: 1,
+    previousOffset: 7,
+    rangeInDays: 7,
   },
   monthly: {
     title: 'CSAT Trendline (30 Days)',
@@ -105,6 +105,55 @@ const PERIOD_META: Record<
     rangeInDays: 30,
   },
 };
+
+const IST_TIMEZONE = 'Asia/Kolkata';
+
+function formatHourLabel(hour: number) {
+  const display = hour % 12 || 12;
+  const period = hour < 12 ? 'AM' : 'PM';
+  return `${display} ${period}`;
+}
+
+function formatDateLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-IN', {
+    month: 'short',
+    day: '2-digit',
+    timeZone: IST_TIMEZONE,
+  }).format(date);
+}
+
+function formatTrendLabel(value: string, period: Period) {
+  if (period === 'daily') return value;
+  return formatDateLabel(value);
+}
+
+function getIstHourIndex(value: string): number | null {
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) {
+    const hour = Number(
+      new Intl.DateTimeFormat('en-IN', {
+        hour: 'numeric',
+        hour12: false,
+        timeZone: IST_TIMEZONE,
+      }).format(date),
+    );
+    return Number.isFinite(hour) ? hour : null;
+  }
+
+  const match = value.trim().match(/^(\d{1,2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  if (!Number.isFinite(hour)) return null;
+  const ampm = match[2]?.toUpperCase();
+  if (ampm) {
+    if (hour === 12) hour = 0;
+    if (ampm === 'PM') hour += 12;
+  }
+  if (hour < 0 || hour > 23) return null;
+  return hour;
+}
 
 function startOfDay(date: Date) {
   const next = new Date(date);
@@ -371,6 +420,14 @@ export default function Overview() {
   }, [data?.data]);
 
   const periodMeta = PERIOD_META[period];
+  const trendlineTitle =
+    period === 'daily'
+      ? 'CSAT Trendline (Today)'
+      : period === 'weekly'
+        ? 'CSAT Trendline (Last Seven Days)'
+        : 'CSAT Trendline (Last 30 Days)';
+  const periodDescriptor =
+    period === 'daily' ? 'today' : period === 'weekly' ? 'last seven days' : 'last 30 days';
 
   const currentRangeStart = useMemo(
     () => startOfDay(shiftDays(referenceDate, -(periodMeta.rangeInDays - 1))),
@@ -455,16 +512,68 @@ export default function Overview() {
     ? (outletFeedbackError?.message ?? 'Failed to load data.')
     : null;
 
+  const bucketLabels = useMemo(
+    () => Array.from({ length: 9 }, (_, index) => formatHourLabel(index * 3)),
+    [],
+  );
+
   const trendData = useMemo<TrendPoint[]>(() => {
     const labels = trendline?.currentPeriod.labels ?? [];
     const currentValues = trendline?.currentPeriod.values ?? [];
     const previousValues = trendline?.previousPeriod.values ?? [];
 
     if (labels.length > 0) {
+      if (period === 'daily') {
+        const currentSum = Array.from({ length: 8 }, () => 0);
+        const currentCount = Array.from({ length: 8 }, () => 0);
+        const previousSum = Array.from({ length: 8 }, () => 0);
+        const previousCount = Array.from({ length: 8 }, () => 0);
+
+        labels.forEach((label, index) => {
+          const hourIndex = getIstHourIndex(label);
+          if (hourIndex == null) return;
+          const bucket = Math.floor(hourIndex / 3);
+          if (bucket < 0 || bucket > 7) return;
+
+          const currentValue = Number(currentValues[index] ?? 0);
+          const previousValue = Number(previousValues[index] ?? 0);
+
+          if (Number.isFinite(currentValue)) {
+            currentSum[bucket] += currentValue;
+            currentCount[bucket] += 1;
+          }
+          if (Number.isFinite(previousValue)) {
+            previousSum[bucket] += previousValue;
+            previousCount[bucket] += 1;
+          }
+        });
+
+        return bucketLabels.map((label, bucket) => {
+          if (bucket >= 8) {
+            return { label, current: null, previous: null };
+          }
+          return {
+            label,
+            current:
+              currentCount[bucket] > 0 ? round(currentSum[bucket] / currentCount[bucket], 2) : 0,
+            previous:
+              previousCount[bucket] > 0 ? round(previousSum[bucket] / previousCount[bucket], 2) : 0,
+          };
+        });
+      }
+
       return labels.map((label, index) => ({
         label,
         current: round(currentValues[index] ?? 0, 2),
         previous: round(previousValues[index] ?? 0, 2),
+      }));
+    }
+
+    if (period === 'daily') {
+      return bucketLabels.map((label, index) => ({
+        label,
+        current: index >= 8 ? null : 0,
+        previous: index >= 8 ? null : 0,
       }));
     }
 
@@ -474,7 +583,7 @@ export default function Overview() {
       current: 0,
       previous: 0,
     }));
-  }, [period, trendline]);
+  }, [bucketLabels, period, trendline]);
 
   const globalCsatScore = round(globalCsat?.globalCsatScore ?? 0, 1);
   const totalGlobalRatings = globalCsat?.totalRatings ?? 0;
@@ -485,8 +594,8 @@ export default function Overview() {
     : isGlobalCsatLoading
       ? 'Loading CSAT from backend...'
       : hasNoRatings
-        ? 'No ratings in selected period'
-        : `${totalGlobalRatings.toLocaleString()} ratings in selected period`;
+        ? `No ratings ${periodDescriptor}`
+        : `${totalGlobalRatings.toLocaleString()} ratings ${periodDescriptor}`;
   const scoreMetaColor = isGlobalCsatError ? '#B91C1C' : '#6B7280';
 
   const peakIncidentTime = useMemo(() => {
@@ -596,9 +705,27 @@ export default function Overview() {
 
   const quickInsights = useMemo(
     () => [
-      { label: 'Peak Incident Time', value: peakIncidentTime },
-      { label: 'Most Improved Outlet', value: mostImprovedOutlet },
-      { label: 'Critical Focus Area', value: criticalFocusArea },
+      {
+        label: 'Peak Incident Time',
+        value: peakIncidentTime,
+        border: '#FED7AA',
+        background: 'linear-gradient(180deg, #FFF9F0 0%, #FFF7ED 100%)',
+        accent: '#EA580C',
+      },
+      {
+        label: 'Most Improved Outlet',
+        value: mostImprovedOutlet,
+        border: '#BBF7D0',
+        background: 'linear-gradient(180deg, #F3FFF8 0%, #ECFDF5 100%)',
+        accent: '#16A34A',
+      },
+      {
+        label: 'Critical Focus Area',
+        value: criticalFocusArea,
+        border: '#FECDD3',
+        background: 'linear-gradient(180deg, #FFF5F7 0%, #FFF1F2 100%)',
+        accent: '#E11D48',
+      },
     ],
     [criticalFocusArea, mostImprovedOutlet, peakIncidentTime],
   );
@@ -606,17 +733,9 @@ export default function Overview() {
   const isTrendlineAllZero = trendData.every(
     (point) => point.current === 0 && point.previous === 0,
   );
-  const yValues = trendData.flatMap((point) => [point.current, point.previous]);
-  const yMin = isTrendlineAllZero
-    ? 0
-    : yValues.length
-      ? Math.max(1, Math.floor((Math.min(...yValues) - 0.2) * 2) / 2)
-      : 1;
-  const yMax = isTrendlineAllZero
-    ? 1
-    : yValues.length
-      ? Math.min(5, Math.ceil((Math.max(...yValues) + 0.2) * 2) / 2)
-      : 5;
+  const yMin = 0;
+  const yMax = 5;
+  const yTicks = [0, 1, 2, 3, 4, 5];
 
   return (
     <Box>
@@ -740,7 +859,7 @@ export default function Overview() {
               mb={2}
             >
               <Typography fontSize={20} fontWeight={800} color='#111827'>
-                {periodMeta.title}
+                {trendlineTitle}
               </Typography>
               <Stack direction='row' spacing={2.5}>
                 <LegendItem color='#10B981' label='Current Period' />
@@ -777,10 +896,15 @@ export default function Overview() {
                       dataKey='label'
                       axisLine={false}
                       tickLine={false}
+                      interval={period === 'daily' ? 0 : 'preserveStartEnd'}
+                      ticks={period === 'daily' ? bucketLabels : undefined}
+                      tickFormatter={(value) => formatTrendLabel(String(value), period)}
                       tick={{ fill: '#6B7280', fontSize: 12, fontWeight: 600 }}
                     />
                     <YAxis
                       domain={[yMin, yMax]}
+                      ticks={yTicks}
+                      allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#94A3B8', fontSize: 12 }}
@@ -793,6 +917,9 @@ export default function Overview() {
                         boxShadow: '0 8px 28px rgba(15, 23, 42, 0.12)',
                       }}
                       cursor={{ stroke: '#CBD5E1', strokeDasharray: '4 4' }}
+                      labelFormatter={(value) =>
+                        period === 'daily' ? `${String(value)} IST` : formatDateLabel(String(value))
+                      }
                     />
                     <Line
                       type='monotone'
@@ -822,7 +949,7 @@ export default function Overview() {
                     color='#94A3B8'
                     textAlign='center'
                   >
-                    No ratings in selected period
+                    {`No ratings ${periodDescriptor}`}
                   </Typography>
                 )}
               </Box>
@@ -836,7 +963,7 @@ export default function Overview() {
           <IncidentSummaryCard
             icon={<AlertCircle size={20} />}
             title='Total Negative Feedbacks'
-            description='Negative feedbacks recorded in the selected period.'
+            description={`Negative feedbacks recorded ${periodDescriptor}.`}
             items={negativeFeedbackByOutlet}
             loading={isOutletFeedbackLoadingState}
             errorMessage={outletFeedbackErrorMessage}
@@ -849,7 +976,7 @@ export default function Overview() {
           <IncidentSummaryCard
             icon={<AlertTriangle size={20} />}
             title='Total Feedback Received'
-            description='All feedback recorded in the selected period.'
+            description={`All feedback recorded ${periodDescriptor}.`}
             items={totalFeedbackByOutlet}
             loading={isOutletFeedbackLoadingState}
             errorMessage={outletFeedbackErrorMessage}
@@ -862,7 +989,7 @@ export default function Overview() {
           <IncidentSummaryCard
             icon={<CheckCircle2 size={20} />}
             title='Total Feedbacks Resolved'
-            description='Resolved feedbacks in the selected period.'
+            description={`Resolved feedbacks ${periodDescriptor}.`}
             items={resolvedFeedbackByOutlet}
             loading={isOutletFeedbackLoadingState}
             errorMessage={outletFeedbackErrorMessage}
@@ -875,7 +1002,7 @@ export default function Overview() {
 
       <Box
         sx={{
-          p: { xs: 3, md: 4 },
+          p: { xs: 3, md: 3.5 },
           mb: 2,
           borderRadius: '24px',
           border: '1px solid #E5E7EB',
@@ -884,36 +1011,49 @@ export default function Overview() {
         }}
       >
         <Typography
-          fontSize={{ xs: 28, md: 34 }}
-          fontWeight={900}
+          fontSize={{ xs: 22, md: 26 }}
+          fontWeight={800}
           color='#111827'
-          letterSpacing='-0.04em'
+          letterSpacing='-0.02em'
         >
           Quick Insights
         </Typography>
 
-        <Stack spacing={2.5} mt={3}>
+        <Stack spacing={2} mt={2.5}>
           {quickInsights.map((insight) => (
             <Box
               key={insight.label}
               sx={{
-                p: { xs: 2.5, md: 3 },
-                borderRadius: '18px',
-                border: '1px solid #E5E7EB',
-                bgcolor: '#F8FAFC',
+                px: { xs: 2.25, md: 2.75 },
+                py: { xs: 2, md: 2.25 },
+                borderRadius: '16px',
+                border: `1px solid ${insight.border}`,
+                background: insight.background,
               }}
             >
-              <Typography fontSize={{ xs: 18, md: 22 }} fontWeight={700} color='#6B7280'>
-                {insight.label}
-              </Typography>
+              <Stack direction='row' spacing={1.2} alignItems='center'>
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    bgcolor: insight.accent,
+                    flexShrink: 0,
+                  }}
+                />
+                <Typography fontSize={{ xs: 13, md: 15 }} fontWeight={700} color='#6B7280'>
+                  {insight.label}
+                </Typography>
+              </Stack>
               <Typography
-                mt={0.5}
-                fontSize={{ xs: 20, md: 30 }}
-                lineHeight={1.2}
+                mt={0.6}
+                fontSize={{ xs: 15, md: 18 }}
+                lineHeight={1.35}
                 fontWeight={800}
                 color='#111827'
                 sx={{ wordBreak: 'break-word' }}
               >
+                {insight.label}
                 {insight.value}
               </Typography>
             </Box>
