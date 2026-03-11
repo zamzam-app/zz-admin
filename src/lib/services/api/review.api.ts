@@ -1,5 +1,15 @@
 import apiClient from './axios';
-import type { Review, RatingsListResponse, ResolveComplaintDto } from '../../types/review';
+import type {
+  CsatTrendlineResponse,
+  GlobalCsatResponse,
+  GlobalCsatPeriod,
+  IncidentsOverviewResponse,
+  QueryIncidentsOverviewParams,
+  QueryGlobalCsatParams,
+  RatingsListResponse,
+  ResolveComplaintDto,
+  Review,
+} from '../../types/review';
 
 export const reviewsApi = {
   getAll: async (): Promise<RatingsListResponse> => {
@@ -41,6 +51,45 @@ export const reviewsApi = {
 
   resolveComplaint: async (ratingId: string, body: ResolveComplaintDto): Promise<Review> => {
     const { data } = await apiClient.post<Review>(`/rating/resolve-complaint/${ratingId}`, body);
+    return data;
+  },
+
+  getGlobalCsat: async (params: QueryGlobalCsatParams = {}): Promise<GlobalCsatResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<GlobalCsatResponse>(
+      query ? `/review/analytics/global-csat?${query}` : '/review/analytics/global-csat',
+    );
+    return data;
+  },
+
+  getCsatTrendline: async (period: GlobalCsatPeriod): Promise<CsatTrendlineResponse> => {
+    const { data } = await apiClient.get<CsatTrendlineResponse>(
+      `/review/analytics/csat-trendline?period=${period}`,
+    );
+    return data;
+  },
+
+  getIncidentsOverview: async (
+    params: QueryIncidentsOverviewParams = {},
+  ): Promise<IncidentsOverviewResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<IncidentsOverviewResponse>(
+      query
+        ? `/review/analytics/incidents-overview?${query}`
+        : '/review/analytics/incidents-overview',
+    );
     return data;
   },
 };
