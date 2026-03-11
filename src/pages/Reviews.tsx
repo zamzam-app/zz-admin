@@ -66,7 +66,8 @@ const METRIC_OFFSETS: Record<MetricKey, number> = {
 function getReviewComment(review: Review): string {
   const response = (review.userResponses ?? []).find((item) => typeof item.answer !== 'number');
   if (!response) return '—';
-  if (Array.isArray(response.answer)) return response.answer.length > 0 ? response.answer.join(', ') : '—';
+  if (Array.isArray(response.answer))
+    return response.answer.length > 0 ? response.answer.join(', ') : '—';
   return String(response.answer ?? '—');
 }
 
@@ -90,8 +91,10 @@ function clampScore(value: number) {
   return Math.max(1, Math.min(5, value));
 }
 
-function formatDateTime(source: string) {
+function formatDateTime(source?: string) {
+  if (!source) return '—';
   const date = new Date(source);
+  if (Number.isNaN(date.getTime())) return '—';
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -101,8 +104,10 @@ function formatDateTime(source: string) {
   return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
-function extractAnswerScores(answer: string[]) {
-  return answer
+function extractAnswerScores(answer: string | string[] | number | undefined) {
+  if (answer == null) return [];
+  const values = Array.isArray(answer) ? answer : [answer];
+  return values
     .map((value) => Number.parseFloat(String(value).replace(/[^0-9.]/g, '')))
     .filter((value) => Number.isFinite(value) && value >= 1 && value <= 5);
 }
@@ -124,7 +129,7 @@ function buildOutletMetrics(reviews: Review[], baseScore: number): Record<Metric
       const title =
         typeof response.questionId === 'string'
           ? response.questionId
-          : (response.questionId as { title?: string } | null)?.title ?? '';
+          : ((response.questionId as { title?: string } | null)?.title ?? '');
       const scores = extractAnswerScores(response.answer ?? []);
 
       if (scores.length === 0) return;
@@ -263,7 +268,7 @@ export default function Reviews() {
     outletIds.forEach((outletId) => {
       const reviews = grouped.get(outletId) ?? [];
       const store = storeLookup.get(outletId);
-      const outletName = reviews[0] ? getOutletName(reviews[0]) : store?.name ?? 'Unknown Outlet';
+      const outletName = reviews[0] ? getOutletName(reviews[0]) : (store?.name ?? 'Unknown Outlet');
       const managerName = store?.managerName ?? 'Manager not assigned';
       const managerPhone = store?.managerPhone;
       const csat = round(
@@ -301,7 +306,9 @@ export default function Reviews() {
       if (first.overallRating !== second.overallRating)
         return first.overallRating - second.overallRating;
 
-      return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
+      const secondTime = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+      const firstTime = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+      return secondTime - firstTime;
     });
 
     return sorted.slice(0, targetCount).map((review) => {
@@ -932,18 +939,20 @@ export default function Reviews() {
                                 </Typography>
                               </Stack>
                               <Typography fontSize={12} color='#9CA3AF'>
-                                {new Date(review.createdAt).toLocaleDateString()}
+                                {review.createdAt
+                                  ? new Date(review.createdAt).toLocaleDateString()
+                                  : '—'}
                               </Typography>
                             </Stack>
 
-                              <Typography
-                                fontSize={12}
-                                fontWeight={700}
-                                color='#6B7280'
-                                textTransform='uppercase'
-                              >
-                                {getOutletName(review)}
-                              </Typography>
+                            <Typography
+                              fontSize={12}
+                              fontWeight={700}
+                              color='#6B7280'
+                              textTransform='uppercase'
+                            >
+                              {getOutletName(review)}
+                            </Typography>
 
                             <Stack direction='row' spacing={0.3} mt={1}>
                               {[...Array(Math.round(review.overallRating))].map((_, index) => (

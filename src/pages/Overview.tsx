@@ -17,15 +17,18 @@ import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import {
   CSAT_TRENDLINE_KEYS,
   ComplaintStatus,
+  type ComplaintStatusValue,
   GLOBAL_CSAT_KEYS,
   INCIDENTS_OVERVIEW_KEYS,
   REVIEW_KEYS,
   type GlobalCsatPeriod,
   type Review,
+  getOutletId,
+  getOutletName,
 } from '../lib/types/review';
 
 type Period = GlobalCsatPeriod;
-type IncidentStatus = ComplaintStatus | 'none';
+type IncidentStatus = ComplaintStatusValue | 'none';
 
 type IncidentRecord = {
   outletId: string;
@@ -124,12 +127,17 @@ function round(value: number, digits = 1) {
 }
 
 function isBetween(source: string, start: Date, end: Date) {
+  if (!source) return false;
   const date = new Date(source);
+  if (Number.isNaN(date.getTime())) return false;
   return date >= start && date <= end;
 }
 
 function getIncidentSlotIndex(source: string) {
-  const hour = new Date(source).getHours();
+  if (!source) return 0;
+  const date = new Date(source);
+  if (Number.isNaN(date.getTime())) return 0;
+  const hour = date.getHours();
   const matchIndex = INCIDENT_TIME_SLOTS.findIndex(
     (slot) => hour >= slot.startHour && hour < slot.endHour,
   );
@@ -138,41 +146,19 @@ function getIncidentSlotIndex(source: string) {
 
 function normalizeReviews(reviews: Review[]): IncidentRecord[] {
   return reviews.map((review) => {
-    const complaintResponses = (review.userResponses ?? []).filter(
-      (response) => response.isComplaint,
-    );
-    const hasPending = complaintResponses.some(
-      (response) => response.complaintStatus === ComplaintStatus.PENDING,
-    );
-    const hasResolved = complaintResponses.some(
-      (response) => response.complaintStatus === ComplaintStatus.RESOLVED,
-    );
-    const hasDismissed = complaintResponses.some(
-      (response) => response.complaintStatus === ComplaintStatus.DISMISSED,
-    );
-
     let status: IncidentStatus = 'none';
-    if (hasPending) {
-      status = ComplaintStatus.PENDING;
-    } else if (hasResolved) {
-      status = ComplaintStatus.RESOLVED;
-    } else if (hasDismissed) {
-      status = ComplaintStatus.DISMISSED;
-    } else if (review.type === 'complaint') {
-      status = ComplaintStatus.PENDING;
+    const isComplaint = review.isComplaint === true || review.complaintStatus != null;
+    if (isComplaint) {
+      status = review.complaintStatus ?? ComplaintStatus.PENDING;
     }
 
-    const resolvedResponse = complaintResponses.find(
-      (response) => response.complaintStatus === ComplaintStatus.RESOLVED,
-    );
-
     return {
-      outletId: review.outletId?._id ?? 'unknown-outlet',
+      outletId: getOutletId(review) ?? 'unknown-outlet',
       rating: review.overallRating || 0,
-      createdAt: review.createdAt,
-      isComplaint: complaintResponses.length > 0 || review.type === 'complaint',
+      createdAt: review.createdAt ?? '',
+      isComplaint,
       status,
-      resolvedAt: resolvedResponse?.resolvedAt,
+      resolvedAt: review.resolvedAt,
     };
   });
 }
@@ -300,8 +286,9 @@ export default function Overview() {
     });
 
     (data?.data ?? []).forEach((review) => {
-      if (review.outletId?._id && review.outletId?.name) {
-        map.set(review.outletId._id, review.outletId.name);
+      const outletId = getOutletId(review);
+      if (outletId) {
+        map.set(outletId, getOutletName(review));
       }
     });
 
