@@ -140,6 +140,13 @@ export function OutletModal({
       message.error('Please upload at least one image.');
       return;
     }
+    const menuItems = form.menuItems?.length
+      ? form.menuItems.map((item) => ({
+          productId: typeof item === 'string' ? item : item.productId,
+          isAvailable:
+            typeof item === 'object' && item?.isAvailable !== undefined ? item.isAvailable : true,
+        }))
+      : undefined;
 
     const payload = {
       name: form.name.trim(),
@@ -149,7 +156,7 @@ export function OutletModal({
       outletType: form.outletTypeId,
       managerId: form.managerId || undefined,
       formId: form.formId || undefined,
-      menuItems: undefined,
+      menuItems,
     };
 
     const id = getOutletId(editing);

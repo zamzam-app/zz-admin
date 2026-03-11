@@ -1,4 +1,7 @@
 export const REVIEW_KEYS = ['reviews'];
+export const GLOBAL_CSAT_KEYS = ['global-csat'];
+export const CSAT_TRENDLINE_KEYS = ['csat-trendline'];
+export const INCIDENTS_OVERVIEW_KEYS = ['incidents-overview'];
 
 export enum RatingType {
   COMPLAINT = 'complaint',
@@ -109,4 +112,52 @@ export function getUserName(review: { userId?: string | UserRef }): string {
   if (review.userId == null) return 'Anonymous';
   if (typeof review.userId === 'string') return 'Anonymous';
   return review.userId.name ?? 'Anonymous';
+}
+
+export type GlobalCsatPeriod = 'daily' | 'weekly' | 'monthly';
+
+export interface QueryGlobalCsatParams {
+  period?: GlobalCsatPeriod;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface GlobalCsatResponse {
+  globalCsatScore: number;
+  averageOverallRating: number;
+  totalRatings: number;
+  totalScore: number;
+  period?: GlobalCsatPeriod;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface CsatTrendlinePeriodData {
+  startDate: string;
+  endDate: string;
+  labels: string[];
+  values: number[];
+  totalRatings: number;
+}
+
+export interface CsatTrendlineResponse {
+  period: GlobalCsatPeriod;
+  currentPeriod: CsatTrendlinePeriodData;
+  previousPeriod: CsatTrendlinePeriodData;
+}
+
+export interface QueryIncidentsOverviewParams {
+  period?: GlobalCsatPeriod;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface IncidentsOverviewResponse {
+  totalOpenIncidents: number;
+  criticalIssues: number;
+  incidentsResolvedToday: number;
+  resolvedTodayDate: string;
+  period?: GlobalCsatPeriod;
+  startDate?: string;
+  endDate?: string;
 }

@@ -1,5 +1,15 @@
 import apiClient from './axios';
-import type { Review, ReviewListResponse, ResolveComplaintDto } from '../../types/review';
+import type {
+  CsatTrendlineResponse,
+  GlobalCsatResponse,
+  GlobalCsatPeriod,
+  IncidentsOverviewResponse,
+  QueryIncidentsOverviewParams,
+  QueryGlobalCsatParams,
+  Review,
+  ReviewListResponse,
+  ResolveComplaintDto,
+} from '../../types/review';
 
 export interface ReviewListParams {
   page?: number;
@@ -49,6 +59,45 @@ export const reviewsApi = {
 
   resolveComplaint: async (reviewId: string, body: ResolveComplaintDto): Promise<Review> => {
     const { data } = await apiClient.post<Review>(`/review/resolve-complaint/${reviewId}`, body);
+    return data;
+  },
+
+  getGlobalCsat: async (params: QueryGlobalCsatParams = {}): Promise<GlobalCsatResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<GlobalCsatResponse>(
+      query ? `/review/analytics/global-csat?${query}` : '/review/analytics/global-csat',
+    );
+    return data;
+  },
+
+  getCsatTrendline: async (period: GlobalCsatPeriod): Promise<CsatTrendlineResponse> => {
+    const { data } = await apiClient.get<CsatTrendlineResponse>(
+      `/review/analytics/csat-trendline?period=${period}`,
+    );
+    return data;
+  },
+
+  getIncidentsOverview: async (
+    params: QueryIncidentsOverviewParams = {},
+  ): Promise<IncidentsOverviewResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<IncidentsOverviewResponse>(
+      query
+        ? `/review/analytics/incidents-overview?${query}`
+        : '/review/analytics/incidents-overview',
+    );
     return data;
   },
 };
