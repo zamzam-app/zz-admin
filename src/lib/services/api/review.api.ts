@@ -6,51 +6,59 @@ import type {
   IncidentsOverviewResponse,
   QueryIncidentsOverviewParams,
   QueryGlobalCsatParams,
-  RatingsListResponse,
-  ResolveComplaintDto,
   Review,
+  ReviewListResponse,
+  ResolveComplaintDto,
 } from '../../types/review';
 
+export interface ReviewListParams {
+  page?: number;
+  limit?: number;
+  outletId?: string;
+  userId?: string;
+}
+
+export interface CreateReviewPayload {
+  formId: string;
+  outletId: string;
+  response: Array<{ questionId: string; answer: string | string[] | number }>;
+  userId?: string;
+}
+
+export interface UpdateReviewPayload {
+  formId?: string;
+  userId?: string;
+  outletId?: string;
+  response?: Array<{ questionId: string; answer: string | string[] | number }>;
+}
+
 export const reviewsApi = {
-  getAll: async (): Promise<RatingsListResponse> => {
-    const { data } = await apiClient.get<RatingsListResponse>('/rating');
+  getAll: async (params?: ReviewListParams): Promise<ReviewListResponse> => {
+    const { data } = await apiClient.get<ReviewListResponse>('/review', { params });
     return data;
   },
 
   getOne: async (id: string): Promise<Review> => {
-    const { data } = await apiClient.get<Review>(`/rating/${id}`);
+    const { data } = await apiClient.get<Review>(`/review/${id}`);
     return data;
   },
 
-  create: async (review: {
-    comment: string;
-    stars: number;
-    productId?: string;
-  }): Promise<Review> => {
-    const { data } = await apiClient.post<Review>('/rating', {
-      comment: review.comment,
-      value: review.stars,
-      product: review.productId,
-    });
+  create: async (payload: CreateReviewPayload): Promise<Review> => {
+    const { data } = await apiClient.post<Review>('/review', payload);
     return data;
   },
 
-  update: async (id: string, review: { comment?: string; stars?: number }): Promise<Review> => {
-    const payload: Partial<{ comment: string; value: number }> = {};
-
-    if (review.comment !== undefined) payload.comment = review.comment;
-    if (review.stars !== undefined) payload.value = review.stars;
-
-    const { data } = await apiClient.patch<Review>(`/rating/${id}`, payload);
+  update: async (id: string, payload: UpdateReviewPayload): Promise<Review> => {
+    const { data } = await apiClient.patch<Review>(`/review/${id}`, payload);
     return data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/rating/${id}`);
+    await apiClient.delete(`/review/${id}`);
   },
 
-  resolveComplaint: async (ratingId: string, body: ResolveComplaintDto): Promise<Review> => {
-    const { data } = await apiClient.post<Review>(`/rating/resolve-complaint/${ratingId}`, body);
+  resolveComplaint: async (reviewId: string, body: ResolveComplaintDto): Promise<Review> => {
+    const { data } = await apiClient.post<Review>(`/review/resolve-complaint/${reviewId}`, body);
     return data;
   },
 

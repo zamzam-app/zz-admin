@@ -15,7 +15,13 @@ import { AlertTriangle, Phone, Star } from 'lucide-react';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
 import type { Review } from '../lib/types/review';
-import { ComplaintStatus, REVIEW_KEYS } from '../lib/types/review';
+import {
+  ComplaintStatus,
+  REVIEW_KEYS,
+  getOutletId,
+  getOutletName,
+  getUserName,
+} from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/ratings/ReviewPreviewModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -57,26 +63,19 @@ const METRIC_OFFSETS: Record<MetricKey, number> = {
   quality: 0.15,
 };
 
+function getReviewComment(review: Review): string {
+  const response = (review.userResponses ?? []).find((item) => typeof item.answer !== 'number');
+  if (!response) return '—';
+  if (Array.isArray(response.answer)) return response.answer.length > 0 ? response.answer.join(', ') : '—';
+  return String(response.answer ?? '—');
+}
+
 const scrollableSx = {
   overflowY: 'auto',
   msOverflowStyle: 'none',
   scrollbarWidth: 'none',
   '&::-webkit-scrollbar': { display: 'none' },
 } as const;
-
-function getReviewComment(review: Review): string {
-  const response = review.userResponses?.find(
-    (item) =>
-      Array.isArray(item.answer) &&
-      item.answer.length > 0 &&
-      item.questionId?.title !== 'Overall Rating',
-  );
-
-  if (!response) return '—';
-  return Array.isArray(response.answer)
-    ? response.answer.join(', ')
-    : String(response.answer ?? '—');
-}
 
 function average(values: number[]) {
   if (values.length === 0) return 0;
@@ -109,12 +108,7 @@ function extractAnswerScores(answer: string[]) {
 }
 
 function isPendingComplaint(review: Review) {
-  const hasPendingResponse = (review.userResponses ?? []).some(
-    (response) =>
-      response.isComplaint === true && response.complaintStatus === ComplaintStatus.PENDING,
-  );
-
-  return hasPendingResponse || review.type === 'complaint';
+  return review.isComplaint === true && review.complaintStatus === ComplaintStatus.PENDING;
 }
 
 function buildOutletMetrics(reviews: Review[], baseScore: number): Record<MetricKey, number> {
@@ -127,7 +121,10 @@ function buildOutletMetrics(reviews: Review[], baseScore: number): Record<Metric
 
   reviews.forEach((review) => {
     (review.userResponses ?? []).forEach((response) => {
-      const title = response.questionId?.title ?? '';
+      const title =
+        typeof response.questionId === 'string'
+          ? response.questionId
+          : (response.questionId as { title?: string } | null)?.title ?? '';
       const scores = extractAnswerScores(response.answer ?? []);
 
       if (scores.length === 0) return;
@@ -210,12 +207,15 @@ export default function Reviews() {
   const allowedReviews = useMemo(() => {
     if (!user) return [];
     if (allowedOutletIds === null) return allReviews;
-    return allReviews.filter((review) => allowedOutletIds.has(review.outletId?._id));
+    return allReviews.filter((review) => {
+      const outletId = getOutletId(review);
+      return outletId != null && allowedOutletIds.has(outletId);
+    });
   }, [allReviews, allowedOutletIds, user]);
 
   const filteredReviews = useMemo(() => {
     if (selectedOutlet === 'all') return allowedReviews;
-    return allowedReviews.filter((review) => review.outletId?._id === selectedOutlet);
+    return allowedReviews.filter((review) => getOutletId(review) === selectedOutlet);
   }, [allowedReviews, selectedOutlet]);
 
   const outletOptions = useMemo((): [string, string][] => {
@@ -226,8 +226,9 @@ export default function Reviews() {
     });
 
     allowedReviews.forEach((review) => {
-      if (review.outletId?._id && review.outletId?.name) {
-        options.set(review.outletId._id, review.outletId.name);
+      const outletId = getOutletId(review);
+      if (outletId) {
+        options.set(outletId, getOutletName(review));
       }
     });
 
@@ -242,7 +243,7 @@ export default function Reviews() {
     const grouped = new Map<string, Review[]>();
 
     filteredReviews.forEach((review) => {
-      const outletId = review.outletId?._id ?? 'unknown-outlet';
+      const outletId = getOutletId(review) ?? 'unknown-outlet';
       const existing = grouped.get(outletId) ?? [];
       existing.push(review);
       grouped.set(outletId, existing);
@@ -262,7 +263,7 @@ export default function Reviews() {
     outletIds.forEach((outletId) => {
       const reviews = grouped.get(outletId) ?? [];
       const store = storeLookup.get(outletId);
-      const outletName = reviews[0]?.outletId?.name ?? store?.name ?? 'Unknown Outlet';
+      const outletName = reviews[0] ? getOutletName(reviews[0]) : store?.name ?? 'Unknown Outlet';
       const managerName = store?.managerName ?? 'Manager not assigned';
       const managerPhone = store?.managerPhone;
       const csat = round(
@@ -304,10 +305,10 @@ export default function Reviews() {
     });
 
     return sorted.slice(0, targetCount).map((review) => {
-      const store = storeLookup.get(review.outletId?._id ?? '');
+      const store = storeLookup.get(getOutletId(review) ?? '');
       return {
         review,
-        outletName: review.outletId?.name ?? store?.name ?? 'Outlet',
+        outletName: getOutletName(review) ?? store?.name ?? 'Outlet',
         managerPhone: store?.managerPhone,
         actionRequired: isPendingComplaint(review),
       };
@@ -329,7 +330,7 @@ export default function Reviews() {
     const groups: Record<number, Review[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
 
     sorted.forEach((review) => {
-      const rating = review.overallRating;
+      const rating = Math.round(review.overallRating);
       if (rating >= 1 && rating <= 5 && groups[rating]) {
         groups[rating].push(review);
       }
@@ -924,10 +925,10 @@ export default function Reviews() {
                             >
                               <Stack direction='row' spacing={1} alignItems='center'>
                                 <Avatar sx={{ width: 32, height: 32 }}>
-                                  {(review.userId?.name ?? 'A').charAt(0)}
+                                  {getUserName(review).charAt(0)}
                                 </Avatar>
                                 <Typography fontSize={14} fontWeight={700} color='#111827'>
-                                  {review.userId?.name ?? 'Anonymous'}
+                                  {getUserName(review)}
                                 </Typography>
                               </Stack>
                               <Typography fontSize={12} color='#9CA3AF'>
@@ -935,17 +936,17 @@ export default function Reviews() {
                               </Typography>
                             </Stack>
 
-                            <Typography
-                              fontSize={12}
-                              fontWeight={700}
-                              color='#6B7280'
-                              textTransform='uppercase'
-                            >
-                              {review.outletId?.name ?? 'Outlet'}
-                            </Typography>
+                              <Typography
+                                fontSize={12}
+                                fontWeight={700}
+                                color='#6B7280'
+                                textTransform='uppercase'
+                              >
+                                {getOutletName(review)}
+                              </Typography>
 
                             <Stack direction='row' spacing={0.3} mt={1}>
-                              {[...Array(review.overallRating)].map((_, index) => (
+                              {[...Array(Math.round(review.overallRating))].map((_, index) => (
                                 <Star key={index} size={14} fill='#D4AF37' color='#D4AF37' />
                               ))}
                             </Stack>

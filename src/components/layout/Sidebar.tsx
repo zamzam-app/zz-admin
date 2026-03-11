@@ -22,7 +22,6 @@ import {
   Logout,
   Cake,
   Computer,
-  Grading,
 } from '@mui/icons-material';
 import { storesList } from '../../__mocks__/managers';
 import type { Outlet } from '../../lib/types/outlet';
@@ -47,7 +46,6 @@ const staffNavItems = [
 
 const cafeNavItems = [
   { label: 'Studio', path: '/studio', icon: <Cake /> },
-  { label: 'Orders', path: '/orders', icon: <Grading /> },
   { label: 'Validations', path: '/validations', icon: <Computer /> },
 ];
 
