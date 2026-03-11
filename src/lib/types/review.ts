@@ -2,6 +2,7 @@ export const REVIEW_KEYS = ['reviews'];
 export const GLOBAL_CSAT_KEYS = ['global-csat'];
 export const CSAT_TRENDLINE_KEYS = ['csat-trendline'];
 export const INCIDENTS_OVERVIEW_KEYS = ['incidents-overview'];
+export const OUTLET_FEEDBACK_SUMMARY_KEYS = ['outlet-feedback-summary'];
 
 export enum RatingType {
   COMPLAINT = 'complaint',
@@ -160,4 +161,19 @@ export interface IncidentsOverviewResponse {
   period?: GlobalCsatPeriod;
   startDate?: string;
   endDate?: string;
+}
+
+export interface OutletFeedbackSummaryItem {
+  outletId: string;
+  outletName: string;
+  negativeFeedbacks: number;
+  totalFeedbacks: number;
+  resolvedFeedbacks: number;
+}
+
+export interface OutletFeedbackSummaryResponse {
+  items: OutletFeedbackSummaryItem[];
+  period: GlobalCsatPeriod;
+  startDate: string;
+  endDate: string;
 }
