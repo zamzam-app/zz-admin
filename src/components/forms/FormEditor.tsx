@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { message, Popconfirm } from 'antd';
-import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus } from 'lucide-react';
+import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus, Copy } from 'lucide-react';
 import { Form, Question, QuestionType } from '../../lib/types/forms';
+import { isDefaultQuestionTitle } from '../../lib/forms/defaultQuestions';
 import { Button } from '../common/Button';
 import Card from '../common/Card';
 
@@ -11,6 +12,8 @@ interface Props {
   onSave: () => void;
   onCancel: () => void;
   onPreview: () => void;
+  existingTitles: string[];
+  isSaving: boolean;
 }
 
 const FormEditor: React.FC<Props> = ({
@@ -19,12 +22,23 @@ const FormEditor: React.FC<Props> = ({
   onSave,
   onCancel,
   onPreview,
+  existingTitles,
+  isSaving,
 }) => {
+  const visibleQuestions = currentForm.questions.filter((q) => !isDefaultQuestionTitle(q.title));
+
   const validate = (): boolean => {
     const errors: string[] = [];
 
     if (!currentForm.title?.trim()) {
       errors.push('Form title is required');
+    }
+    const normalizedTitle = currentForm.title?.trim().toLowerCase();
+    if (
+      normalizedTitle &&
+      existingTitles.some((title) => title.trim().toLowerCase() === normalizedTitle)
+    ) {
+      errors.push('Form title must be unique');
     }
 
     currentForm.questions.forEach((q, idx) => {
@@ -41,27 +55,10 @@ const FormEditor: React.FC<Props> = ({
   };
 
   const handleSave = () => {
+    if (isSaving) return;
     if (!validate()) return;
     onSave();
   };
-
-  useEffect(() => {
-    if (currentForm.questions.length === 0) {
-      const ratingQuestion: Question = {
-        _id: 'delTest',
-        type: 'rating',
-        title: 'Overall Rating',
-        hint: 'Please rate your experience',
-        isRequired: true,
-        maxRatings: 5,
-      };
-
-      setCurrentForm({
-        ...currentForm,
-        questions: [ratingQuestion],
-      });
-    }
-  }, [currentForm, setCurrentForm]);
 
   const addQuestion = () => {
     const newId = Math.random().toString(36).substr(2, 9);
@@ -134,6 +131,21 @@ const FormEditor: React.FC<Props> = ({
     });
   };
 
+  const duplicateQuestion = (qId: string) => {
+    const source = currentForm.questions.find((q) => q._id === qId);
+    if (!source) return;
+    const newId = Math.random().toString(36).substr(2, 9);
+    const cloned: Question = {
+      ...source,
+      _id: newId,
+      options: source.options ? source.options.map((opt) => ({ ...opt })) : undefined,
+    };
+    setCurrentForm({
+      ...currentForm,
+      questions: [...currentForm.questions, cloned],
+    });
+  };
+
   const removeOption = (qId: string, optionIndex: number) => {
     setCurrentForm({
       ...currentForm,
@@ -189,17 +201,18 @@ const FormEditor: React.FC<Props> = ({
           <Button
             variant='admin-primary'
             onClick={handleSave}
+            disabled={isSaving}
             className='rounded-2xl px-8 py-4 shadow-lg flex items-center gap-3'
           >
             <Save size={18} />
-            <span>Save Form</span>
+            <span>{isSaving ? 'Saving...' : 'Save Form'}</span>
           </Button>
         </div>
       </div>
 
       {/* Questions List */}
       <div className='space-y-6'>
-        {currentForm.questions.map((q, idx) => (
+        {visibleQuestions.map((q, idx) => (
           <Card
             key={q._id}
             className='p-8 border border-gray-100 rounded-[28px] bg-white shadow-sm hover:border-blue-200 transition-all'
@@ -231,24 +244,19 @@ const FormEditor: React.FC<Props> = ({
                 </div>
               </div>
 
-              <select
-                disabled={q._id === 'delTest'}
-                className={`h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer
-                  ${
-                    q._id === 'delTest'
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-50 border-gray-50 focus:border-blue-500 cursor-pointer'
-                  }
-                  `}
-                value={q.type}
-                onChange={(e) => updateQuestion(q._id, { type: e.target.value as QuestionType })}
-              >
-                <option value='short_answer'>Short Answer</option>
-                <option value='paragraph'>Paragraph</option>
-                <option value='multiple_choice'>Multiple Choice</option>
-                <option value='checkbox'>Checkboxes</option>
-                <option value='rating'>Star Rating</option>
-              </select>
+              {!isDefaultQuestionTitle(q.title) && (
+                <select
+                  className='h-12 px-4 rounded-xl border-2 border-gray-50 bg-gray-50 font-bold text-[#1F2937] outline-none focus:border-blue-500 transition-all cursor-pointer'
+                  value={q.type}
+                  onChange={(e) => updateQuestion(q._id, { type: e.target.value as QuestionType })}
+                >
+                  <option value='short_answer'>Short Answer</option>
+                  <option value='paragraph'>Paragraph</option>
+                  <option value='multiple_choice'>Multiple Choice</option>
+                  <option value='checkbox'>Checkboxes</option>
+                  <option value='rating'>Star Rating</option>
+                </select>
+              )}
             </div>
 
             {/* Dynamic Content */}
@@ -302,16 +310,7 @@ const FormEditor: React.FC<Props> = ({
                   </div>
                 </div>
               ) : q.type === 'rating' ? (
-                <div className='flex items-center gap-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 w-fit'>
-                  <select
-                    className='bg-white border-2 border-blue-100 rounded-lg px-3 py-1 font-bold text-blue-600 outline-none'
-                    value={q.maxRatings || 5}
-                    onChange={(e) => updateQuestion(q._id, { maxRatings: Number(e.target.value) })}
-                  >
-                    <option value={3}>3 Stars</option>
-                    <option value={5}>5 Stars</option>
-                    <option value={10}>10 Stars</option>
-                  </select>
+                <div className='flex items-center gap-4 bg-blue-50/50 p-4 rounded-2xl border border-blue-100 w-fit'>
                   <div className='flex gap-1 text-amber-400'>
                     {Array.from({ length: q.maxRatings || 5 }).map((_, i) => (
                       <Star key={i} size={20} fill='currentColor' />
@@ -347,18 +346,26 @@ const FormEditor: React.FC<Props> = ({
                 <Trash2 size={18} className={q._id === 'delTest' ? 'text-gray-300' : ''} /> Delete
                 Question
               </button>
+              <button
+                onClick={() => duplicateQuestion(q._id)}
+                className='flex items-center gap-2 text-gray-400 font-bold hover:text-amber-600 transition-colors'
+              >
+                <Copy size={18} /> Duplicate
+              </button>
 
-              <label className='flex items-center gap-3 cursor-pointer group'>
-                <span className='text-sm font-black text-gray-500 group-hover:text-[#1F2937]'>
-                  Required
-                </span>
-                <input
-                  type='checkbox'
-                  checked={q.isRequired}
-                  onChange={(e) => updateQuestion(q._id, { isRequired: e.target.checked })}
-                  className='w-5 h-5 rounded-lg border-2 border-gray-200 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer'
-                />
-              </label>
+              {!isDefaultQuestionTitle(q.title) && (
+                <label className='flex items-center gap-3 cursor-pointer group'>
+                  <span className='text-sm font-black text-gray-500 group-hover:text-[#1F2937]'>
+                    Required
+                  </span>
+                  <input
+                    type='checkbox'
+                    checked={q.isRequired}
+                    onChange={(e) => updateQuestion(q._id, { isRequired: e.target.checked })}
+                    className='w-5 h-5 rounded-lg border-2 border-gray-200 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer'
+                  />
+                </label>
+              )}
             </div>
           </Card>
         ))}

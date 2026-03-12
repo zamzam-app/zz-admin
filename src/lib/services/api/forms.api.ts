@@ -6,7 +6,7 @@ function questionsForApi(questions: Form['questions']) {
   return questions.map((q) => ({
     type: q.type,
     title: q.title,
-    isRequired: q.isRequired,
+    isRequired: q.isRequired ?? false,
     ...(q.hint != null && { hint: q.hint }),
     ...(q.options != null && { options: q.options }),
     ...(q.maxRatings != null && { maxRatings: q.maxRatings }),

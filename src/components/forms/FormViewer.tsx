@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Star } from 'lucide-react';
 import { Form } from '../../lib/types/forms';
 import Card from '../common/Card';
+import { isDefaultQuestionTitle } from '../../lib/forms/defaultQuestions';
 
 interface Props {
   form: Form;
@@ -42,7 +43,8 @@ const FormViewer: React.FC<Props> = ({ form, onBack }) => {
             <div className='flex justify-between items-start mb-6'>
               <div>
                 <span className='text-[10px] text-blue-500 uppercase font-black tracking-widest block mb-1'>
-                  Question {index + 1} {q.isRequired && '• Required'}
+                  Question {index + 1}{' '}
+                  {q.isRequired && !isDefaultQuestionTitle(q.title) && '• Required'}
                 </span>
                 <h3 className='text-xl font-bold text-[#1F2937]'>{q.title}</h3>
               </div>

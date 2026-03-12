@@ -135,6 +135,7 @@ export function OutletTypesModal({ open, onClose }: OutletTypesModalProps) {
           setEditingType(null);
         }}
         editing={editingType}
+        existingNames={list.map((item) => item.name)}
       />
     </>
   );
