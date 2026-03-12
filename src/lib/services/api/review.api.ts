@@ -123,7 +123,7 @@ export const reviewsApi = {
 
     const query = searchParams.toString();
     const { data } = await apiClient.get<FranchiseAnalyticsResponseDto>(
-      query ? `/review/analytics/franchise?${query}` : '/review/analytics/franchise',
+      query ? `/analytics/franchise?${query}` : '/analytics/franchise',
     );
     return data;
   },
