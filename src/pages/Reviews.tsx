@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Grid, Stack } from '@mui/material';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
@@ -55,6 +55,34 @@ export default function Reviews() {
     ratingOrder,
   } = useReviewsPageData(user, allReviews, selectedOutlet);
 
+  const finalOutletOptions = useMemo((): [string, string][] => {
+    const optionsMap = new Map<string, string>();
+
+    if (franchiseData?.franchiseRanking) {
+      franchiseData.franchiseRanking.forEach((r) => {
+        optionsMap.set(r.outletId, r.outletName);
+      });
+    }
+
+    outletOptions.forEach(([id, name]) => {
+      if (!optionsMap.has(id)) {
+        optionsMap.set(id, name);
+      }
+    });
+
+    return Array.from(optionsMap.entries());
+  }, [franchiseData, outletOptions]);
+
+  useEffect(() => {
+    if (selectedOutlet !== 'all') {
+      const exists = finalOutletOptions.some(([id]) => id === selectedOutlet);
+      if (!exists) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedOutlet('all');
+      }
+    }
+  }, [finalOutletOptions, selectedOutlet]);
+
   const outletAggregates = useMemo(() => {
     if (!franchiseData) return [];
     const { franchiseRanking, metricsHeatmap } = franchiseData;
@@ -107,8 +135,8 @@ export default function Reviews() {
       <ReviewsPageHeader
         selectedOutlet={selectedOutlet}
         onOutletChange={setSelectedOutlet}
-        outletOptions={outletOptions}
-        showOutletFilter={user?.role === 'admin' || outletOptions.length > 1}
+        outletOptions={finalOutletOptions}
+        showOutletFilter={user?.role === 'admin' || finalOutletOptions.length > 1}
       />
 
       {loading && (
