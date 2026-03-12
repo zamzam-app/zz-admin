@@ -1,4 +1,4 @@
-import { Download, ExternalLink } from 'lucide-react';
+import { Copy, Download, ExternalLink } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import type { Outlet } from '../../lib/types/outlet';
 import { userBaseUrl } from '../../lib/config/userBaseUrl';
@@ -35,6 +35,11 @@ export function QrCodeModal({
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const copyReviewUrl = async (url: string) => {
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+  };
+
   const data: QrCodeData[] = [{ name: 'Scan to access review page', url: reviewUrl, id: 'review' }];
 
   return (
@@ -58,6 +63,14 @@ export function QrCodeModal({
               {item.url || '—'}
             </code>
             <div className='flex flex-row gap-2 justify-center'>
+              <Button
+                variant='outline'
+                onClick={() => copyReviewUrl(item.url)}
+                disabled={!item.url}
+                title='Copy review URL'
+              >
+                <Copy size={16} />
+              </Button>
               <Button
                 variant='outline'
                 onClick={() =>
