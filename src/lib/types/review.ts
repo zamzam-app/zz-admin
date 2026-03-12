@@ -3,7 +3,6 @@ export const GLOBAL_CSAT_KEYS = ['global-csat'];
 export const CSAT_TRENDLINE_KEYS = ['csat-trendline'];
 export const INCIDENTS_OVERVIEW_KEYS = ['incidents-overview'];
 export const OUTLET_FEEDBACK_SUMMARY_KEYS = ['outlet-feedback-summary'];
-export const FRANCHISE_ANALYTICS_KEYS = ['franchise-analytics'];
 export const QUICK_INSIGHTS_KEYS = ['quick-insights'];
 
 export enum RatingType {
@@ -178,31 +177,6 @@ export interface OutletFeedbackSummaryResponse {
   period: GlobalCsatPeriod;
   startDate: string;
   endDate: string;
-}
-
-export interface FranchiseRankingItemDto {
-  rank: number;
-  outletId: string;
-  outletName: string;
-  managerName: string | null;
-  csatScore: number;
-}
-
-export interface MetricsHeatmapItemDto {
-  outletId: string;
-  outletName: string;
-  metrics: {
-    staff: number;
-    speed: number;
-    clean: number;
-    quality: number;
-    overall: number;
-  };
-}
-
-export interface FranchiseAnalyticsResponseDto {
-  franchiseRanking: FranchiseRankingItemDto[];
-  metricsHeatmap: MetricsHeatmapItemDto[];
 }
 
 export interface QuickInsightsResponse {

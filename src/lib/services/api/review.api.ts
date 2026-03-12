@@ -5,7 +5,6 @@ import type {
   GlobalCsatPeriod,
   IncidentsOverviewResponse,
   OutletFeedbackSummaryResponse,
-  FranchiseAnalyticsResponseDto,
   QuickInsightsResponse,
   QueryIncidentsOverviewParams,
   QueryGlobalCsatParams,
@@ -114,22 +113,6 @@ export const reviewsApi = {
   getQuickInsights: async (period: GlobalCsatPeriod): Promise<QuickInsightsResponse> => {
     const { data } = await apiClient.get<QuickInsightsResponse>(
       `/analytics/quick-insights?period=${period}`,
-    );
-    return data;
-  },
-
-  getFranchiseAnalytics: async (
-    params: QueryGlobalCsatParams = {},
-  ): Promise<FranchiseAnalyticsResponseDto> => {
-    const searchParams = new URLSearchParams();
-
-    if (params.period) searchParams.set('period', params.period);
-    if (params.startDate) searchParams.set('startDate', params.startDate);
-    if (params.endDate) searchParams.set('endDate', params.endDate);
-
-    const query = searchParams.toString();
-    const { data } = await apiClient.get<FranchiseAnalyticsResponseDto>(
-      query ? `/analytics/franchise?${query}` : '/analytics/franchise',
     );
     return data;
   },
