@@ -5,6 +5,7 @@ import type {
   GlobalCsatPeriod,
   IncidentsOverviewResponse,
   OutletFeedbackSummaryResponse,
+  FranchiseAnalyticsResponseDto,
   QueryIncidentsOverviewParams,
   QueryGlobalCsatParams,
   Review,
@@ -107,6 +108,22 @@ export const reviewsApi = {
   ): Promise<OutletFeedbackSummaryResponse> => {
     const { data } = await apiClient.get<OutletFeedbackSummaryResponse>(
       `/review/analytics/outlet-feedback-summary?period=${period}`,
+    );
+    return data;
+  },
+
+  getFranchiseAnalytics: async (
+    params: QueryGlobalCsatParams = {},
+  ): Promise<FranchiseAnalyticsResponseDto> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<FranchiseAnalyticsResponseDto>(
+      query ? `/review/analytics/franchise?${query}` : '/review/analytics/franchise',
     );
     return data;
   },

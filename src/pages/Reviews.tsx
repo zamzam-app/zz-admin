@@ -18,6 +18,7 @@ import type { Review } from '../lib/types/review';
 import {
   ComplaintStatus,
   REVIEW_KEYS,
+  FRANCHISE_ANALYTICS_KEYS,
   getOutletId,
   getOutletName,
   getUserName,
@@ -49,20 +50,6 @@ const METRIC_LABEL: Record<MetricKey, string> = {
   quality: 'Quality',
 };
 
-const METRIC_MATCHERS: Record<MetricKey, RegExp> = {
-  staff: /(staff|service|team|friendly|attitude)/i,
-  speed: /(speed|wait|time|quick|fast)/i,
-  clean: /(clean|hygiene|sanitize|sanitation|tidy)/i,
-  quality: /(quality|taste|food|fresh|product)/i,
-};
-
-const METRIC_OFFSETS: Record<MetricKey, number> = {
-  staff: 0.1,
-  speed: -0.15,
-  clean: 0.05,
-  quality: 0.15,
-};
-
 function getReviewComment(review: Review): string {
   const response = (review.userResponses ?? []).find((item) => typeof item.answer !== 'number');
   if (!response) return '—';
@@ -78,18 +65,6 @@ const scrollableSx = {
   '&::-webkit-scrollbar': { display: 'none' },
 } as const;
 
-function average(values: number[]) {
-  if (values.length === 0) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function round(value: number, digits = 1) {
-  return Number(value.toFixed(digits));
-}
-
-function clampScore(value: number) {
-  return Math.max(1, Math.min(5, value));
-}
 
 function formatDateTime(source?: string) {
   if (!source) return '—';
@@ -104,53 +79,8 @@ function formatDateTime(source?: string) {
   return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
-function extractAnswerScores(answer: string | string[] | number | undefined) {
-  if (answer == null) return [];
-  const values = Array.isArray(answer) ? answer : [answer];
-  return values
-    .map((value) => Number.parseFloat(String(value).replace(/[^0-9.]/g, '')))
-    .filter((value) => Number.isFinite(value) && value >= 1 && value <= 5);
-}
-
 function isPendingComplaint(review: Review) {
   return review.isComplaint === true && review.complaintStatus === ComplaintStatus.PENDING;
-}
-
-function buildOutletMetrics(reviews: Review[], baseScore: number): Record<MetricKey, number> {
-  const buckets: Record<MetricKey, number[]> = {
-    staff: [],
-    speed: [],
-    clean: [],
-    quality: [],
-  };
-
-  reviews.forEach((review) => {
-    (review.userResponses ?? []).forEach((response) => {
-      const title =
-        typeof response.questionId === 'string'
-          ? response.questionId
-          : ((response.questionId as { title?: string } | null)?.title ?? '');
-      const scores = extractAnswerScores(response.answer ?? []);
-
-      if (scores.length === 0) return;
-
-      METRIC_ORDER.forEach((metric) => {
-        if (METRIC_MATCHERS[metric].test(title)) {
-          buckets[metric].push(...scores);
-        }
-      });
-    });
-  });
-
-  const metrics = {} as Record<MetricKey, number>;
-
-  METRIC_ORDER.forEach((metric) => {
-    const fallback = clampScore(baseScore + METRIC_OFFSETS[metric]);
-    const value = buckets[metric].length > 0 ? average(buckets[metric]) : fallback;
-    metrics[metric] = round(value, 1);
-  });
-
-  return metrics;
 }
 
 function getHeatCellStyle(score: number) {
@@ -178,15 +108,21 @@ function getRatingBadgeStyle(score: number) {
 export default function Reviews() {
   const { user } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState('all');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [previewReviewId, setPreviewReviewId] = useState<string | null>(null);
 
   const {
     data,
-    isLoading: loading,
+    isLoading: reviewsLoading,
     error,
     refetch,
   } = useApiQuery(REVIEW_KEYS, () => reviewsApi.getAll());
+
+  const { data: franchiseData, isLoading: franchiseLoading } = useApiQuery(
+    FRANCHISE_ANALYTICS_KEYS,
+    () => reviewsApi.getFranchiseAnalytics(),
+  );
+
+  const loading = reviewsLoading || franchiseLoading;
 
   const allReviews = useMemo(() => data?.data ?? [], [data?.data]);
 
@@ -245,51 +181,28 @@ export default function Reviews() {
   }, []);
 
   const outletAggregates = useMemo(() => {
-    const grouped = new Map<string, Review[]>();
+    if (!franchiseData) return [];
+    const { franchiseRanking, metricsHeatmap } = franchiseData;
 
-    filteredReviews.forEach((review) => {
-      const outletId = getOutletId(review) ?? 'unknown-outlet';
-      const existing = grouped.get(outletId) ?? [];
-      existing.push(review);
-      grouped.set(outletId, existing);
+    const rows: OutletAggregate[] = franchiseRanking.map((ranking, index) => {
+      const heatmap = metricsHeatmap[index];
+      return {
+        outletId: ranking.outletId,
+        outletName: ranking.outletName,
+        managerName: ranking.managerName ?? 'Manager not assigned',
+        csat: heatmap?.metrics.overall ?? ranking.csatScore,
+        metrics: {
+          staff: heatmap?.metrics.staff ?? 0,
+          speed: heatmap?.metrics.speed ?? 0,
+          clean: heatmap?.metrics.clean ?? 0,
+          quality: heatmap?.metrics.quality ?? 0,
+        },
+      };
     });
 
-    const outletIds = new Set<string>();
-    grouped.forEach((_, outletId) => outletIds.add(outletId));
-
-    accessibleStores.forEach((store) => {
-      if (selectedOutlet === 'all' || selectedOutlet === store.outletId) {
-        outletIds.add(store.outletId);
-      }
-    });
-
-    const rows: OutletAggregate[] = [];
-
-    outletIds.forEach((outletId) => {
-      const reviews = grouped.get(outletId) ?? [];
-      const store = storeLookup.get(outletId);
-      const outletName = reviews[0] ? getOutletName(reviews[0]) : (store?.name ?? 'Unknown Outlet');
-      const managerName = store?.managerName ?? 'Manager not assigned';
-      const managerPhone = store?.managerPhone;
-      const csat = round(
-        reviews.length > 0
-          ? average(reviews.map((review) => review.overallRating))
-          : (store?.rating ?? 0),
-        1,
-      );
-
-      rows.push({
-        outletId,
-        outletName,
-        managerName,
-        managerPhone,
-        csat,
-        metrics: buildOutletMetrics(reviews, csat || 3.5),
-      });
-    });
-
-    return rows.sort((first, second) => second.csat - first.csat);
-  }, [accessibleStores, filteredReviews, selectedOutlet, storeLookup]);
+    if (selectedOutlet === 'all') return rows;
+    return rows.filter((row) => row.outletId === selectedOutlet);
+  }, [franchiseData, selectedOutlet]);
 
   const criticalFeed = useMemo(() => {
     if (filteredReviews.length === 0) return [];
@@ -328,10 +241,8 @@ export default function Reviews() {
   );
 
   const groupedReviews = useMemo(() => {
-    const sorted = [...filteredReviews].sort((first, second) =>
-      sortOrder === 'asc'
-        ? first.overallRating - second.overallRating
-        : second.overallRating - first.overallRating,
+    const sorted = [...filteredReviews].sort(
+      (first, second) => second.overallRating - first.overallRating,
     );
 
     const groups: Record<number, Review[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
@@ -344,9 +255,9 @@ export default function Reviews() {
     });
 
     return groups;
-  }, [filteredReviews, sortOrder]);
+  }, [filteredReviews]);
 
-  const ratingOrder = sortOrder === 'asc' ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
+  const ratingOrder = [5, 4, 3, 2, 1];
 
   const handleClosePreview = () => {
     setPreviewReviewId(null);
@@ -444,17 +355,6 @@ export default function Reviews() {
             </FormControl>
           )}
 
-          <FormControl size='small' sx={{ minWidth: 220 }}>
-            <InputLabel>All Reviews Order</InputLabel>
-            <Select
-              value={sortOrder}
-              label='All Reviews Order'
-              onChange={(event) => setSortOrder(event.target.value as 'asc' | 'desc')}
-            >
-              <MenuItem value='desc'>Highest to Lowest</MenuItem>
-              <MenuItem value='asc'>Lowest to Highest</MenuItem>
-            </Select>
-          </FormControl>
         </Stack>
       </Stack>
 
