@@ -12,6 +12,8 @@ interface Props {
   onSave: () => void;
   onCancel: () => void;
   onPreview: () => void;
+  existingTitles: string[];
+  isSaving: boolean;
 }
 
 const FormEditor: React.FC<Props> = ({
@@ -20,6 +22,8 @@ const FormEditor: React.FC<Props> = ({
   onSave,
   onCancel,
   onPreview,
+  existingTitles,
+  isSaving,
 }) => {
   const visibleQuestions = currentForm.questions.filter((q) => !isDefaultQuestionTitle(q.title));
 
@@ -29,8 +33,15 @@ const FormEditor: React.FC<Props> = ({
     if (!currentForm.title?.trim()) {
       errors.push('Form title is required');
     }
+    const normalizedTitle = currentForm.title?.trim().toLowerCase();
+    if (
+      normalizedTitle &&
+      existingTitles.some((title) => title.trim().toLowerCase() === normalizedTitle)
+    ) {
+      errors.push('Form title must be unique');
+    }
 
-    visibleQuestions.forEach((q, idx) => {
+    currentForm.questions.forEach((q, idx) => {
       if (!q.title?.trim()) {
         errors.push(`Question ${idx + 1}: title is required`);
       }
@@ -44,6 +55,7 @@ const FormEditor: React.FC<Props> = ({
   };
 
   const handleSave = () => {
+    if (isSaving) return;
     if (!validate()) return;
     onSave();
   };
@@ -174,10 +186,11 @@ const FormEditor: React.FC<Props> = ({
           <Button
             variant='admin-primary'
             onClick={handleSave}
+            disabled={isSaving}
             className='rounded-2xl px-8 py-4 shadow-lg flex items-center gap-3'
           >
             <Save size={18} />
-            <span>Save Form</span>
+            <span>{isSaving ? 'Saving...' : 'Save Form'}</span>
           </Button>
         </div>
       </div>

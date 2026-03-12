@@ -16,9 +16,16 @@ export type AddOutletTypeModalProps = {
   onClose: () => void;
   onSuccess: () => void;
   editing?: OutletType | null;
+  existingNames?: string[];
 };
 
-export function AddOutletTypeModal({ open, onClose, onSuccess, editing }: AddOutletTypeModalProps) {
+export function AddOutletTypeModal({
+  open,
+  onClose,
+  onSuccess,
+  editing,
+  existingNames = [],
+}: AddOutletTypeModalProps) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -45,6 +52,19 @@ export function AddOutletTypeModal({ open, onClose, onSuccess, editing }: AddOut
     setError(null);
     if (!name.trim() || !description.trim()) {
       setError('Name and description are required.');
+      return;
+    }
+
+    const normalized = name.trim().toLowerCase();
+    const duplicate = existingNames.some((existing) => {
+      const existingNormalized = existing.trim().toLowerCase();
+      if (editing && existingNormalized === (editing.name ?? '').trim().toLowerCase()) {
+        return false;
+      }
+      return existingNormalized === normalized;
+    });
+    if (duplicate) {
+      setError('Outlet type name already exists.');
       return;
     }
 

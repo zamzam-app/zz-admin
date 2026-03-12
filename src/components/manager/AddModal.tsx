@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { message } from 'antd';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
@@ -12,6 +13,7 @@ type AddModalProps = {
   onClose: () => void;
   editing: User | null;
   onSuccess: () => void;
+  existingUsers: User[];
 };
 
 const initialForm: Partial<User> & { password?: string } = {};
@@ -20,7 +22,15 @@ function getUserId(u: User | null | undefined): string | undefined {
   return u ? (u._id ?? u.id) : undefined;
 }
 
-export function AddModal({ open, onClose, editing, onSuccess }: AddModalProps) {
+function getApiErrorMessage(err: unknown, fallback: string) {
+  const responseMessage = (err as { response?: { data?: { message?: string } } })?.response?.data
+    ?.message;
+  if (responseMessage) return responseMessage;
+  const generic = (err as Error | undefined)?.message;
+  return generic || fallback;
+}
+
+export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: AddModalProps) {
   const [form, setForm] = useState<Partial<User> & { password?: string }>(initialForm);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +39,11 @@ export function AddModal({ open, onClose, editing, onSuccess }: AddModalProps) {
     [MANAGER_KEYS],
     {
       onSuccess: () => onSuccess(),
-      onError: (err) => setError(err.message ?? 'Failed to create employee'),
+      onError: (err) => {
+        const msg = getApiErrorMessage(err, 'Failed to create employee');
+        setError(msg);
+        message.error(msg);
+      },
     },
   );
 
@@ -38,7 +52,11 @@ export function AddModal({ open, onClose, editing, onSuccess }: AddModalProps) {
     [MANAGER_KEYS],
     {
       onSuccess: () => onSuccess(),
-      onError: (err) => setError(err.message ?? 'Failed to update employee'),
+      onError: (err) => {
+        const msg = getApiErrorMessage(err, 'Failed to update employee');
+        setError(msg);
+        message.error(msg);
+      },
     },
   );
 
@@ -62,6 +80,20 @@ export function AddModal({ open, onClose, editing, onSuccess }: AddModalProps) {
     e.preventDefault();
     setError(null);
     if (!form.name?.trim() || !form.email?.trim() || !form.userName?.trim()) return;
+    const normalizedUsername = form.userName.trim().toLowerCase();
+    const editingId = getUserId(editing);
+    const duplicateUser = existingUsers.find((u) => {
+      const existingName = u.userName?.trim().toLowerCase();
+      if (!existingName) return false;
+      if (editingId && getUserId(u) === editingId) return false;
+      return existingName === normalizedUsername;
+    });
+    if (duplicateUser) {
+      const msg = 'Username is already taken.';
+      setError(msg);
+      message.error(msg);
+      return;
+    }
     const phone = form.phoneNumber?.trim();
     if (!editing && !phone) {
       setError('Phone number is required.');

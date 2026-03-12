@@ -31,6 +31,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   productToEdit = null,
 }) => {
   const [newProduct, setNewProduct] = useState(initialFormState);
+  const [priceInput, setPriceInput] = useState('1');
   const isEditMode = !!productToEdit;
 
   const createMutation = useApiMutation(
@@ -60,7 +61,10 @@ export const AddModal: React.FC<AddModalProps> = ({
   // Clear form when modal closes
   useEffect(() => {
     if (!open) {
-      const t = setTimeout(() => setNewProduct(initialFormState), 0);
+      const t = setTimeout(() => {
+        setNewProduct(initialFormState);
+        setPriceInput(String(initialFormState.price ?? ''));
+      }, 0);
       return () => clearTimeout(t);
     }
   }, [open]);
@@ -76,7 +80,10 @@ export const AddModal: React.FC<AddModalProps> = ({
           images: productToEdit.images ?? [],
         }
       : initialFormState;
-    const t = setTimeout(() => setNewProduct(next), 0);
+    const t = setTimeout(() => {
+      setNewProduct(next);
+      setPriceInput(next.price == null || Number.isNaN(next.price) ? '' : String(next.price));
+    }, 0);
     return () => clearTimeout(t);
   }, [open, productToEdit]);
 
@@ -98,6 +105,11 @@ export const AddModal: React.FC<AddModalProps> = ({
 
     if (!newProduct.name || !newProduct.description || newProduct.price == null) {
       message.error('Please fill all required fields');
+      return;
+    }
+
+    if (Number.isNaN(newProduct.price) || newProduct.price < 0) {
+      message.error('Price must be zero or more');
       return;
     }
 
@@ -197,8 +209,18 @@ export const AddModal: React.FC<AddModalProps> = ({
           <div>
             <Input
               label='Price'
-              value={newProduct.price ?? ''}
-              onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
+              value={priceInput}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (!/^\d*\.?\d*$/.test(value)) return;
+                setPriceInput(value);
+                if (value.trim() === '') {
+                  setNewProduct({ ...newProduct, price: undefined as unknown as number });
+                  return;
+                }
+                const parsed = Number(value);
+                setNewProduct({ ...newProduct, price: Number.isNaN(parsed) ? parsed : parsed });
+              }}
             />
           </div>
 
