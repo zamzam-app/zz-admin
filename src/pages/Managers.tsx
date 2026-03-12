@@ -363,6 +363,7 @@ export default function ManagersPage() {
         onClose={() => setModal(null)}
         editing={editing}
         onSuccess={() => setModal(null)}
+        existingUsers={employees}
       />
 
       <DeleteModal

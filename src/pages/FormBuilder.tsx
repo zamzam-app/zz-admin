@@ -16,6 +16,7 @@ export default function FormBuilderPage() {
   const [view, setView] = useState<ViewMode>('dashboard');
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
   const [isNewForm, setIsNewForm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const {
     data: savedForms = [],
@@ -71,6 +72,8 @@ export default function FormBuilderPage() {
 
   const handleSave = () => {
     if (!currentForm) return;
+    if (isSaving) return;
+    setIsSaving(true);
     if (isNewForm && currentForm._id === DRAFT_FORM_ID) {
       createMutation.mutate(undefined, {
         onSuccess: (newForm) => {
@@ -83,16 +86,24 @@ export default function FormBuilderPage() {
               onSuccess: () => {
                 setCurrentForm(null);
                 setIsNewForm(false);
+                setIsSaving(false);
               },
+              onError: () => setIsSaving(false),
             },
           );
         },
+        onError: () => setIsSaving(false),
       });
     } else {
-      updateMutation.mutate({
-        id: currentForm._id,
-        payload: { title: currentForm.title, questions: currentForm.questions },
-      });
+      updateMutation.mutate(
+        {
+          id: currentForm._id,
+          payload: { title: currentForm.title, questions: currentForm.questions },
+        },
+        {
+          onSettled: () => setIsSaving(false),
+        },
+      );
     }
   };
 
@@ -156,6 +167,8 @@ export default function FormBuilderPage() {
         <FormEditor
           currentForm={currentForm}
           setCurrentForm={setCurrentForm as React.Dispatch<React.SetStateAction<Form | null>>}
+          existingTitles={savedForms.filter((f) => f._id !== currentForm._id).map((f) => f.title)}
+          isSaving={isSaving}
           onSave={handleSave}
           onCancel={() => {
             if (isNewForm && currentForm._id === DRAFT_FORM_ID) {
