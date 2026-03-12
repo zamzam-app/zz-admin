@@ -59,6 +59,37 @@ export default function FormBuilderPage() {
     setView('builder');
   };
 
+  const getDuplicateTitle = (title: string) => {
+    const base = `${title} Copy`;
+    const existing = new Set(savedForms.map((f) => f.title.trim().toLowerCase()));
+    if (!existing.has(base.toLowerCase())) return base;
+    let idx = 2;
+    while (existing.has(`${base} ${idx}`.toLowerCase())) idx += 1;
+    return `${base} ${idx}`;
+  };
+
+  const handleDuplicate = async (form: Form) => {
+    try {
+      const fullForm = await formsApi.getForm(form._id);
+      const title = getDuplicateTitle(fullForm.title || 'Untitled Form');
+      createMutation.mutate(undefined, {
+        onSuccess: (newForm) => {
+          updateMutation.mutate(
+            {
+              id: newForm._id,
+              payload: { title, questions: fullForm.questions ?? [] },
+            },
+            {
+              onSuccess: () => message.success('Form duplicated'),
+            },
+          );
+        },
+      });
+    } catch {
+      message.error('Failed to duplicate form');
+    }
+  };
+
   const handleEdit = async (form: Form) => {
     try {
       const fullForm = await formsApi.getForm(form._id);
@@ -141,6 +172,7 @@ export default function FormBuilderPage() {
             setView('viewer');
           }}
           onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
         />
       )}
 

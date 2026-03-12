@@ -1,6 +1,6 @@
 import React from 'react';
 import { message, Popconfirm } from 'antd';
-import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus } from 'lucide-react';
+import { ArrowLeft, Eye, Info, Trash2, X, Star, Save, Plus, Copy } from 'lucide-react';
 import { Form, Question, QuestionType } from '../../lib/types/forms';
 import { isDefaultQuestionTitle } from '../../lib/forms/defaultQuestions';
 import { Button } from '../common/Button';
@@ -128,6 +128,21 @@ const FormEditor: React.FC<Props> = ({
           options: q.options.map((opt, i) => (i === optionIndex ? { ...opt, text } : opt)),
         };
       }),
+    });
+  };
+
+  const duplicateQuestion = (qId: string) => {
+    const source = currentForm.questions.find((q) => q._id === qId);
+    if (!source) return;
+    const newId = Math.random().toString(36).substr(2, 9);
+    const cloned: Question = {
+      ...source,
+      _id: newId,
+      options: source.options ? source.options.map((opt) => ({ ...opt })) : undefined,
+    };
+    setCurrentForm({
+      ...currentForm,
+      questions: [...currentForm.questions, cloned],
     });
   };
 
@@ -330,6 +345,12 @@ const FormEditor: React.FC<Props> = ({
               >
                 <Trash2 size={18} className={q._id === 'delTest' ? 'text-gray-300' : ''} /> Delete
                 Question
+              </button>
+              <button
+                onClick={() => duplicateQuestion(q._id)}
+                className='flex items-center gap-2 text-gray-400 font-bold hover:text-amber-600 transition-colors'
+              >
+                <Copy size={18} /> Duplicate
               </button>
 
               {!isDefaultQuestionTitle(q.title) && (
