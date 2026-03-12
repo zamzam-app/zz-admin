@@ -17,7 +17,6 @@ export function useReviewsPageData(
   user: User,
   allReviews: Review[],
   selectedOutlet: string,
-  sortOrder: 'asc' | 'desc',
 ) {
   const allowedOutletIds = useMemo(() => {
     if (!user) return new Set<string>();
@@ -151,10 +150,8 @@ export function useReviewsPageData(
   );
 
   const groupedReviews = useMemo(() => {
-    const sorted = [...filteredReviews].sort((first, second) =>
-      sortOrder === 'asc'
-        ? first.overallRating - second.overallRating
-        : second.overallRating - first.overallRating,
+    const sorted = [...filteredReviews].sort(
+      (first, second) => second.overallRating - first.overallRating,
     );
 
     const groups: Record<number, Review[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
@@ -167,9 +164,9 @@ export function useReviewsPageData(
     });
 
     return groups;
-  }, [filteredReviews, sortOrder]);
+  }, [filteredReviews]);
 
-  const ratingOrder = sortOrder === 'asc' ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
+  const ratingOrder = [5, 4, 3, 2, 1];
 
   return {
     filteredReviews,

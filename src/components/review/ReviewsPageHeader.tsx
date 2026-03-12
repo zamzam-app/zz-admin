@@ -4,8 +4,6 @@ import { Box, FormControl, InputLabel, MenuItem, Select, Stack, Typography } fro
 type ReviewsPageHeaderProps = {
   selectedOutlet: string;
   onOutletChange: (value: string) => void;
-  sortOrder: 'asc' | 'desc';
-  onSortChange: (value: 'asc' | 'desc') => void;
   outletOptions: [string, string][];
   showOutletFilter: boolean;
 };
@@ -13,8 +11,6 @@ type ReviewsPageHeaderProps = {
 export const ReviewsPageHeader: React.FC<ReviewsPageHeaderProps> = ({
   selectedOutlet,
   onOutletChange,
-  sortOrder,
-  onSortChange,
   outletOptions,
   showOutletFilter,
 }) => {
@@ -54,18 +50,6 @@ export const ReviewsPageHeader: React.FC<ReviewsPageHeaderProps> = ({
             </Select>
           </FormControl>
         )}
-
-        <FormControl size='small' sx={{ minWidth: 220 }}>
-          <InputLabel>All Reviews Order</InputLabel>
-          <Select
-            value={sortOrder}
-            label='All Reviews Order'
-            onChange={(event) => onSortChange(event.target.value as 'asc' | 'desc')}
-          >
-            <MenuItem value='desc'>Highest to Lowest</MenuItem>
-            <MenuItem value='asc'>Lowest to Highest</MenuItem>
-          </Select>
-        </FormControl>
       </Stack>
     </Stack>
   );

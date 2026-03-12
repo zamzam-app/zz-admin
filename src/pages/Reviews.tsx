@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Box, Grid, Stack } from '@mui/material';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
-import { REVIEW_KEYS } from '../lib/types/review';
+import {
+  REVIEW_KEYS,
+  FRANCHISE_ANALYTICS_KEYS,
+} from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/review/ReviewPreviewModal';
 import { ReviewsPageHeader } from '../components/review/ReviewsPageHeader';
@@ -13,20 +16,27 @@ import { CriticalFeedbackFeed } from '../components/review/CriticalFeedbackFeed'
 import { AllReviewsSection } from '../components/review/AllReviewsSection';
 import { useReviewsPageData } from '../components/review/useReviewsPageData';
 import { scrollableSx } from '../components/review/reviewConstants';
+import type { OutletAggregate } from '../components/review/reviewConstants';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 export default function Reviews() {
   const { user } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState('all');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [previewReviewId, setPreviewReviewId] = useState<string | null>(null);
 
   const {
     data,
-    isLoading: loading,
+    isLoading: reviewsLoading,
     error,
     refetch,
   } = useApiQuery(REVIEW_KEYS, () => reviewsApi.getAll());
+
+  const { data: franchiseData, isLoading: franchiseLoading } = useApiQuery(
+    FRANCHISE_ANALYTICS_KEYS,
+    () => reviewsApi.getFranchiseAnalytics(),
+  );
+
+  const loading = reviewsLoading || franchiseLoading;
 
   const allReviews = data?.data ?? [];
 
@@ -39,12 +49,35 @@ export default function Reviews() {
   const {
     filteredReviews,
     outletOptions,
-    outletAggregates,
     criticalFeed,
     actionRequiredCount,
     groupedReviews,
     ratingOrder,
-  } = useReviewsPageData(user, allReviews, selectedOutlet, sortOrder);
+  } = useReviewsPageData(user, allReviews, selectedOutlet);
+
+  const outletAggregates = useMemo(() => {
+    if (!franchiseData) return [];
+    const { franchiseRanking, metricsHeatmap } = franchiseData;
+
+    const rows: OutletAggregate[] = franchiseRanking.map((ranking, index) => {
+      const heatmap = metricsHeatmap[index];
+      return {
+        outletId: ranking.outletId,
+        outletName: ranking.outletName,
+        managerName: ranking.managerName ?? 'Manager not assigned',
+        csat: heatmap?.metrics.overall ?? ranking.csatScore,
+        metrics: {
+          staff: heatmap?.metrics.staff ?? 0,
+          speed: heatmap?.metrics.speed ?? 0,
+          clean: heatmap?.metrics.clean ?? 0,
+          quality: heatmap?.metrics.quality ?? 0,
+        },
+      };
+    });
+
+    if (selectedOutlet === 'all') return rows;
+    return rows.filter((row) => row.outletId === selectedOutlet);
+  }, [franchiseData, selectedOutlet]);
 
   const handleClosePreview = () => {
     setPreviewReviewId(null);
@@ -74,8 +107,6 @@ export default function Reviews() {
       <ReviewsPageHeader
         selectedOutlet={selectedOutlet}
         onOutletChange={setSelectedOutlet}
-        sortOrder={sortOrder}
-        onSortChange={setSortOrder}
         outletOptions={outletOptions}
         showOutletFilter={user?.role === 'admin' || outletOptions.length > 1}
       />
