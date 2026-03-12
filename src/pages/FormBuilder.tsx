@@ -9,6 +9,7 @@ import FormViewer from '../components/forms/FormViewer';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 import { Button } from '../components/common/Button';
+import { DEFAULT_FORM_QUESTIONS } from '../lib/forms/defaultQuestions';
 
 type ViewMode = 'dashboard' | 'builder' | 'viewer' | 'preview';
 export default function FormBuilderPage() {
@@ -134,7 +135,19 @@ export default function FormBuilderPage() {
 
       {currentForm && (view === 'viewer' || view === 'preview') && (
         <FormViewer
-          form={currentForm}
+          form={
+            view === 'preview'
+              ? {
+                  ...currentForm,
+                  questions: [
+                    ...DEFAULT_FORM_QUESTIONS.filter(
+                      (dq) => !currentForm.questions.some((q) => q.title === dq.title),
+                    ),
+                    ...currentForm.questions,
+                  ],
+                }
+              : currentForm
+          }
           onBack={() => setView(view === 'preview' ? 'builder' : 'dashboard')}
         />
       )}
