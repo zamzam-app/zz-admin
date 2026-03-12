@@ -2,10 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box, Grid, Stack } from '@mui/material';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
-import {
-  REVIEW_KEYS,
-  FRANCHISE_ANALYTICS_KEYS,
-} from '../lib/types/review';
+import { REVIEW_KEYS, FRANCHISE_ANALYTICS_KEYS } from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/review/ReviewPreviewModal';
 import { ReviewsPageHeader } from '../components/review/ReviewsPageHeader';
@@ -46,32 +43,13 @@ export default function Reviews() {
     { enabled: !!previewReviewId },
   );
 
-  const {
-    filteredReviews,
-    outletOptions,
-    criticalFeed,
-    actionRequiredCount,
-    groupedReviews,
-    ratingOrder,
-  } = useReviewsPageData(user, allReviews, selectedOutlet);
+  const { filteredReviews, criticalFeed, actionRequiredCount, groupedReviews, ratingOrder } =
+    useReviewsPageData(user, allReviews, selectedOutlet);
 
   const finalOutletOptions = useMemo((): [string, string][] => {
-    const optionsMap = new Map<string, string>();
-
-    if (franchiseData?.franchiseRanking) {
-      franchiseData.franchiseRanking.forEach((r) => {
-        optionsMap.set(r.outletId, r.outletName);
-      });
-    }
-
-    outletOptions.forEach(([id, name]) => {
-      if (!optionsMap.has(id)) {
-        optionsMap.set(id, name);
-      }
-    });
-
-    return Array.from(optionsMap.entries());
-  }, [franchiseData, outletOptions]);
+    if (!franchiseData?.franchiseRanking) return [];
+    return franchiseData.franchiseRanking.map((r) => [r.outletId, r.outletName]);
+  }, [franchiseData]);
 
   useEffect(() => {
     if (selectedOutlet !== 'all') {

@@ -13,11 +13,7 @@ type User = {
   outletId?: string | string[];
 } | null;
 
-export function useReviewsPageData(
-  user: User,
-  allReviews: Review[],
-  selectedOutlet: string,
-) {
+export function useReviewsPageData(user: User, allReviews: Review[], selectedOutlet: string) {
   const allowedOutletIds = useMemo(() => {
     if (!user) return new Set<string>();
     if (user.role === 'admin') return null;
