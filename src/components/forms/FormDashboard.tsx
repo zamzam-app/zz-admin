@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Layout, Edit2, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Layout, Edit2, Trash2, ExternalLink, Copy } from 'lucide-react';
 import { Form } from '../../lib/types/forms';
 import { Button } from '../common/Button';
 import Card from '../common/Card';
@@ -12,9 +12,17 @@ interface Props {
   onEdit: (form: Form) => void;
   onOpen: (form: Form) => void;
   onDelete: (form: Form) => void;
+  onDuplicate: (form: Form) => void;
 }
 
-const FormDashboard: React.FC<Props> = ({ savedForms, onCreateNew, onEdit, onOpen, onDelete }) => {
+const FormDashboard: React.FC<Props> = ({
+  savedForms,
+  onCreateNew,
+  onEdit,
+  onOpen,
+  onDelete,
+  onDuplicate,
+}) => {
   const [formToDelete, setFormToDelete] = useState<Form | null>(null);
 
   return (
@@ -90,6 +98,12 @@ const FormDashboard: React.FC<Props> = ({ savedForms, onCreateNew, onEdit, onOpe
                           className='p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all'
                         >
                           <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => onDuplicate(form)}
+                          className='p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all'
+                        >
+                          <Copy size={18} />
                         </button>
                         <button
                           onClick={() => setFormToDelete(form)}

@@ -9,12 +9,14 @@ import FormViewer from '../components/forms/FormViewer';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 import { Button } from '../components/common/Button';
+import { DEFAULT_FORM_QUESTIONS } from '../lib/forms/defaultQuestions';
 
 type ViewMode = 'dashboard' | 'builder' | 'viewer' | 'preview';
 export default function FormBuilderPage() {
   const [view, setView] = useState<ViewMode>('dashboard');
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
   const [isNewForm, setIsNewForm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const {
     data: savedForms = [],
@@ -57,6 +59,37 @@ export default function FormBuilderPage() {
     setView('builder');
   };
 
+  const getDuplicateTitle = (title: string) => {
+    const base = `${title} Copy`;
+    const existing = new Set(savedForms.map((f) => f.title.trim().toLowerCase()));
+    if (!existing.has(base.toLowerCase())) return base;
+    let idx = 2;
+    while (existing.has(`${base} ${idx}`.toLowerCase())) idx += 1;
+    return `${base} ${idx}`;
+  };
+
+  const handleDuplicate = async (form: Form) => {
+    try {
+      const fullForm = await formsApi.getForm(form._id);
+      const title = getDuplicateTitle(fullForm.title || 'Untitled Form');
+      createMutation.mutate(undefined, {
+        onSuccess: (newForm) => {
+          updateMutation.mutate(
+            {
+              id: newForm._id,
+              payload: { title, questions: fullForm.questions ?? [] },
+            },
+            {
+              onSuccess: () => message.success('Form duplicated'),
+            },
+          );
+        },
+      });
+    } catch {
+      message.error('Failed to duplicate form');
+    }
+  };
+
   const handleEdit = async (form: Form) => {
     try {
       const fullForm = await formsApi.getForm(form._id);
@@ -70,6 +103,8 @@ export default function FormBuilderPage() {
 
   const handleSave = () => {
     if (!currentForm) return;
+    if (isSaving) return;
+    setIsSaving(true);
     if (isNewForm && currentForm._id === DRAFT_FORM_ID) {
       createMutation.mutate(undefined, {
         onSuccess: (newForm) => {
@@ -82,16 +117,24 @@ export default function FormBuilderPage() {
               onSuccess: () => {
                 setCurrentForm(null);
                 setIsNewForm(false);
+                setIsSaving(false);
               },
+              onError: () => setIsSaving(false),
             },
           );
         },
+        onError: () => setIsSaving(false),
       });
     } else {
-      updateMutation.mutate({
-        id: currentForm._id,
-        payload: { title: currentForm.title, questions: currentForm.questions },
-      });
+      updateMutation.mutate(
+        {
+          id: currentForm._id,
+          payload: { title: currentForm.title, questions: currentForm.questions },
+        },
+        {
+          onSettled: () => setIsSaving(false),
+        },
+      );
     }
   };
 
@@ -129,12 +172,25 @@ export default function FormBuilderPage() {
             setView('viewer');
           }}
           onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
         />
       )}
 
       {currentForm && (view === 'viewer' || view === 'preview') && (
         <FormViewer
-          form={currentForm}
+          form={
+            view === 'preview'
+              ? {
+                  ...currentForm,
+                  questions: [
+                    ...DEFAULT_FORM_QUESTIONS.filter(
+                      (dq) => !currentForm.questions.some((q) => q.title === dq.title),
+                    ),
+                    ...currentForm.questions,
+                  ],
+                }
+              : currentForm
+          }
           onBack={() => setView(view === 'preview' ? 'builder' : 'dashboard')}
         />
       )}
@@ -143,6 +199,8 @@ export default function FormBuilderPage() {
         <FormEditor
           currentForm={currentForm}
           setCurrentForm={setCurrentForm as React.Dispatch<React.SetStateAction<Form | null>>}
+          existingTitles={savedForms.filter((f) => f._id !== currentForm._id).map((f) => f.title)}
+          isSaving={isSaving}
           onSave={handleSave}
           onCancel={() => {
             if (isNewForm && currentForm._id === DRAFT_FORM_ID) {

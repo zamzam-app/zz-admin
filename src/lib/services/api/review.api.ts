@@ -1,5 +1,18 @@
 import apiClient from './axios';
-import type { Review, ReviewListResponse, ResolveComplaintDto } from '../../types/review';
+import type {
+  CsatTrendlineResponse,
+  GlobalCsatResponse,
+  GlobalCsatPeriod,
+  IncidentsOverviewResponse,
+  OutletFeedbackSummaryResponse,
+  FranchiseAnalyticsResponseDto,
+  QuickInsightsResponse,
+  QueryIncidentsOverviewParams,
+  QueryGlobalCsatParams,
+  Review,
+  ReviewListResponse,
+  ResolveComplaintDto,
+} from '../../types/review';
 
 export interface ReviewListParams {
   page?: number;
@@ -49,6 +62,75 @@ export const reviewsApi = {
 
   resolveComplaint: async (reviewId: string, body: ResolveComplaintDto): Promise<Review> => {
     const { data } = await apiClient.post<Review>(`/review/resolve-complaint/${reviewId}`, body);
+    return data;
+  },
+
+  getGlobalCsat: async (params: QueryGlobalCsatParams = {}): Promise<GlobalCsatResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<GlobalCsatResponse>(
+      query ? `/analytics/global-csat?${query}` : '/analytics/global-csat',
+    );
+    return data;
+  },
+
+  getCsatTrendline: async (period: GlobalCsatPeriod): Promise<CsatTrendlineResponse> => {
+    const { data } = await apiClient.get<CsatTrendlineResponse>(
+      `/analytics/csat-trendline?period=${period}`,
+    );
+    return data;
+  },
+
+  getIncidentsOverview: async (
+    params: QueryIncidentsOverviewParams = {},
+  ): Promise<IncidentsOverviewResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<IncidentsOverviewResponse>(
+      query ? `/analytics/incidents-overview?${query}` : '/analytics/incidents-overview',
+    );
+    return data;
+  },
+
+  getOutletFeedbackSummary: async (
+    period: GlobalCsatPeriod,
+  ): Promise<OutletFeedbackSummaryResponse> => {
+    const { data } = await apiClient.get<OutletFeedbackSummaryResponse>(
+      `/analytics/outlet-feedback-summary?period=${period}`,
+    );
+    return data;
+  },
+
+  getQuickInsights: async (period: GlobalCsatPeriod): Promise<QuickInsightsResponse> => {
+    const { data } = await apiClient.get<QuickInsightsResponse>(
+      `/analytics/quick-insights?period=${period}`,
+    );
+    return data;
+  },
+
+  getFranchiseAnalytics: async (
+    params: QueryGlobalCsatParams = {},
+  ): Promise<FranchiseAnalyticsResponseDto> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.period) searchParams.set('period', params.period);
+    if (params.startDate) searchParams.set('startDate', params.startDate);
+    if (params.endDate) searchParams.set('endDate', params.endDate);
+
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<FranchiseAnalyticsResponseDto>(
+      query ? `/analytics/franchise?${query}` : '/analytics/franchise',
+    );
     return data;
   },
 };
