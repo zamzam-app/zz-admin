@@ -5,6 +5,7 @@ import type {
   GlobalCsatPeriod,
   IncidentsOverviewResponse,
   OutletFeedbackSummaryResponse,
+  QuickInsightsResponse,
   QueryIncidentsOverviewParams,
   QueryGlobalCsatParams,
   Review,
@@ -72,14 +73,14 @@ export const reviewsApi = {
 
     const query = searchParams.toString();
     const { data } = await apiClient.get<GlobalCsatResponse>(
-      query ? `/review/analytics/global-csat?${query}` : '/review/analytics/global-csat',
+      query ? `/analytics/global-csat?${query}` : '/analytics/global-csat',
     );
     return data;
   },
 
   getCsatTrendline: async (period: GlobalCsatPeriod): Promise<CsatTrendlineResponse> => {
     const { data } = await apiClient.get<CsatTrendlineResponse>(
-      `/review/analytics/csat-trendline?period=${period}`,
+      `/analytics/csat-trendline?period=${period}`,
     );
     return data;
   },
@@ -95,9 +96,7 @@ export const reviewsApi = {
 
     const query = searchParams.toString();
     const { data } = await apiClient.get<IncidentsOverviewResponse>(
-      query
-        ? `/review/analytics/incidents-overview?${query}`
-        : '/review/analytics/incidents-overview',
+      query ? `/analytics/incidents-overview?${query}` : '/analytics/incidents-overview',
     );
     return data;
   },
@@ -106,7 +105,14 @@ export const reviewsApi = {
     period: GlobalCsatPeriod,
   ): Promise<OutletFeedbackSummaryResponse> => {
     const { data } = await apiClient.get<OutletFeedbackSummaryResponse>(
-      `/review/analytics/outlet-feedback-summary?period=${period}`,
+      `/analytics/outlet-feedback-summary?period=${period}`,
+    );
+    return data;
+  },
+
+  getQuickInsights: async (period: GlobalCsatPeriod): Promise<QuickInsightsResponse> => {
+    const { data } = await apiClient.get<QuickInsightsResponse>(
+      `/analytics/quick-insights?period=${period}`,
     );
     return data;
   },
