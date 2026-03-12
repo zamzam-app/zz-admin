@@ -1,11 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Grid, Stack } from '@mui/material';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
-import {
-  REVIEW_KEYS,
-  FRANCHISE_ANALYTICS_KEYS,
-} from '../lib/types/review';
+import { REVIEW_KEYS, FRANCHISE_ANALYTICS_KEYS } from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/review/ReviewPreviewModal';
 import { ReviewsPageHeader } from '../components/review/ReviewsPageHeader';
@@ -46,14 +43,23 @@ export default function Reviews() {
     { enabled: !!previewReviewId },
   );
 
-  const {
-    filteredReviews,
-    outletOptions,
-    criticalFeed,
-    actionRequiredCount,
-    groupedReviews,
-    ratingOrder,
-  } = useReviewsPageData(user, allReviews, selectedOutlet);
+  const { filteredReviews, criticalFeed, actionRequiredCount, groupedReviews, ratingOrder } =
+    useReviewsPageData(user, allReviews, selectedOutlet);
+
+  const finalOutletOptions = useMemo((): [string, string][] => {
+    if (!franchiseData?.franchiseRanking) return [];
+    return franchiseData.franchiseRanking.map((r) => [r.outletId, r.outletName]);
+  }, [franchiseData]);
+
+  useEffect(() => {
+    if (selectedOutlet !== 'all') {
+      const exists = finalOutletOptions.some(([id]) => id === selectedOutlet);
+      if (!exists) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedOutlet('all');
+      }
+    }
+  }, [finalOutletOptions, selectedOutlet]);
 
   const outletAggregates = useMemo(() => {
     if (!franchiseData) return [];
@@ -107,8 +113,8 @@ export default function Reviews() {
       <ReviewsPageHeader
         selectedOutlet={selectedOutlet}
         onOutletChange={setSelectedOutlet}
-        outletOptions={outletOptions}
-        showOutletFilter={user?.role === 'admin' || outletOptions.length > 1}
+        outletOptions={finalOutletOptions}
+        showOutletFilter={user?.role === 'admin' || finalOutletOptions.length > 1}
       />
 
       {loading && (
