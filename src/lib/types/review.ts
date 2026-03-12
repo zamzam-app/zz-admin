@@ -4,6 +4,7 @@ export const CSAT_TRENDLINE_KEYS = ['csat-trendline'];
 export const INCIDENTS_OVERVIEW_KEYS = ['incidents-overview'];
 export const OUTLET_FEEDBACK_SUMMARY_KEYS = ['outlet-feedback-summary'];
 export const FRANCHISE_ANALYTICS_KEYS = ['franchise-analytics'];
+export const QUICK_INSIGHTS_KEYS = ['quick-insights'];
 
 export enum RatingType {
   COMPLAINT = 'complaint',
@@ -202,4 +203,29 @@ export interface MetricsHeatmapItemDto {
 export interface FranchiseAnalyticsResponseDto {
   franchiseRanking: FranchiseRankingItemDto[];
   metricsHeatmap: MetricsHeatmapItemDto[];
+}
+
+export interface QuickInsightsResponse {
+  peakIncidentTime: {
+    label: string;
+    startTime: string;
+    endTime: string;
+    timeZone: string;
+    totalIncidents: number;
+  } | null;
+  mostImprovedOutlet: {
+    outletId: string;
+    outletName: string;
+    improvement: number;
+    currentAverage: number;
+    previousAverage: number;
+  } | null;
+  criticalFocusArea: {
+    outletId: string;
+    outletName: string;
+    criticalIssues: number;
+  } | null;
+  period: GlobalCsatPeriod;
+  startDate: string;
+  endDate: string;
 }
