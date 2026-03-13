@@ -24,7 +24,7 @@ export const ReviewsPageHeader: React.FC<ReviewsPageHeaderProps> = ({
       flexShrink={0}
     >
       <Box>
-        <Typography variant='h4' fontWeight={800}>
+        <Typography variant='h4' fontWeight={800} sx={{ fontSize: 32 }}>
           Reviews
         </Typography>
         <Typography variant='body2' color='text.secondary'>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, ButtonBase, Stack, Typography } from '@mui/material';
-import { AlertTriangle, Phone } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import type { Review } from '../../lib/types/review';
 import { cardSx } from './reviewConstants';
 import { getReviewComment, formatDateTime, getRatingBadgeStyle } from './reviewUtils';
@@ -8,7 +8,8 @@ import { getReviewComment, formatDateTime, getRatingBadgeStyle } from './reviewU
 export type CriticalFeedbackItem = {
   review: Review;
   outletName: string;
-  managerPhone?: string;
+  /** "user name - outlet name" for display */
+  displayLabel?: string;
   actionRequired: boolean;
 };
 
@@ -16,14 +17,12 @@ type CriticalFeedbackFeedProps = {
   items: CriticalFeedbackItem[];
   actionRequiredCount: number;
   onViewTicket: (reviewId: string) => void;
-  onCallManager: (phone?: string) => void;
 };
 
 export const CriticalFeedbackFeed: React.FC<CriticalFeedbackFeedProps> = ({
   items,
   actionRequiredCount,
   onViewTicket,
-  onCallManager,
 }) => {
   return (
     <Box sx={cardSx}>
@@ -39,7 +38,7 @@ export const CriticalFeedbackFeed: React.FC<CriticalFeedbackFeedProps> = ({
         <Stack direction='row' spacing={1.2} alignItems='center'>
           <AlertTriangle size={20} color='#DC2626' />
           <Typography fontSize={30} fontWeight={900} color='#111827' letterSpacing='-0.04em'>
-            Critical Feedback Feed (Bottom 10%)
+            Critical Feedback Feed
           </Typography>
         </Stack>
 
@@ -105,10 +104,10 @@ export const CriticalFeedbackFeed: React.FC<CriticalFeedbackFeedProps> = ({
 
                   <Box>
                     <Typography fontSize={21} fontWeight={800} color='#111827'>
-                      {item.outletName}
-                    </Typography>
-                    <Typography mt={0.5} fontSize={19} color='#4B5563' fontStyle='italic'>
                       "{getReviewComment(item.review)}"
+                    </Typography>
+                    <Typography mt={0.5} fontSize={14} color='#6B7280'>
+                      {item.displayLabel ?? item.outletName}
                     </Typography>
 
                     <Stack direction='row' spacing={1.2} mt={1.5} flexWrap='wrap'>
@@ -128,34 +127,6 @@ export const CriticalFeedbackFeed: React.FC<CriticalFeedbackFeedProps> = ({
                         }}
                       >
                         View Ticket
-                      </ButtonBase>
-
-                      <ButtonBase
-                        onClick={() => onCallManager(item.managerPhone)}
-                        disabled={!item.managerPhone}
-                        sx={{
-                          height: 34,
-                          px: 1.8,
-                          borderRadius: '999px',
-                          border: '1px solid #A7F3D0',
-                          bgcolor: '#ECFDF5',
-                          color: '#047857',
-                          fontSize: 12,
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 0.7,
-                          '&:disabled': {
-                            borderColor: '#E5E7EB',
-                            bgcolor: '#F9FAFB',
-                            color: '#9CA3AF',
-                          },
-                        }}
-                      >
-                        <Phone size={13} />
-                        Call Manager
                       </ButtonBase>
                     </Stack>
                   </Box>
