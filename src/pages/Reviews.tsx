@@ -89,12 +89,6 @@ export default function Reviews() {
     setPreviewReviewId(null);
   };
 
-  const handleCallManager = (phone?: string) => {
-    if (phone) {
-      window.open(`tel:${phone}`);
-    }
-  };
-
   if (error) {
     return <ReviewsErrorState error={error} onRetry={() => refetch()} />;
   }
@@ -142,7 +136,6 @@ export default function Reviews() {
             items={criticalFeed}
             actionRequiredCount={actionRequiredCount}
             onViewTicket={setPreviewReviewId}
-            onCallManager={handleCallManager}
           />
 
           <AllReviewsSection

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Review } from '../../lib/types/review';
-import { getOutletId, getOutletName } from '../../lib/types/review';
+import { getOutletId, getOutletName, getUserName } from '../../lib/types/review';
 import type { OutletAggregate } from './reviewConstants';
 import { buildOutletMetrics } from './reviewUtils';
 import { average, round } from './reviewUtils';
@@ -136,13 +136,14 @@ export function useReviewsPageData(user: User, allReviews: Review[], selectedOut
   }, [accessibleStores, filteredReviews, selectedOutlet, storeLookup]);
 
   const criticalFeed = useMemo((): CriticalFeedbackItem[] => {
-    if (filteredReviews.length === 0) return [];
+    const isCritical = (review: Review) =>
+      review.complaintStatus === 'pending' &&
+      (review.isComplaint === true || (review.overallRating ?? 0) < 2.5);
 
-    const targetCount = Math.min(
-      filteredReviews.length,
-      Math.max(3, Math.ceil(filteredReviews.length * 0.1)),
-    );
-    const sorted = [...filteredReviews].sort((first, second) => {
+    const criticalReviews = filteredReviews.filter(isCritical);
+    if (criticalReviews.length === 0) return [];
+
+    const sorted = [...criticalReviews].sort((first, second) => {
       const firstPending = isPendingComplaint(first) ? 1 : 0;
       const secondPending = isPendingComplaint(second) ? 1 : 0;
 
@@ -155,12 +156,14 @@ export function useReviewsPageData(user: User, allReviews: Review[], selectedOut
       return secondTime - firstTime;
     });
 
-    return sorted.slice(0, targetCount).map((review) => {
+    return sorted.map((review) => {
       const store = storeLookup.get(getOutletId(review) ?? '');
+      const outletName = getOutletName(review) ?? store?.name ?? 'Outlet';
+      const userName = getUserName(review);
       return {
         review,
-        outletName: getOutletName(review) ?? store?.name ?? 'Outlet',
-        managerPhone: store?.managerPhone,
+        outletName,
+        displayLabel: `${userName} - ${outletName}`,
         actionRequired: isPendingComplaint(review),
       };
     });
