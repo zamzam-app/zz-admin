@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { Review } from '../../lib/types/review';
 import { getOutletId, getOutletName } from '../../lib/types/review';
-import { storesList } from '../../__mocks__/managers';
 import type { OutletAggregate } from './reviewConstants';
 import { buildOutletMetrics } from './reviewUtils';
 import { average, round } from './reviewUtils';
@@ -13,6 +12,15 @@ type User = {
   outletId?: string | string[];
 } | null;
 
+/** Minimal store info derived from review data (no mock). */
+type StoreInfo = {
+  outletId: string;
+  name: string;
+  managerName?: string;
+  managerPhone?: string;
+  rating?: number;
+};
+
 export function useReviewsPageData(user: User, allReviews: Review[], selectedOutlet: string) {
   const allowedOutletIds = useMemo(() => {
     if (!user) return new Set<string>();
@@ -20,12 +28,6 @@ export function useReviewsPageData(user: User, allReviews: Review[], selectedOut
     if (Array.isArray(user.outletId) && user.outletId.length > 0) return new Set(user.outletId);
     return new Set<string>();
   }, [user]);
-
-  const accessibleStores = useMemo(() => {
-    if (!user) return [];
-    if (allowedOutletIds === null) return storesList;
-    return storesList.filter((store) => allowedOutletIds.has(store.outletId));
-  }, [allowedOutletIds, user]);
 
   const allowedReviews = useMemo(() => {
     if (!user) return [];
@@ -35,6 +37,34 @@ export function useReviewsPageData(user: User, allReviews: Review[], selectedOut
       return outletId != null && allowedOutletIds.has(outletId);
     });
   }, [allReviews, allowedOutletIds, user]);
+
+  const { storeLookup, accessibleStores } = useMemo(() => {
+    const grouped = new Map<string, Review[]>();
+    allowedReviews.forEach((review) => {
+      const outletId = getOutletId(review);
+      if (outletId) {
+        const existing = grouped.get(outletId) ?? [];
+        existing.push(review);
+        grouped.set(outletId, existing);
+      }
+    });
+    const lookup = new Map<string, StoreInfo>();
+    grouped.forEach((reviews, outletId) => {
+      const name = getOutletName(reviews[0]);
+      const rating = average(reviews.map((r) => r.overallRating));
+      lookup.set(outletId, {
+        outletId,
+        name,
+        managerName: 'Manager not assigned',
+        managerPhone: undefined,
+        rating: round(rating, 1),
+      });
+    });
+    return {
+      storeLookup: lookup,
+      accessibleStores: Array.from(lookup.values()),
+    };
+  }, [allowedReviews]);
 
   const filteredReviews = useMemo(() => {
     if (selectedOutlet === 'all') return allowedReviews;
@@ -57,10 +87,6 @@ export function useReviewsPageData(user: User, allReviews: Review[], selectedOut
 
     return Array.from(options.entries());
   }, [accessibleStores, allowedReviews]);
-
-  const storeLookup = useMemo(() => {
-    return new Map(storesList.map((store) => [store.outletId, store]));
-  }, []);
 
   const outletAggregates = useMemo((): OutletAggregate[] => {
     const grouped = new Map<string, Review[]>();

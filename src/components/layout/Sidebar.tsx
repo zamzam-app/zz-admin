@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../lib/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Logo } from '../common/Logo'; // 1. Ensure this path is correct
+import { Logo } from '../common/Logo';
 import {
   Drawer,
   List,
