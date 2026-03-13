@@ -79,7 +79,7 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!form.name?.trim() || !form.email?.trim() || !form.userName?.trim()) return;
+    if (!form.name?.trim() || !form.userName?.trim()) return;
     const normalizedUsername = form.userName.trim().toLowerCase();
     const editingId = getUserId(editing);
     const duplicateUser = existingUsers.find((u) => {
@@ -94,12 +94,6 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
       message.error(msg);
       return;
     }
-    const phone = form.phoneNumber?.trim();
-    if (!editing && !phone) {
-      setError('Phone number is required.');
-      return;
-    }
-
     const id = getUserId(editing);
 
     if (editing && id) {
@@ -108,18 +102,26 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
         payload: {
           name: form.name,
           userName: form.userName,
-          email: form.email,
+          email:
+            form.email ||
+            (form.userName.includes('@')
+              ? form.userName
+              : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
           role: 'manager',
-          phoneNumber: phone ?? form.phoneNumber,
+          phoneNumber: form.phoneNumber || '',
         },
       });
     } else {
       createMutation.mutate({
         name: form.name!,
         userName: form.userName!,
-        email: form.email!,
+        email:
+          form.email ||
+          (form.userName.includes('@')
+            ? form.userName
+            : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
         role: 'manager',
-        phoneNumber: phone ?? '',
+        phoneNumber: form.phoneNumber || '',
         password: form.password,
       });
     }
@@ -143,7 +145,7 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
             {error}
           </p>
         )}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8'>
+        <div className='flex flex-col gap-6'>
           <Input
             label='Full Name'
             placeholder='Enter name'
@@ -156,21 +158,6 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
             placeholder='test-manager-01'
             value={form.userName || ''}
             onChange={(e) => setForm({ ...form, userName: e.target.value })}
-            required
-          />
-          <Input
-            label='Email'
-            type='email'
-            placeholder='testmanager01@zamzam.com'
-            value={form.email || ''}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <Input
-            label='Phone Number'
-            placeholder='+1234567890'
-            value={form.phoneNumber || ''}
-            onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
             required
           />
           <Input
