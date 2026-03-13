@@ -6,6 +6,7 @@ export interface Product {
   price: number;
   description: string;
   images: string[];
+  categoryList?: string[];
   isActive: boolean;
   isDeleted: boolean;
   createdAt?: Date;
@@ -17,6 +18,7 @@ export interface CreateProductRequest {
   price: number;
   description: string;
   images: string[];
+  categoryList?: string[];
 }
 
 export interface UpdateProductDto {
@@ -24,5 +26,6 @@ export interface UpdateProductDto {
   price?: number;
   description?: string;
   images?: string[];
+  categoryList?: string[];
   isActive?: boolean;
 }

@@ -1,14 +1,18 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { message, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Loader2 } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
 import { Modal } from '../common/Modal';
 import { productApi } from '../../lib/services/api/product.api';
 import type { Product, CreateProductRequest, UpdateProductDto } from '../../lib/types/product';
-import { useApiMutation } from '../../lib/react-query/use-api-hooks';
+import { useApiMutation, useApiQuery } from '../../lib/react-query/use-api-hooks';
 import { useImageUpload } from '../../lib/hooks/useImageUpload';
+import { categoryApi } from '../../lib/services/api/category.api';
+import { CATEGORY_KEYS } from '../../lib/types/category';
+import type { Category } from '../../lib/types/category';
 
 type AddModalProps = {
   open: boolean;
@@ -22,6 +26,7 @@ const initialFormState: CreateProductRequest = {
   price: 1,
   description: '',
   images: [],
+  categoryList: [],
 };
 
 export const AddModal: React.FC<AddModalProps> = ({
@@ -33,6 +38,10 @@ export const AddModal: React.FC<AddModalProps> = ({
   const [newProduct, setNewProduct] = useState(initialFormState);
   const [priceInput, setPriceInput] = useState('1');
   const isEditMode = !!productToEdit;
+  const { data: categoriesData } = useApiQuery(CATEGORY_KEYS, () =>
+    categoryApi.getCategories({ page: 1, limit: 100 }),
+  );
+  const categories: Category[] = categoriesData?.data ?? [];
 
   const createMutation = useApiMutation(
     (payload: CreateProductRequest) => productApi.create(payload),
@@ -78,6 +87,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           price: productToEdit.price,
           description: productToEdit.description ?? '',
           images: productToEdit.images ?? [],
+          categoryList: productToEdit.categoryList ?? [],
         }
       : initialFormState;
     const t = setTimeout(() => {
@@ -123,6 +133,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       price: newProduct.price,
       description: newProduct.description ?? '',
       images: newProduct.images ?? [],
+      categoryList: newProduct.categoryList ?? [],
     };
 
     try {
@@ -134,6 +145,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             price: payload.price,
             description: payload.description,
             images: payload.images,
+            categoryList: payload.categoryList,
           },
         });
       } else {
@@ -172,6 +184,29 @@ export const AddModal: React.FC<AddModalProps> = ({
       })),
     [newProduct.images],
   );
+
+  const compressImage = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) return file;
+    try {
+      const compressed = await imageCompression(file, {
+        maxWidthOrHeight: 1280,
+        maxSizeMB: 9.5,
+        initialQuality: 0.7,
+        useWebWorker: true,
+      });
+      if (compressed.size > 10 * 1024 * 1024) {
+        message.error('Image is too large even after compression. Please choose a smaller image.');
+        return null;
+      }
+      if (compressed instanceof File) return compressed;
+      return new File([compressed], file.name, {
+        type: 'image/jpeg',
+        lastModified: file.lastModified,
+      });
+    } catch {
+      return file;
+    }
+  }, []);
 
   return (
     <Modal
@@ -224,6 +259,38 @@ export const AddModal: React.FC<AddModalProps> = ({
             />
           </div>
 
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-2'>Cake Categories</label>
+            {categories.length === 0 ? (
+              <div className='text-sm text-gray-400'>No categories available.</div>
+            ) : (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                {categories.map((category) => {
+                  const selected = (newProduct.categoryList ?? []).includes(category._id);
+                  return (
+                    <label
+                      key={category._id}
+                      className='flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/50 cursor-pointer hover:border-gray-200'
+                    >
+                      <input
+                        type='checkbox'
+                        checked={selected}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...(newProduct.categoryList ?? []), category._id]
+                            : (newProduct.categoryList ?? []).filter((id) => id !== category._id);
+                          setNewProduct({ ...newProduct, categoryList: next });
+                        }}
+                        className='w-4 h-4 rounded border-gray-300 text-[#1F2937] focus:ring-[#1F2937]'
+                      />
+                      <span className='text-sm font-medium text-gray-700'>{category.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Image upload */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Upload Images</label>
@@ -236,8 +303,14 @@ export const AddModal: React.FC<AddModalProps> = ({
               disabled={uploadLoading}
               customRequest={({ file, onSuccess, onError }) => {
                 clearUploadError();
-                upload(file as File)
+                const targetFile = file as File;
+                compressImage(targetFile)
+                  .then((compressed) => {
+                    if (!compressed) return;
+                    return upload(compressed);
+                  })
                   .then((url) => {
+                    if (!url) return;
                     setNewProduct((prev) => ({
                       ...prev,
                       images: [...(prev.images ?? []), url],
