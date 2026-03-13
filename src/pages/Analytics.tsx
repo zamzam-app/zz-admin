@@ -3,8 +3,11 @@ import { ArrowLeft, Star } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { Box, Select, MenuItem } from '@mui/material';
-import { storesList } from '../__mocks__/managers';
 import Card from '../components/common/Card';
+import { useApiQuery } from '../lib/react-query/use-api-hooks';
+import { outletApi } from '../lib/services/api/outlet.api';
+import { OUTLET_KEYS } from '../lib/types/outlet';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const mockReviews = [
   { id: 1, name: 'Bob', rating: 2, comment: 'Not great.' },
@@ -22,6 +25,9 @@ export default function Analytics() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const { data: outlets, isLoading } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
+  const store = outlets?.find((s) => s.id === id || s.outletId === id) ?? null;
+
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const sortedReviews = useMemo(() => {
@@ -34,7 +40,14 @@ export default function Analytics() {
     return sorted.sort((a, b) => a.rating - b.rating);
   }, [sortOrder]);
 
-  const store = storesList.find((s) => s.id === id);
+  if (isLoading) {
+    return (
+      <div className='flex items-center justify-center p-8'>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   if (!store) return <div className='p-8'>Store not found</div>;
 
   const trendData = [

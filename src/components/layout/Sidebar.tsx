@@ -23,9 +23,11 @@ import {
   Cake,
   Computer,
 } from '@mui/icons-material';
-import { storesList } from '../../__mocks__/managers';
 import type { Outlet } from '../../lib/types/outlet';
 import { Modal } from '../common/Modal';
+import { useApiQuery } from '../../lib/react-query/use-api-hooks';
+import { outletApi } from '../../lib/services/api/outlet.api';
+import { OUTLET_KEYS } from '../../lib/types/outlet';
 
 const drawerWidth = 280;
 
@@ -62,14 +64,16 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
 
   const role = user?.role || 'staff';
 
+  const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
+
   /* ================================
    1. Resolve user outlets safely
   ================================= */
   const userStores = React.useMemo<Outlet[]>(() => {
-    if (role === 'admin') return storesList;
+    if (role === 'admin') return outlets;
     const ids = user?.outletId || [];
-    return storesList.filter((store) => ids.includes(store.outletId));
-  }, [role, user?.outletId]);
+    return outlets.filter((store) => ids.includes(store.outletId) || ids.includes(store.id));
+  }, [role, user?.outletId, outlets]);
 
   /* ================================
    2. Detect cafe capability
