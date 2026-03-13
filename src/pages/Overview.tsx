@@ -213,6 +213,18 @@ export default function Overview() {
     [outletFeedbackItems],
   );
 
+  const openComplaintsByOutlet = useMemo<OutletCount[]>(
+    () =>
+      outletFeedbackItems
+        .map((item) => ({
+          outletId: item.outletId,
+          outletName: item.outletName,
+          count: Math.max(0, (item.negativeFeedbacks ?? 0) - (item.resolvedFeedbacks ?? 0)),
+        }))
+        .sort((first, second) => second.count - first.count),
+    [outletFeedbackItems],
+  );
+
   const isOutletFeedbackLoadingState = isOutletFeedbackLoading || isOutletFeedbackFetching;
   const outletFeedbackErrorMessage = isOutletFeedbackError
     ? (outletFeedbackError?.message ?? 'Failed to load data.')
@@ -418,6 +430,8 @@ export default function Overview() {
         insights={quickInsights}
         loading={isQuickInsightsLoadingState}
         errorMessage={quickInsightsErrorMessage}
+        openComplaints={openComplaintsByOutlet}
+        openComplaintsLoading={isOutletFeedbackLoadingState}
       />
     </Box>
   );
