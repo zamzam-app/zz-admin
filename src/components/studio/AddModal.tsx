@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { message, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Loader2 } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
 import { Modal } from '../common/Modal';
@@ -173,6 +174,29 @@ export const AddModal: React.FC<AddModalProps> = ({
     [newProduct.images],
   );
 
+  const compressImage = useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith('image/')) return file;
+      try {
+        const compressed = await imageCompression(file, {
+          maxWidthOrHeight: 1280,
+          maxSizeMB: 9.5,
+          initialQuality: 0.7,
+          useWebWorker: true,
+        });
+        if (compressed.size > 10 * 1024 * 1024) {
+          message.error('Image is too large even after compression. Please choose a smaller image.');
+          return null;
+        }
+        if (compressed instanceof File) return compressed;
+        return new File([compressed], file.name, { type: 'image/jpeg', lastModified: file.lastModified });
+      } catch {
+        return file;
+      }
+    },
+    [],
+  );
+
   return (
     <Modal
       open={open}
@@ -236,8 +260,14 @@ export const AddModal: React.FC<AddModalProps> = ({
               disabled={uploadLoading}
               customRequest={({ file, onSuccess, onError }) => {
                 clearUploadError();
-                upload(file as File)
+                const targetFile = file as File;
+                compressImage(targetFile)
+                  .then((compressed) => {
+                    if (!compressed) return;
+                    return upload(compressed);
+                  })
                   .then((url) => {
+                    if (!url) return;
                     setNewProduct((prev) => ({
                       ...prev,
                       images: [...(prev.images ?? []), url],
