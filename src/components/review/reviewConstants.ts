@@ -39,6 +39,27 @@ export const scrollableSx = {
   '&::-webkit-scrollbar': { display: 'none' },
 } as const;
 
+/** Scrollbar hidden by default, appears when content overflows */
+export const overflowScrollSx = {
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  scrollbarWidth: 'thin',
+  '&::-webkit-scrollbar': {
+    width: 6,
+    height: 6,
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: '#d1d5db',
+    borderRadius: 3,
+  },
+  '&::-webkit-scrollbar-thumb:hover': {
+    background: '#9ca3af',
+  },
+} as const;
+
 export const cardSx = {
   borderRadius: '22px',
   border: '1px solid #E5E7EB',

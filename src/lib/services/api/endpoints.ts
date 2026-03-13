@@ -29,3 +29,8 @@ export const OUTLET_TABLE = {
   BASE: '/outlet-table',
   BY_ID: (id: string) => `/outlet-table/${id}`,
 };
+
+export const CATEGORY = {
+  BASE: '/category',
+  BY_ID: (id: string) => `/category/${id}`,
+};

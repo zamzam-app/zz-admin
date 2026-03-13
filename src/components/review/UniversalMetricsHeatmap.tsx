@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import type { OutletAggregate } from './reviewConstants';
-import { METRIC_ORDER, METRIC_LABEL, cardSx } from './reviewConstants';
+import { METRIC_ORDER, METRIC_LABEL, cardSx, overflowScrollSx } from './reviewConstants';
 import { getHeatCellStyle } from './reviewUtils';
 
 type UniversalMetricsHeatmapProps = {
@@ -12,14 +12,23 @@ export const UniversalMetricsHeatmap: React.FC<UniversalMetricsHeatmapProps> = (
   outletAggregates,
 }) => {
   return (
-    <Box sx={cardSx}>
-      <Box px={3} py={2.5} borderBottom='1px solid #F3F4F6'>
+    <Box sx={{ ...cardSx, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box px={3} py={2.5} borderBottom='1px solid #F3F4F6' flexShrink={0}>
         <Typography fontSize={30} fontWeight={900} color='#111827' letterSpacing='-0.04em'>
           Universal Metrics Heatmap
         </Typography>
       </Box>
 
-      <Box px={2.5} py={2.5} sx={{ overflowX: 'auto' }}>
+      <Box
+        px={2.5}
+        py={2.5}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          ...overflowScrollSx,
+          overflowX: 'auto',
+        }}
+      >
         <Box sx={{ minWidth: 780 }}>
           <Box
             sx={{

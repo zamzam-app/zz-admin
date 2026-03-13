@@ -34,19 +34,20 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [resolutionNotes, setResolutionNotes] = useState('');
-  const [pendingAction, setPendingAction] = useState<{ complaintStatus: ComplaintStatus } | null>(
-    null,
-  );
+  const [showResolveConfirm, setShowResolveConfirm] = useState(false);
+  /** After resolve, show the updated review from the API so resolution notes appear immediately */
+  const [updatedReview, setUpdatedReview] = useState<Review | null>(null);
 
   const resolveMutation = useApiMutation(
     ({ reviewId, body }: { reviewId: string; body: ResolveComplaintDto }) =>
       reviewsApi.resolveComplaint(reviewId, body),
     [REVIEW_KEYS],
     {
-      onSuccess: () => {
+      onSuccess: (data: Review) => {
         message.success('Complaint updated.');
         setResolutionNotes('');
-        setPendingAction(null);
+        setShowResolveConfirm(false);
+        setUpdatedReview(data);
         onResolved?.();
       },
       onError: (e) => {
@@ -55,24 +56,32 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
     },
   );
 
-  const handleResolve = (complaintStatus: ComplaintStatus) => {
+  const handleResolve = () => {
     if (!review || !user?.id) return;
     const body: ResolveComplaintDto = {
-      complaintStatus,
+      complaintStatus: ComplaintStatus.RESOLVED,
       resolvedBy: user.id,
       resolutionNotes: resolutionNotes.trim() || undefined,
     };
     resolveMutation.mutate({ reviewId: review._id, body });
   };
 
-  const isComplaintPending =
-    review?.isComplaint === true && review?.complaintStatus === ComplaintStatus.PENDING;
-  const isComplaintResolved =
-    review?.isComplaint === true && review?.complaintStatus === ComplaintStatus.RESOLVED;
-  const isComplaintDismissed =
-    review?.isComplaint === true && review?.complaintStatus === ComplaintStatus.DISMISSED;
+  /** Use API-updated review only when it matches the current modal review; otherwise avoid stale state */
+  const displayReview =
+    updatedReview && review && updatedReview._id === review._id ? updatedReview : review;
 
-  const isComplaint = review?.isComplaint === true;
+  const isComplaintPending =
+    displayReview?.isComplaint === true &&
+    displayReview?.complaintStatus === ComplaintStatus.PENDING;
+  const isComplaintResolved = displayReview?.complaintStatus === ComplaintStatus.RESOLVED;
+  const isComplaintDismissed = displayReview?.complaintStatus === ComplaintStatus.DISMISSED;
+
+  const isComplaint = displayReview?.isComplaint === true;
+
+  /** Show resolution UI for pending complaints or for low-rated reviews (including those not marked as complaints) */
+  const showResolutionActions =
+    isComplaintPending ||
+    ((displayReview?.overallRating ?? 0) < 2.5 && !isComplaintResolved && !isComplaintDismissed);
 
   return (
     <Modal open={open} onClose={onClose} title='Complete Review' maxWidth='md' scrollableContent>
@@ -87,10 +96,10 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
           {/* Meta */}
           <Box display='flex' flexWrap='wrap' gap={2} alignItems='center'>
             <Typography variant='body2' fontWeight={600} color='text.secondary'>
-              {getOutletName(review)}
+              {getOutletName(displayReview!)}
             </Typography>
             <Typography variant='body2' color='text.secondary'>
-              {new Date(review.createdAt ?? '').toLocaleDateString()}
+              {new Date(displayReview!.createdAt ?? '').toLocaleDateString()}
             </Typography>
           </Box>
 
@@ -106,7 +115,7 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
               gap: 2,
             }}
           >
-            {(review.userResponses ?? []).map((res, index) => {
+            {(displayReview!.userResponses ?? []).map((res, index) => {
               const qId = res.questionId;
               const answerDisplay = Array.isArray(res.answer)
                 ? res.answer.join(', ')
@@ -143,7 +152,7 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
           </Box>
 
           {/* Complaint raised by user (shown for any complaint: pending, resolved, or dismissed) */}
-          {isComplaint && (review.complaintReason ?? '').trim() && (
+          {isComplaint && (displayReview!.complaintReason ?? '').trim() && (
             <Box
               sx={{
                 p: 2,
@@ -157,14 +166,14 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                 Complaint raised by user
               </Typography>
               <Typography variant='body2' color='text.secondary'>
-                {review.complaintReason}
+                {displayReview!.complaintReason}
               </Typography>
             </Box>
           )}
 
-          {/* Review-level resolution (when complaint was resolved or dismissed) */}
+          {/* Review-level resolution (when resolved or dismissed – shows notes and timestamp) */}
           {(isComplaintResolved || isComplaintDismissed) &&
-            (review.resolutionNotes || review.resolvedAt) && (
+            (displayReview!.resolutionNotes || displayReview!.resolvedAt) && (
               <Box
                 sx={{
                   p: 1.5,
@@ -176,12 +185,12 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                   borderColor: isComplaintResolved ? 'success.light' : 'error.light',
                 }}
               >
-                {review.resolutionNotes && (
+                {displayReview!.resolutionNotes && (
                   <Typography variant='caption' display='block' color='text.secondary'>
-                    {review.resolutionNotes}
+                    {displayReview!.resolutionNotes}
                   </Typography>
                 )}
-                {review.resolvedAt && (
+                {displayReview!.resolvedAt && (
                   <Typography
                     variant='caption'
                     display='block'
@@ -189,15 +198,15 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                     sx={{ mt: 0.5, opacity: 0.9 }}
                   >
                     {isComplaintResolved ? 'Resolved' : 'Dismissed'}{' '}
-                    {new Date(review.resolvedAt).toLocaleString()}
-                    {review.resolvedBy ? ` by ${review.resolvedBy}` : ''}
+                    {new Date(displayReview!.resolvedAt).toLocaleString()}
+                    {displayReview!.resolvedBy ? ` by ${displayReview!.resolvedBy}` : ''}
                   </Typography>
                 )}
               </Box>
             )}
 
-          {/* Resolve complaint section (review-level, only when pending) */}
-          {isComplaintPending && (
+          {/* Resolve complaint / low-rating section (pending complaints or overallRating < 2.5) */}
+          {showResolutionActions && (
             <Box
               sx={{
                 mt: 1,
@@ -231,18 +240,9 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                   color='success'
                   size='small'
                   disabled={resolveMutation.isPending || !user?.id}
-                  onClick={() => setPendingAction({ complaintStatus: ComplaintStatus.RESOLVED })}
+                  onClick={() => setShowResolveConfirm(true)}
                 >
                   Mark as resolved
-                </Button>
-                <Button
-                  variant='outlined'
-                  color='error'
-                  size='small'
-                  disabled={resolveMutation.isPending || !user?.id}
-                  onClick={() => setPendingAction({ complaintStatus: ComplaintStatus.DISMISSED })}
-                >
-                  Mark as rejected
                 </Button>
               </Box>
             </Box>
@@ -254,7 +254,7 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
               Overall rating
             </Typography>
             <Box display='flex' gap={0.75} alignItems='center'>
-              {[...Array(Math.round(review.overallRating ?? 0))].map((_, i) => (
+              {[...Array(Math.round(displayReview!.overallRating ?? 0))].map((_, i) => (
                 <Star key={i} size={28} fill='#D4AF37' color='#D4AF37' />
               ))}
             </Box>
@@ -263,31 +263,15 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
       )}
 
       <ResolveComplaintConfirmModal
-        open={pendingAction !== null}
-        onClose={() => setPendingAction(null)}
-        title={
-          pendingAction?.complaintStatus === ComplaintStatus.RESOLVED
-            ? 'Mark as resolved'
-            : 'Mark as rejected'
-        }
-        description={
-          pendingAction?.complaintStatus === ComplaintStatus.RESOLVED
-            ? 'Are you sure you want to mark this complaint as resolved?'
-            : 'Are you sure you want to mark this complaint as rejected (dismissed)?'
-        }
-        confirmLabel={
-          pendingAction?.complaintStatus === ComplaintStatus.RESOLVED ? 'Resolve' : 'Reject'
-        }
+        open={showResolveConfirm}
+        onClose={() => setShowResolveConfirm(false)}
+        title='Mark as resolved'
+        description='Are you sure you want to mark this complaint as resolved?'
+        confirmLabel='Resolve'
         cancelLabel='Cancel'
-        onConfirm={() => {
-          if (pendingAction) {
-            handleResolve(pendingAction.complaintStatus);
-          }
-        }}
+        onConfirm={handleResolve}
         loading={resolveMutation.isPending}
-        confirmColor={
-          pendingAction?.complaintStatus === ComplaintStatus.RESOLVED ? 'success' : 'error'
-        }
+        confirmColor='success'
       />
     </Modal>
   );

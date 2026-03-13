@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Image, Popconfirm, Switch } from 'antd';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Pencil, Layers } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
@@ -10,6 +10,7 @@ import { productApi } from '../lib/services/api/product.api';
 import type { Product } from '../lib/types/product';
 import { AddModal } from '../components/studio/AddModal';
 import { DeleteModal } from '../components/common/DeleteModal';
+import { CakeCategoriesModal } from '../components/studio/CakeCategoriesModal';
 
 const PRODUCT_KEYS = ['products'];
 
@@ -19,6 +20,7 @@ const Studio = () => {
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [toggleConfirm, setToggleConfirm] = useState<{ id: string; list: boolean } | null>(null);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useApiQuery(PRODUCT_KEYS, () => productApi.getAll());
   const products = Array.isArray(data) ? data : [];
@@ -79,18 +81,28 @@ const Studio = () => {
           <h3 className='font-black text-3xl text-[#1F2937] tracking-tight'>Cake Studio</h3>
           <p className='text-gray-500 text-sm mt-1'>Manage your cake catalog</p>
         </div>
-        <Button
-          variant='admin-primary'
-          onClick={() => {
-            setProductToEdit(null);
-            setIsModalOpen(true);
-          }}
-          className='rounded-2xl py-4 shadow-xl shadow-gray-900/10'
-        >
-          <div className='flex items-center gap-2'>
-            <Plus size={20} /> Add New Listing
-          </div>
-        </Button>
+        <div className='flex items-center gap-3'>
+          <Button
+            variant='outline'
+            onClick={() => setCategoriesOpen(true)}
+            className='rounded-2xl py-4'
+          >
+            <Layers size={18} className='mr-2' />
+            Cake Categories
+          </Button>
+          <Button
+            variant='admin-primary'
+            onClick={() => {
+              setProductToEdit(null);
+              setIsModalOpen(true);
+            }}
+            className='rounded-2xl py-4 shadow-xl shadow-gray-900/10'
+          >
+            <div className='flex items-center gap-2'>
+              <Plus size={20} /> Add New Listing
+            </div>
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -258,6 +270,8 @@ const Studio = () => {
         onConfirm={confirmDelete}
         isPending={deleteMutation.isPending}
       />
+
+      <CakeCategoriesModal open={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
     </div>
   );
 };

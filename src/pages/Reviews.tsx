@@ -89,12 +89,6 @@ export default function Reviews() {
     setPreviewReviewId(null);
   };
 
-  const handleCallManager = (phone?: string) => {
-    if (phone) {
-      window.open(`tel:${phone}`);
-    }
-  };
-
   if (error) {
     return <ReviewsErrorState error={error} onRetry={() => refetch()} />;
   }
@@ -125,12 +119,16 @@ export default function Reviews() {
 
       <Box sx={{ ...scrollableSx, flex: 1, minHeight: 0, pr: 0.5, pb: 1 }}>
         <Stack spacing={3}>
-          <Grid container spacing={3}>
-            <Grid size={{ xs: 12, lg: 4 }}>
-              <FranchiseRankingCard outletAggregates={outletAggregates} />
+          <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
+            <Grid size={{ xs: 12, lg: 4 }} sx={{ minHeight: 320 }}>
+              <Box sx={{ height: '100%' }}>
+                <FranchiseRankingCard outletAggregates={outletAggregates} />
+              </Box>
             </Grid>
-            <Grid size={{ xs: 12, lg: 8 }}>
-              <UniversalMetricsHeatmap outletAggregates={outletAggregates} />
+            <Grid size={{ xs: 12, lg: 8 }} sx={{ minHeight: 320 }}>
+              <Box sx={{ height: '100%' }}>
+                <UniversalMetricsHeatmap outletAggregates={outletAggregates} />
+              </Box>
             </Grid>
           </Grid>
 
@@ -138,7 +136,6 @@ export default function Reviews() {
             items={criticalFeed}
             actionRequiredCount={actionRequiredCount}
             onViewTicket={setPreviewReviewId}
-            onCallManager={handleCallManager}
           />
 
           <AllReviewsSection
