@@ -3,6 +3,22 @@ import { ComplaintStatus } from '../../lib/types/review';
 import type { MetricKey } from './reviewConstants';
 import { METRIC_ORDER, METRIC_MATCHERS, METRIC_OFFSETS } from './reviewConstants';
 
+export type ComplaintBorder = 'green' | 'yellow' | 'red';
+
+export function getComplaintBorder(review: Review): ComplaintBorder | undefined {
+  if (review.isComplaint !== true || !review.complaintStatus) return undefined;
+  switch (review.complaintStatus) {
+    case ComplaintStatus.RESOLVED:
+      return 'green';
+    case ComplaintStatus.PENDING:
+      return 'yellow';
+    case ComplaintStatus.DISMISSED:
+      return 'red';
+    default:
+      return undefined;
+  }
+}
+
 export function getReviewComment(review: Review): string {
   const response = (review.userResponses ?? []).find((item) => typeof item.answer !== 'number');
   if (!response) return '—';

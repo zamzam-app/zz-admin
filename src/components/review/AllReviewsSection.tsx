@@ -4,6 +4,7 @@ import { Star } from 'lucide-react';
 import type { Review } from '../../lib/types/review';
 import { ReviewCard } from './ReviewCard';
 import { cardSx } from './reviewConstants';
+import { getComplaintBorder } from './reviewUtils';
 
 type AllReviewsSectionProps = {
   groupedReviews: Record<number, Review[]>;
@@ -76,6 +77,7 @@ export const AllReviewsSection: React.FC<AllReviewsSectionProps> = ({
                       key={review._id}
                       review={review}
                       onClick={() => onReviewClick(review._id)}
+                      complaintBorder={getComplaintBorder(review)}
                     />
                   ))}
                 </Box>
