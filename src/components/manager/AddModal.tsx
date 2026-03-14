@@ -123,21 +123,19 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
       title={editing ? 'Edit Employee' : 'Add Employee'}
       maxWidth='md'
     >
-      <form onSubmit={handleSave} className='flex flex-col gap-8'>
+      <form onSubmit={handleSave} className='flex flex-col gap-8' noValidate>
         <div className='flex flex-col gap-6'>
           <Input
             label='Full Name'
             placeholder='Enter name'
             value={form.name || ''}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
           />
           <Input
             label='Username'
             placeholder='test-manager-01'
             value={form.userName || ''}
             onChange={(e) => setForm({ ...form, userName: e.target.value })}
-            required
           />
           {!editing && (
             <Input
@@ -146,7 +144,6 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
               placeholder='password123'
               value={form.password || ''}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
             />
           )}
         </div>
