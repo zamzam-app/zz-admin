@@ -106,7 +106,7 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
             form.email ||
             (form.userName.includes('@')
               ? form.userName
-              : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
+              : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@zamzam.com`),
           role: 'manager',
         },
       });
@@ -118,7 +118,7 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
           form.email ||
           (form.userName.includes('@')
             ? form.userName
-            : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
+            : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@zamzam.com`),
         role: 'manager',
         password: form.password,
       });
@@ -158,14 +158,16 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
             onChange={(e) => setForm({ ...form, userName: e.target.value })}
             required
           />
-          <Input
-            label='Password'
-            type='password'
-            placeholder='password123'
-            value={form.password || ''}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required={!editing}
-          />
+          {!editing && (
+            <Input
+              label='Password'
+              type='password'
+              placeholder='password123'
+              value={form.password || ''}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
+          )}
         </div>
 
         <div className='flex justify-end items-center gap-4 pt-6 border-t border-gray-100'>
