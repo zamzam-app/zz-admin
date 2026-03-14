@@ -13,6 +13,7 @@ import { REVIEW_KEYS } from '../../lib/types/review';
 import {
   type Review,
   type ResolveComplaintDto,
+  type UserResponseQuestionRef,
   ComplaintStatus,
   getOutletName,
 } from '../../lib/types/review';
@@ -116,12 +117,34 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
             }}
           >
             {(displayReview!.userResponses ?? []).map((res, index) => {
-              const qId = res.questionId;
+              const question =
+                typeof res.questionId === 'object' && res.questionId != null
+                  ? (res.questionId as UserResponseQuestionRef)
+                  : null;
+              const qId =
+                typeof res.questionId === 'string'
+                  ? res.questionId
+                  : (question?._id ?? `q-${index}`);
+              const questionTitle = question?.title ?? 'Question';
+              const questionType = question?.type;
+              const options = question?.options ?? [];
+              const maxRatings = question?.maxRatings ?? 5;
+
               const answerDisplay = Array.isArray(res.answer)
                 ? res.answer.join(', ')
                 : typeof res.answer === 'number'
                   ? String(res.answer)
                   : String(res.answer ?? '—');
+
+              /** For multiple_choice/checkbox, answer can be option index (string) or array of indices */
+              const selectedSet = new Set(
+                Array.isArray(res.answer)
+                  ? res.answer.map(String)
+                  : res.answer != null
+                    ? [String(res.answer)]
+                    : [],
+              );
+
               return (
                 <Box
                   component='li'
@@ -141,11 +164,63 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                     display='block'
                     mb={0.5}
                   >
-                    Question
+                    {questionTitle}
                   </Typography>
-                  <Typography variant='body2' color='text.secondary'>
-                    {answerDisplay}
-                  </Typography>
+                  {questionType === 'rating' && typeof res.answer === 'number' ? (
+                    <Box display='flex' gap={0.5} alignItems='center' flexWrap='wrap'>
+                      {[...Array(Math.min(maxRatings, 5))].map((_, i) => {
+                        const value = i + 1;
+                        const filled = value <= Math.round(res.answer as number);
+                        return (
+                          <Star
+                            key={i}
+                            size={22}
+                            fill={filled ? '#D4AF37' : 'transparent'}
+                            color={filled ? '#D4AF37' : '#E0E0E0'}
+                          />
+                        );
+                      })}
+                    </Box>
+                  ) : (questionType === 'multiple_choice' || questionType === 'checkbox') &&
+                    options.length > 0 ? (
+                    <Box component='ul' sx={{ listStyle: 'none', pl: 0, m: 0 }}>
+                      {options.map((opt, optIdx) => {
+                        const key = String(optIdx);
+                        const selected = selectedSet.has(key);
+                        return (
+                          <Box
+                            component='li'
+                            key={optIdx}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              py: 0.25,
+                              color: selected ? 'text.primary' : 'text.secondary',
+                              fontWeight: selected ? 600 : 400,
+                            }}
+                          >
+                            <Box
+                              component='span'
+                              sx={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: questionType === 'checkbox' ? 0.5 : '50%',
+                                border: '2px solid',
+                                borderColor: selected ? 'primary.main' : 'divider',
+                                bgcolor: selected ? 'primary.main' : 'transparent',
+                              }}
+                            />
+                            <Typography variant='body2'>{opt.text}</Typography>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  ) : (
+                    <Typography variant='body2' color='text.secondary'>
+                      {answerDisplay}
+                    </Typography>
+                  )}
                 </Box>
               );
             })}
