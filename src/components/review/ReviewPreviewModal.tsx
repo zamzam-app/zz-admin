@@ -136,14 +136,16 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                   ? String(res.answer)
                   : String(res.answer ?? '—');
 
-              /** For multiple_choice/checkbox, answer can be option index (string) or array of indices */
-              const selectedSet = new Set(
-                Array.isArray(res.answer)
-                  ? res.answer.map(String)
-                  : res.answer != null
-                    ? [String(res.answer)]
-                    : [],
-              );
+              /** For multiple_choice/checkbox, answer is option text(s) – match by opt.text */
+              const answerTexts =
+                typeof res.answer === 'number'
+                  ? []
+                  : Array.isArray(res.answer)
+                    ? res.answer.map(String)
+                    : res.answer != null
+                      ? [String(res.answer)]
+                      : [];
+              const selectedTextSet = new Set(answerTexts);
 
               return (
                 <Box
@@ -185,8 +187,10 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                     options.length > 0 ? (
                     <Box component='ul' sx={{ listStyle: 'none', pl: 0, m: 0 }}>
                       {options.map((opt, optIdx) => {
-                        const key = String(optIdx);
-                        const selected = selectedSet.has(key);
+                        const isOther = opt.text === 'Other:';
+                        const selected = isOther
+                          ? answerTexts.some((a) => String(a).toLowerCase().startsWith('other:'))
+                          : selectedTextSet.has(opt.text);
                         return (
                           <Box
                             component='li'
@@ -217,7 +221,15 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
                       })}
                     </Box>
                   ) : (
-                    <Typography variant='body2' color='text.secondary'>
+                    <Typography
+                      variant='body2'
+                      color='text.secondary'
+                      sx={{
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
                       {answerDisplay}
                     </Typography>
                   )}
