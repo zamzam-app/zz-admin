@@ -34,7 +34,7 @@ export interface CreateUserPayload {
   userName: string;
   email: string;
   role: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   password?: string;
   outletId?: string[];
 }
