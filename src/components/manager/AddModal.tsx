@@ -108,7 +108,6 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
               ? form.userName
               : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
           role: 'manager',
-          phoneNumber: form.phoneNumber || '',
         },
       });
     } else {
@@ -121,7 +120,6 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
             ? form.userName
             : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
         role: 'manager',
-        phoneNumber: form.phoneNumber || '',
         password: form.password,
       });
     }
