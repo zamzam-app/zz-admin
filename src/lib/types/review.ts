@@ -19,9 +19,18 @@ export enum ComplaintStatus {
 
 export type ComplaintStatusValue = 'pending' | 'resolved' | 'dismissed';
 
-/** One answered question (no per-response complaint fields). */
+/** Populated question (when API returns question details with the response). */
+export interface UserResponseQuestionRef {
+  _id: string;
+  title?: string;
+  type?: string;
+  options?: Array<{ text: string }>;
+  maxRatings?: number;
+}
+
+/** One answered question (no per-response complaint fields). questionId may be populated with question details. */
 export interface UserResponse {
-  questionId: string;
+  questionId: string | UserResponseQuestionRef;
   answer: string | string[] | number;
 }
 
