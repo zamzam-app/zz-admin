@@ -32,7 +32,6 @@ function getApiErrorMessage(err: unknown, fallback: string) {
 
 export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: AddModalProps) {
   const [form, setForm] = useState<Partial<User> & { password?: string }>(initialForm);
-  const [error, setError] = useState<string | null>(null);
 
   const createMutation = useApiMutation(
     (data: CreateUserPayload) => usersApi.create(data),
@@ -40,9 +39,7 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
     {
       onSuccess: () => onSuccess(),
       onError: (err) => {
-        const msg = getApiErrorMessage(err, 'Failed to create employee');
-        setError(msg);
-        message.error(msg);
+        message.error(getApiErrorMessage(err, 'Failed to create employee'));
       },
     },
   );
@@ -53,9 +50,7 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
     {
       onSuccess: () => onSuccess(),
       onError: (err) => {
-        const msg = getApiErrorMessage(err, 'Failed to update employee');
-        setError(msg);
-        message.error(msg);
+        message.error(getApiErrorMessage(err, 'Failed to update employee'));
       },
     },
   );
@@ -63,23 +58,19 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
   useEffect(() => {
     if (open) {
       const next = editing ? { ...editing } : initialForm;
-      const t = setTimeout(() => {
-        setForm(next);
-        setError(null);
-      }, 0);
+      const t = setTimeout(() => setForm(next), 0);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => {
-      setForm(initialForm);
-      setError(null);
-    }, 0);
+    const t = setTimeout(() => setForm(initialForm), 0);
     return () => clearTimeout(t);
   }, [open, editing]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    if (!form.name?.trim() || !form.userName?.trim()) return;
+    if (!form.name?.trim() || !form.userName?.trim()) {
+      message.error('Full Name and Username are required.');
+      return;
+    }
     const normalizedUsername = form.userName.trim().toLowerCase();
     const editingId = getUserId(editing);
     const duplicateUser = existingUsers.find((u) => {
@@ -89,9 +80,7 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
       return existingName === normalizedUsername;
     });
     if (duplicateUser) {
-      const msg = 'Username is already taken.';
-      setError(msg);
-      message.error(msg);
+      message.error('Username is already taken.');
       return;
     }
     const id = getUserId(editing);
@@ -106,9 +95,8 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
             form.email ||
             (form.userName.includes('@')
               ? form.userName
-              : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
+              : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@zamzam.com`),
           role: 'manager',
-          phoneNumber: form.phoneNumber || '',
         },
       });
     } else {
@@ -119,9 +107,8 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
           form.email ||
           (form.userName.includes('@')
             ? form.userName
-            : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@domain.com`),
+            : `${form.userName.replace(/[^a-zA-Z0-9]/g, '') || 'employee'}@zamzam.com`),
         role: 'manager',
-        phoneNumber: form.phoneNumber || '',
         password: form.password,
       });
     }
@@ -136,38 +123,29 @@ export function AddModal({ open, onClose, editing, onSuccess, existingUsers }: A
       title={editing ? 'Edit Employee' : 'Add Employee'}
       maxWidth='md'
     >
-      <form onSubmit={handleSave} className='flex flex-col gap-8'>
-        {error && (
-          <p
-            className='text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3'
-            role='alert'
-          >
-            {error}
-          </p>
-        )}
+      <form onSubmit={handleSave} className='flex flex-col gap-8' noValidate>
         <div className='flex flex-col gap-6'>
           <Input
             label='Full Name'
             placeholder='Enter name'
             value={form.name || ''}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
           />
           <Input
             label='Username'
             placeholder='test-manager-01'
             value={form.userName || ''}
             onChange={(e) => setForm({ ...form, userName: e.target.value })}
-            required
           />
-          <Input
-            label='Password'
-            type='password'
-            placeholder='password123'
-            value={form.password || ''}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required={!editing}
-          />
+          {!editing && (
+            <Input
+              label='Password'
+              type='password'
+              placeholder='password123'
+              value={form.password || ''}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+          )}
         </div>
 
         <div className='flex justify-end items-center gap-4 pt-6 border-t border-gray-100'>
