@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Review } from '../../lib/types/review';
+import type { ComplaintStatusValue, Review } from '../../lib/types/review';
 import { getOutletId, getOutletName, getUserName } from '../../lib/types/review';
 import type { OutletAggregate } from './reviewConstants';
 import { buildOutletMetrics } from './reviewUtils';
@@ -21,7 +21,12 @@ type StoreInfo = {
   rating?: number;
 };
 
-export function useReviewsPageData(user: User, allReviews: Review[], selectedOutlet: string) {
+export function useReviewsPageData(
+  user: User,
+  allReviews: Review[],
+  selectedOutlet: string,
+  statusFilter: ComplaintStatusValue | null,
+) {
   const allowedOutletIds = useMemo(() => {
     if (!user) return new Set<string>();
     if (user.role === 'admin') return null;
@@ -67,9 +72,16 @@ export function useReviewsPageData(user: User, allReviews: Review[], selectedOut
   }, [allowedReviews]);
 
   const filteredReviews = useMemo(() => {
-    if (selectedOutlet === 'all') return allowedReviews;
-    return allowedReviews.filter((review) => getOutletId(review) === selectedOutlet);
-  }, [allowedReviews, selectedOutlet]);
+    const byOutlet =
+      selectedOutlet === 'all'
+        ? allowedReviews
+        : allowedReviews.filter((review) => getOutletId(review) === selectedOutlet);
+
+    if (!statusFilter) return byOutlet;
+    return byOutlet.filter(
+      (review) => review.isComplaint === true && review.complaintStatus === statusFilter,
+    );
+  }, [allowedReviews, selectedOutlet, statusFilter]);
 
   const outletOptions = useMemo((): [string, string][] => {
     const options = new Map<string, string>();

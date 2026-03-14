@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box, Grid, Stack } from '@mui/material';
 import { reviewsApi } from '../lib/services/api/review.api';
 import { useAuth } from '../lib/context/AuthContext';
-import { REVIEW_KEYS, FRANCHISE_ANALYTICS_KEYS } from '../lib/types/review';
+import {
+  REVIEW_KEYS,
+  FRANCHISE_ANALYTICS_KEYS,
+  type ComplaintStatusValue,
+} from '../lib/types/review';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/review/ReviewPreviewModal';
 import { ReviewsPageHeader } from '../components/review/ReviewsPageHeader';
@@ -19,6 +23,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 export default function Reviews() {
   const { user } = useAuth();
   const [selectedOutlet, setSelectedOutlet] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<ComplaintStatusValue | null>(null);
   const [previewReviewId, setPreviewReviewId] = useState<string | null>(null);
 
   const {
@@ -44,7 +49,7 @@ export default function Reviews() {
   );
 
   const { filteredReviews, criticalFeed, actionRequiredCount, groupedReviews, ratingOrder } =
-    useReviewsPageData(user, allReviews, selectedOutlet);
+    useReviewsPageData(user, allReviews, selectedOutlet, statusFilter);
 
   const finalOutletOptions = useMemo((): [string, string][] => {
     if (!franchiseData?.franchiseRanking) return [];
@@ -143,6 +148,8 @@ export default function Reviews() {
             ratingOrder={ratingOrder}
             totalCount={filteredReviews.length}
             onReviewClick={setPreviewReviewId}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
           />
         </Stack>
       </Box>
