@@ -11,8 +11,25 @@
       opacity: 1;
     }
   }
-
   .animate-flip-in {
     animation: flipIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
+}
+
+/* 
+  Global Deflicker & Focus Reset 
+  Ensures no browser-default focus rings or tap highlights appear during rapid UI updates.
+*/
+* {
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+*:focus,
+*:active,
+*:focus-within,
+*:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }

@@ -16,6 +16,7 @@ import {
   type UserResponseQuestionRef,
   ComplaintStatus,
   getOutletName,
+  getUserName,
 } from '../../lib/types/review';
 
 type ReviewPreviewModalProps = {
@@ -96,11 +97,22 @@ export const ReviewPreviewModal: React.FC<ReviewPreviewModalProps> = ({
         <Box display='flex' flexDirection='column' gap={2}>
           {/* Meta */}
           <Box display='flex' flexWrap='wrap' gap={2} alignItems='center'>
+            <Typography variant='body2' fontWeight={700} color='primary.main'>
+              {getUserName(displayReview!)}
+            </Typography>
+            <Box
+              component='span'
+              sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'text.disabled' }}
+            />
             <Typography variant='body2' fontWeight={600} color='text.secondary'>
               {getOutletName(displayReview!)}
             </Typography>
+            <Box
+              component='span'
+              sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'text.disabled' }}
+            />
             <Typography variant='body2' color='text.secondary'>
-              {new Date(displayReview!.createdAt ?? '').toLocaleDateString()}
+              {new Date(displayReview!.createdAt ?? '').toLocaleDateString('en-GB')}
             </Typography>
           </Box>
 
