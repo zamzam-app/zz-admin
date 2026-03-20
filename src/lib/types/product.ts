@@ -29,3 +29,36 @@ export interface UpdateProductDto {
   categoryList?: string[];
   isActive?: boolean;
 }
+
+export interface GeneratedCake {
+  _id: string;
+  imageUrl: string;
+  userId: {
+    _id: string;
+    name?: string;
+    phoneNumber?: string;
+    gender?: string;
+    dob?: string;
+    role?: string;
+    isActive?: boolean;
+    isDeleted?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+  prompt: string;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomCakesResponse {
+  data: GeneratedCake[];
+  meta: {
+    total: number;
+    currentPage: number;
+    hasPrevPage: boolean;
+    hasNextPage: boolean;
+    limit: number;
+  };
+}

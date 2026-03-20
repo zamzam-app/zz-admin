@@ -1,9 +1,10 @@
 import {
   useQuery,
+  useInfiniteQuery,
   useMutation,
   useQueryClient,
-  UseQueryOptions,
-  UseMutationOptions,
+  type UseQueryOptions,
+  type UseMutationOptions,
 } from '@tanstack/react-query';
 
 /**
@@ -22,8 +23,29 @@ export function useApiQuery<T>(
 }
 
 /**
+ * Reusable Infinite Query Hook for Lazy Loading
+ */
+export function useApiInfiniteQuery<T>(
+  queryKey: unknown[],
+  queryFn: (pageParam: number) => Promise<T>,
+  options?: unknown,
+) {
+  return useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam }) => queryFn(pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: T) => {
+      const page = lastPage as unknown as { meta?: { hasNextPage: boolean; currentPage: number } };
+      return page.meta?.hasNextPage ? page.meta.currentPage + 1 : undefined;
+    },
+    ...(options as Record<string, unknown>),
+  });
+}
+
+/**
  * Reusable Mutation Hook with automatic cache invalidation
  */
+
 export function useApiMutation<TData, TVariables>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   invalidateKeys?: unknown[][],
