@@ -54,7 +54,7 @@ const calculateAge = (dobString: string | undefined): string => {
 export const UserCreations = () => {
   const [selectedCreation, setSelectedCreation] = useState<GeneratedCake | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female' | 'other'>('all');
+  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all');
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -149,11 +149,11 @@ export const UserCreations = () => {
               <Filter size={16} />
               <span className='text-[10px] font-black uppercase tracking-wider'>Filter:</span>
             </div>
-            {(['all', 'male', 'female', 'other'] as const).map((gender) => (
+            {(['all', 'male', 'female'] as const).map((gender) => (
               <button
                 key={gender}
                 onClick={() => setGenderFilter(gender)}
-                className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+                className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all outline-none focus:outline-none ${
                   genderFilter === gender
                     ? 'bg-[#1F2937] text-white shadow-lg shadow-gray-200'
                     : 'bg-white text-gray-400 hover:text-gray-600 border border-gray-100'

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+
 import { Image, Popconfirm, Switch } from 'antd';
-import { Plus, Trash2, Pencil, Layers } from 'lucide-react';
+import { Plus, Trash2, Pencil, Layers, ChevronUp, ChevronDown } from 'lucide-react';
+
 import { Button } from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
@@ -24,9 +26,51 @@ const Studio = () => {
   const [toggleConfirm, setToggleConfirm] = useState<{ id: string; list: boolean } | null>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'catalogue' | 'creations'>('catalogue');
+  const [sortConfig, setSortConfig] = useState<{
+    field: 'details' | 'price' | null;
+    order: 'asc' | 'desc' | null;
+  }>({ field: null, order: null });
 
-  const { data, isLoading, error, refetch } = useApiQuery(PRODUCT_KEYS, () => productApi.getAll());
-  const products = Array.isArray(data) ? data : [];
+  const { data, isLoading, error, refetch } = useApiQuery<Product[]>(PRODUCT_KEYS, () =>
+    productApi.getAll(),
+  );
+
+  const sortedProducts = useMemo(() => {
+    const productsList = Array.isArray(data) ? data : [];
+    if (!sortConfig.field) return productsList;
+
+    return [...productsList].sort((a, b) => {
+      if (sortConfig.field === 'details') {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        if (sortConfig.order === 'asc') return nameA.localeCompare(nameB);
+        return nameB.localeCompare(nameA);
+      }
+
+      if (sortConfig.field === 'price') {
+        const priceA = a.price || 0;
+        const priceB = b.price || 0;
+        if (sortConfig.order === 'desc') return priceB - priceA;
+        return priceA - priceB;
+      }
+
+      return 0;
+    });
+  }, [data, sortConfig]);
+
+  const handleSort = (field: 'details' | 'price') => {
+    if (sortConfig.field === field) {
+      setSortConfig({
+        field,
+        order: sortConfig.order === 'asc' ? 'desc' : 'asc',
+      });
+    } else {
+      setSortConfig({
+        field,
+        order: field === 'details' ? 'asc' : 'desc',
+      });
+    }
+  };
 
   const deleteMutation = useApiMutation((id: string) => productApi.delete(id), [PRODUCT_KEYS]);
   const toggleMutation = useApiMutation(
@@ -132,7 +176,7 @@ const Studio = () => {
       <div className='flex gap-2 p-1.5 bg-[#F3F4F6] rounded-2xl w-fit mb-8 shadow-inner'>
         <button
           onClick={() => setActiveTab('catalogue')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 ${
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none ${
             activeTab === 'catalogue'
               ? 'bg-white text-[#1F2937] shadow-sm'
               : 'text-gray-400 hover:text-gray-600'
@@ -143,7 +187,7 @@ const Studio = () => {
         </button>
         <button
           onClick={() => setActiveTab('creations')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 ${
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none ${
             activeTab === 'creations'
               ? 'bg-white text-[#D4AF37] shadow-sm'
               : 'text-gray-400 hover:text-gray-600'
@@ -156,18 +200,58 @@ const Studio = () => {
 
       {activeTab === 'catalogue' ? (
         /* Table for Catalogue */
-        <div className='bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500'>
+        <div className='bg-white rounded-3xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500'>
           <table className='w-full text-left'>
-            <thead className='bg-[#F9FAFB] text-gray-400 text-[10px] uppercase font-black tracking-[0.2em]'>
+            <thead className='bg-[#F9FAFB] text-gray-400 text-[10px] uppercase font-black tracking-[0.2em] select-none border-b border-gray-100/50'>
               <tr>
-                <th className='px-8 py-6'>Reference</th>
-                <th className='px-8 py-6'>Details</th>
-                <th className='px-8 py-6 text-center'>Price</th>
-                <th className='px-8 py-6 text-right'>Control</th>
+                <th className='px-8 py-6 w-24'>Reference</th>
+                <th
+                  className='px-8 py-6 cursor-pointer group hover:bg-gray-100/50 outline-none select-none relative'
+                  onClick={() => handleSort('details')}
+                >
+                  <div className='flex items-center justify-center gap-2 relative'>
+                    <span>Details</span>
+                    <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0'>
+                      {sortConfig.field === 'details' ? (
+                        sortConfig.order === 'asc' ? (
+                          <ChevronUp size={14} className='text-[#D4AF37]' />
+                        ) : (
+                          <ChevronDown size={14} className='text-[#D4AF37]' />
+                        )
+                      ) : (
+                        <ChevronUp size={14} className='text-gray-300' />
+                      )}
+                    </div>
+                  </div>
+                </th>
+                <th
+                  className='px-8 py-6 text-center cursor-pointer group hover:bg-gray-100/50 outline-none select-none relative border-l border-gray-100/50'
+                  onClick={() => handleSort('price')}
+                >
+                  <div className='flex items-center justify-center gap-2 relative'>
+                    <span>Price</span>
+                    <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0'>
+                      {sortConfig.field === 'price' ? (
+                        sortConfig.order === 'desc' ? (
+                          <ChevronDown size={14} className='text-[#D4AF37]' />
+                        ) : (
+                          <ChevronUp size={14} className='text-[#D4AF37]' />
+                        )
+                      ) : (
+                        <ChevronDown size={14} className='text-gray-300' />
+                      )}
+                    </div>
+                  </div>
+                </th>
+
+                <th className='px-8 py-6 text-right relative border-l border-gray-100/50'>
+                  Control
+                </th>
               </tr>
             </thead>
-            <tbody className='divide-y divide-gray-50 text-[#1F2937]'>
-              {products.length === 0 ? (
+
+            <tbody className='text-[#1F2937]'>
+              {sortedProducts.length === 0 ? (
                 <tr>
                   <td colSpan={4} className='px-8 py-0'>
                     <NoDataFallback
@@ -191,8 +275,11 @@ const Studio = () => {
                   </td>
                 </tr>
               ) : (
-                products.map((product) => (
-                  <tr key={product._id} className='hover:bg-[#F9FAFB]/50 transition-colors'>
+                sortedProducts.map((product) => (
+                  <tr
+                    key={product._id}
+                    className='hover:bg-[#F9FAFB]/50 border-b border-gray-100/50'
+                  >
                     <td className='px-8 py-6'>
                       <div className='w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-[#F9FAFB] cursor-pointer'>
                         {product.images?.length ? (
@@ -235,7 +322,7 @@ const Studio = () => {
                         )}
                       </div>
                     </td>
-                    <td className='px-8 py-6'>
+                    <td className='px-8 py-6 text-center'>
                       <div className='font-bold mb-1'>{product.name}</div>
                       <div className='text-[10px] font-black text-[#D4AF37] uppercase tracking-widest'>
                         {product.description
@@ -244,6 +331,7 @@ const Studio = () => {
                           : '—'}
                       </div>
                     </td>
+
                     <td className='px-8 py-6 text-center'>
                       <div className='inline-block px-3 py-1 bg-emerald-50 text-[#10B981] rounded-lg font-black text-sm'>
                         ₹{product.price}
@@ -279,14 +367,14 @@ const Studio = () => {
                             setProductToEdit(product);
                             setIsModalOpen(true);
                           }}
-                          className='p-3 text-gray-400 hover:text-[#1F2937] hover:bg-gray-100 rounded-xl transition-all cursor-pointer'
+                          className='p-3 text-gray-400 hover:text-[#1F2937] hover:bg-gray-100 rounded-xl transition-all cursor-pointer outline-none focus:outline-none'
                           title='Edit'
                         >
                           <Pencil size={16} />
                         </button>
                         <button
                           onClick={() => setProductToDelete(product)}
-                          className='p-3 text-gray-400 hover:text-[#E11D48] hover:bg-white rounded-xl transition-all cursor-pointer'
+                          className='p-3 text-gray-400 hover:text-[#E11D48] hover:bg-white rounded-xl transition-all cursor-pointer outline-none focus:outline-none'
                           title='Delete'
                         >
                           <Trash2 size={16} />
