@@ -86,7 +86,7 @@ const Studio = () => {
               <Layers size={24} />
             </div>
             <h3 className='font-black text-3xl text-[#1F2937] tracking-tight'>
-              {activeTab === 'catalogue' ? 'Cake Studio' : 'AI Creations'}
+              {activeTab === 'catalogue' ? 'Cake Studio' : 'AI studio'}
             </h3>
           </div>
           <p className='text-gray-500 text-sm ml-12'>
@@ -150,7 +150,7 @@ const Studio = () => {
           }`}
         >
           <Sparkles size={16} />
-          AI Creations
+          AI studio
         </button>
       </div>
 
