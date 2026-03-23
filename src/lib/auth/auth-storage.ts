@@ -31,12 +31,8 @@ export const getAccessToken = (): string | null => {
 };
 
 export const setSession = (user: User, token: string) => {
-  try {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    localStorage.setItem(TOKEN_KEY, JSON.stringify({ token }));
-  } catch (error) {
-    console.error('Error saving session to storage:', error);
-  }
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem(TOKEN_KEY, JSON.stringify({ token }));
 };
 
 export const clearSession = () => {
