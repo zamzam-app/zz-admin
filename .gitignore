@@ -27,3 +27,7 @@ dist-ssr
 temp
 .cursor
 .agents
+playwright/.auth/
+playwright-report/
+test-results/
+.env.e2e.local
