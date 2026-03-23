@@ -32,6 +32,7 @@ export interface ApiOutletItem {
   description?: string | null;
   images?: string[] | null;
   managerId?: ApiPopulatedRef | string | null;
+  managerIds?: Array<ApiPopulatedRef | string> | null;
   formId?: string | null;
   formTitle?: string | null;
   qrToken?: string | null;
@@ -69,6 +70,28 @@ function parseRef(ref: unknown): { id: string | undefined; name: string | undefi
   return { id: undefined, name: undefined };
 }
 
+function parseRefs(refs: ApiOutletItem['managerIds'] | ApiOutletItem['managerId']): {
+  ids: string[];
+  names: string[];
+} {
+  if (Array.isArray(refs)) {
+    return refs.reduce<{ ids: string[]; names: string[] }>(
+      (acc, ref) => {
+        const parsed = parseRef(ref);
+        if (parsed.id) acc.ids.push(parsed.id);
+        if (parsed.name) acc.names.push(parsed.name);
+        return acc;
+      },
+      { ids: [], names: [] },
+    );
+  }
+  const single = parseRef(refs);
+  return {
+    ids: single.id ? [single.id] : [],
+    names: single.name ? [single.name] : [],
+  };
+}
+
 function parseMenuItems(raw: ApiOutletItem['menuItems']): OutletMenuItem[] {
   if (!Array.isArray(raw) || raw.length === 0) return [];
   return raw.map((m) => ({
@@ -81,7 +104,7 @@ function parseMenuItems(raw: ApiOutletItem['menuItems']): OutletMenuItem[] {
 function toOutlet(item: ApiOutletItem): Outlet {
   const id = item._id;
   const outletType = parseRef(item.outletType);
-  const manager = parseRef(item.managerId);
+  const managerRefs = parseRefs(item.managerIds ?? item.managerId);
   const images = Array.isArray(item.images) ? item.images : undefined;
   const formId = item.formId ?? undefined;
   const address = item.address ?? undefined;
@@ -98,8 +121,10 @@ function toOutlet(item: ApiOutletItem): Outlet {
     totalFeedback: Number(item.totalFeedback) || 0,
     address: address || undefined,
     managerPhone: item.managerPhone ?? undefined,
-    managerId: manager.id,
-    managerName: manager.name,
+    managerIds: managerRefs.ids,
+    managerNames: managerRefs.names,
+    managerId: managerRefs.ids[0],
+    managerName: managerRefs.names[0],
     formId: formId || undefined,
     formTitle: item.formTitle ?? undefined,
     qrToken: qrToken || undefined,

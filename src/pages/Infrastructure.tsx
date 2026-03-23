@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Store, MapPin, QrCode, Trash2, User, Layers } from 'lucide-react';
+import { Plus, Store, MapPin, Trash2, User, Layers } from 'lucide-react';
+import { QrcodeOutlined, EditOutlined } from '@ant-design/icons';
 import { nanoid } from 'nanoid';
 
 import type { Outlet } from '../lib/types/outlet';
-import type { IOutletTable } from '../lib/types/outletTable';
 import type { ManagerOption } from '../components/outlet';
 import { User as ManagerUser } from '../lib/types/manager';
 
@@ -14,11 +14,9 @@ import { DeleteModal } from '../components/common/DeleteModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { NoDataFallback } from '../components/common/NoDataFallback';
 
-import { OutletModal, OutletTypesModal, QrCodeModal, TablesModal } from '../components/outlet';
-import { AddTableModal } from '../components/outlet/AddTableModal';
+import { OutletModal, OutletTypesModal, QrCodeModal } from '../components/outlet';
 
 import { outletApi } from '../lib/services/api/outlet.api';
-import { outletTableApi } from '../lib/services/api/outletTable.api';
 import { formsApi } from '../lib/services/api/forms.api';
 import { usersApi } from '../lib/services/api/users.api';
 
@@ -26,7 +24,6 @@ import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { FORM_KEYS } from '../lib/types/forms';
 import { MANAGER_KEYS } from '../lib/types/manager';
-import { useAuth } from '../lib/context/AuthContext';
 
 function toManagerOption(user: ManagerUser): ManagerOption {
   return {
@@ -36,10 +33,14 @@ function toManagerOption(user: ManagerUser): ManagerOption {
   };
 }
 
+function getManagerNames(store: Outlet): string[] {
+  if (store.managerNames && store.managerNames.length > 0) return store.managerNames;
+  if (store.managerName) return [store.managerName];
+  return [];
+}
+
 export default function Infrastructure() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-
   const {
     data: stores = [],
     isLoading,
@@ -58,18 +59,6 @@ export default function Infrastructure() {
   const [selectedQrStore, setSelectedQrStore] = useState<Outlet | null>(null);
   const [outletToDelete, setOutletToDelete] = useState<Outlet | null>(null);
   const [outletTypesModalOpen, setOutletTypesModalOpen] = useState(false);
-
-  const [tablesOpen, setTablesOpen] = useState(false);
-  const [addTableOpen, setAddTableOpen] = useState(false);
-  const [selectedOutletForTables, setSelectedOutletForTables] = useState<Outlet | null>(null);
-  const [editingTable, setEditingTable] = useState<IOutletTable | null>(null);
-
-  const { data: tablesResponse } = useApiQuery(
-    ['outlet-tables', selectedOutletForTables?.id],
-    () => outletTableApi.getTables(selectedOutletForTables!.id),
-    { enabled: !!selectedOutletForTables },
-  );
-  const tables: IOutletTable[] = tablesResponse?.data?.data ?? [];
 
   const deleteMutation = useApiMutation((id: string) => outletApi.delete(id), [OUTLET_KEYS], {
     onSuccess: () => setOutletToDelete(null),
@@ -104,37 +93,31 @@ export default function Infrastructure() {
     deleteMutation.mutate(id);
   };
 
-  const handleOpenTables = (store: Outlet) => {
-    setSelectedOutletForTables(store);
-    setTablesOpen(true);
-  };
-
-  const createTable = async (payload: {
-    outletId: string;
-    createdBy: string;
-    name: string;
-    capacity?: number;
-  }) => {
-    await outletTableApi.createTable(payload);
-    queryClient.invalidateQueries({ queryKey: ['outlet-tables', payload.outletId] });
-  };
-
   const header = (
     <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
       <div>
-        <h1 className='text-3xl font-black text-[#1F2937]'>Outlet Infrastructure</h1>
-        <p className='text-gray-500 text-sm'>Manage all physical outlets and QR points</p>
+        <div className='inline-flex items-center gap-2 rounded-full bg-[#FFF7E6] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#9A6B1E]'>
+          Operations
+        </div>
+        <h1 className='mt-3 text-3xl font-black text-[#0F172A]'>Outlet Infrastructure</h1>
+        <p className='mt-1 text-sm text-slate-500'>
+          Manage outlets, QR access, and table inventory.
+        </p>
       </div>
       <div className='flex flex-wrap gap-3'>
         <Button
           type='button'
           variant='outline'
           onClick={() => setOutletTypesModalOpen(true)}
-          className='rounded-2xl px-6 py-4'
+          className='rounded-2xl px-6 py-4 bg-white'
         >
           <Layers size={18} className='mr-2' /> Outlet Types
         </Button>
-        <Button variant='admin-primary' onClick={handleOpenAdd} className='rounded-2xl px-6 py-4'>
+        <Button
+          variant='admin-primary'
+          onClick={handleOpenAdd}
+          className='rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.15)]'
+        >
           <Plus size={18} /> Add Outlet
         </Button>
       </div>
@@ -174,75 +157,95 @@ export default function Infrastructure() {
       {header}
 
       {/* Outlet Grid */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-        {stores.map((store) => (
-          <Card
-            key={store.id}
-            className='p-6 border border-gray-100 rounded-[28px] hover:border-[#D4AF37] transition-all'
-          >
-            <div className='flex items-start justify-between mb-6'>
-              <div className='flex items-center gap-4'>
-                {store.images?.[0] ? (
-                  <img
-                    src={store.images[0]}
-                    alt={store.name}
-                    className='w-12 h-12 rounded-2xl object-cover'
-                  />
-                ) : (
-                  <div className='w-12 h-12 rounded-2xl bg-[#1F2937] text-[#D4AF37] flex items-center justify-center'>
-                    <Store size={22} />
+      <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
+        {stores.map((store) => {
+          const managerNames = getManagerNames(store);
+          return (
+            <Card
+              key={store.id}
+              className='group relative overflow-hidden p-4 border border-slate-200/70 bg-white rounded-[22px] shadow-[0_8px_30px_rgba(15,23,42,0.08)] hover:-translate-y-[2px] hover:border-[#D4AF37] transition-all'
+            >
+              <div className='flex items-start justify-between gap-4 mb-3'>
+                <div className='flex items-center gap-4'>
+                  {store.images?.[0] ? (
+                    <img
+                      src={store.images[0]}
+                      alt={store.name}
+                      className='w-12 h-12 rounded-2xl object-cover ring-2 ring-white shadow-sm'
+                    />
+                  ) : (
+                    <div className='w-12 h-12 rounded-2xl bg-[#111827] text-[#D4AF37] flex items-center justify-center shadow-sm'>
+                      <Store size={22} />
+                    </div>
+                  )}
+                  <div>
+                    <h4 className='font-black text-lg text-[#0F172A]'>{store.name}</h4>
+                    <p className='text-[10px] text-gray-400 uppercase font-bold tracking-widest'>
+                      {store.outletTypeName || 'Outlet'}
+                    </p>
                   </div>
-                )}
-                <div>
-                  <h4 className='font-black text-lg text-[#1F2937]'>{store.name}</h4>
-                  <p className='text-[10px] text-gray-400 uppercase font-bold tracking-widest'>
-                    {store.outletTypeName}
-                  </p>
+                </div>
+                <div />
+              </div>
+
+              <div className='space-y-2.5 text-sm text-gray-600'>
+                <div className='flex items-start gap-2'>
+                  <MapPin size={14} className='mt-0.5 text-slate-400' />
+                  <span>{store.address || 'No address provided'}</span>
+                </div>
+                <div className='flex items-start gap-2'>
+                  <User size={14} className='mt-0.5 text-slate-400' />
+                  <div>
+                    <div className='text-xs uppercase tracking-[0.2em] text-gray-400 font-semibold'>
+                      Managers
+                    </div>
+                    <div className='mt-2 flex flex-wrap gap-2'>
+                      {managerNames.length > 0 ? (
+                        managerNames.map((name) => (
+                          <span
+                            key={name}
+                            className='inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700'
+                          >
+                            {name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className='text-sm text-gray-400'>No managers assigned</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className='flex gap-2'>
+
+              <div className='mt-4 flex items-center gap-2'>
+                <button
+                  onClick={() => handleGenerateQr(store)}
+                  aria-label='Generate QR code'
+                  title='QR Code'
+                  className='flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-700 hover:bg-gray-50 hover:text-slate-900 transition'
+                >
+                  <QrcodeOutlined />
+                </button>
+                <button
+                  onClick={() => handleEdit(store)}
+                  aria-label='Edit outlet'
+                  title='Edit'
+                  className='flex h-9 w-9 items-center justify-center rounded-lg bg-[#111827] text-white hover:bg-[#0B1220] transition'
+                >
+                  <EditOutlined />
+                </button>
                 <button
                   onClick={() => setOutletToDelete(store)}
-                  className='p-2 text-red-500 hover:bg-red-50 rounded-xl cursor-pointer'
+                  aria-label='Delete outlet'
+                  title='Delete'
+                  className='flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-white text-red-500 hover:bg-red-50 transition'
                 >
                   <Trash2 size={16} />
                 </button>
               </div>
-            </div>
-
-            <div className='space-y-3 text-sm text-gray-600'>
-              <div className='flex items-center gap-2'>
-                <MapPin size={14} />
-                {store.address}
-              </div>
-              <div className='flex items-center gap-2'>
-                <User size={14} />
-                {store.managerName ?? 'No Manager Assigned'}
-              </div>
-            </div>
-
-            <div className='flex gap-3 mt-6'>
-              <button
-                onClick={() => handleGenerateQr(store)}
-                className='flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer'
-              >
-                <QrCode size={16} /> QR Code
-              </button>
-              <button
-                onClick={() => handleOpenTables(store)}
-                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 active:text-white focus:text-white cursor-pointer'
-              >
-                Tables
-              </button>
-              <button
-                onClick={() => handleEdit(store)}
-                className='flex-1 py-3 bg-[#1F2937] text-white rounded-xl hover:bg-gray-800 active:text-white focus:text-white cursor-pointer'
-              >
-                Edit
-              </button>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {/* MODALS */}
@@ -262,55 +265,6 @@ export default function Infrastructure() {
       />
 
       <QrCodeModal open={qrOpen} onClose={() => setQrOpen(false)} store={selectedQrStore} />
-
-      <TablesModal
-        open={tablesOpen}
-        outletName={selectedOutletForTables?.name}
-        tables={tables}
-        onClose={() => setTablesOpen(false)}
-        onAddClick={() => setAddTableOpen(true)}
-        onEdit={(table) => {
-          setEditingTable(table);
-          setAddTableOpen(true);
-        }}
-        onDelete={async (table) => {
-          if (!table._id || !selectedOutletForTables) return;
-          await outletTableApi.deleteTable(table._id);
-          queryClient.invalidateQueries({
-            queryKey: ['outlet-tables', selectedOutletForTables.id],
-          });
-        }}
-      />
-
-      <AddTableModal
-        key={editingTable?._id ?? 'new'}
-        open={addTableOpen}
-        editing={editingTable}
-        onClose={() => {
-          setAddTableOpen(false);
-          setEditingTable(null);
-        }}
-        onSave={async (payload) => {
-          if (!selectedOutletForTables) return;
-
-          if (editingTable) {
-            await outletTableApi.updateTable(editingTable._id!, payload);
-          } else {
-            await createTable({
-              outletId: selectedOutletForTables.id,
-              createdBy: user?.id || '',
-              ...payload,
-            });
-          }
-
-          queryClient.invalidateQueries({
-            queryKey: ['outlet-tables', selectedOutletForTables.id],
-          });
-
-          setEditingTable(null);
-          setAddTableOpen(false);
-        }}
-      />
 
       <DeleteModal
         open={!!outletToDelete}

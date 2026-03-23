@@ -194,11 +194,31 @@ export default function Analytics() {
 
             <div className='bg-white p-8 rounded-4xl shadow-sm border border-gray-100'>
               <div className='space-y-3 text-sm text-gray-700'>
+                <div>
+                  <span className='font-semibold text-gray-900'>Managers:</span>
+                  <div className='mt-2 flex flex-wrap gap-2'>
+                    {(store.managerNames && store.managerNames.length > 0
+                      ? store.managerNames
+                      : store.managerName
+                        ? [store.managerName]
+                        : []
+                    ).map((name) => (
+                      <span
+                        key={name}
+                        className='inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700'
+                      >
+                        {name}
+                      </span>
+                    ))}
+                    {(!store.managerNames || store.managerNames.length === 0) &&
+                      !store.managerName && (
+                        <span className='text-xs text-gray-400'>No managers assigned</span>
+                      )}
+                  </div>
+                </div>
                 <p>
-                  <span className='font-semibold text-gray-900'>Name:</span> {store.managerName}
-                </p>
-                <p>
-                  <span className='font-semibold text-gray-900'>Phone:</span> {store.managerPhone}
+                  <span className='font-semibold text-gray-900'>Phone:</span>{' '}
+                  {store.managerPhone || 'Not provided'}
                 </p>
                 <p>
                   <span className='font-semibold text-gray-900'>Outlet ID:</span> {store.id}

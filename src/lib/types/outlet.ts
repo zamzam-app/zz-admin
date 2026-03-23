@@ -21,6 +21,9 @@ export interface Outlet {
   managerPhone?: string;
   formId?: string;
   formTitle?: string;
+  managerIds?: string[];
+  managerNames?: string[];
+  /** Legacy single-manager fields (backward compatibility) */
   managerId?: string;
   managerName?: string;
   qrToken?: string;
@@ -49,7 +52,7 @@ export interface CreateOutletPayload {
   images?: string[];
   address?: string;
   outletType: string;
-  managerId?: string | null;
+  managerIds?: string[] | null;
   formId?: string | null;
   productTemplateId?: string | null;
   menuItems?: OutletMenuItem[];
@@ -62,7 +65,7 @@ export interface UpdateOutletPayload {
   images?: string[];
   address?: string;
   outletType?: string;
-  managerId?: string | null;
+  managerIds?: string[] | null;
   formId?: string | null;
   productTemplateId?: string | null;
   menuItems?: OutletMenuItem[];
