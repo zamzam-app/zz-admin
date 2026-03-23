@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessToken, clearSession, hasSession } from '../../auth/auth-storage';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -7,15 +8,10 @@ const api = axios.create({
 
 /* ---------------- REQUEST INTERCEPTOR ---------------- */
 api.interceptors.request.use((config) => {
-  const sessionString = localStorage.getItem('token');
+  const token = getAccessToken();
 
-  if (sessionString) {
-    const sessionData = JSON.parse(sessionString);
-    const token = sessionData?.token;
-
-    if (token) {
-      config.headers.set('Authorization', `Bearer ${token}`);
-    }
+  if (token) {
+    config.headers.set('Authorization', `Bearer ${token}`);
   }
 
   return config;
@@ -25,11 +21,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const tokenString = localStorage.getItem('token');
-
     // Only redirect if user was already logged in
-    if (error?.response?.status === 401 && tokenString) {
-      localStorage.clear();
+    if (error?.response?.status === 401 && hasSession()) {
+      clearSession();
       window.location.href = '/login';
     }
 
