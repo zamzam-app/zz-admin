@@ -26,13 +26,15 @@ export function useReviewsPageData(
   allReviews: Review[],
   selectedOutlet: string,
   statusFilter: ComplaintStatusValue | null,
+  assignedOutletIds?: string[] | null,
 ) {
   const allowedOutletIds = useMemo(() => {
     if (!user) return new Set<string>();
     if (user.role === 'admin') return null;
+    if (assignedOutletIds && assignedOutletIds.length > 0) return new Set(assignedOutletIds);
     if (Array.isArray(user.outletId) && user.outletId.length > 0) return new Set(user.outletId);
     return new Set<string>();
-  }, [user]);
+  }, [assignedOutletIds, user]);
 
   const allowedReviews = useMemo(() => {
     if (!user) return [];

@@ -15,6 +15,7 @@ const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
 const Overview = lazy(() => import('../pages/Overview'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Reviews = lazy(() => import('../pages/Reviews'));
+const Tasks = lazy(() => import('../pages/Tasks'));
 const Infrastructure = lazy(() => import('../pages/Infrastructure'));
 const FormBuilder = lazy(() => import('../pages/FormBuilder'));
 const ManagersPage = lazy(() => import('../pages/Managers'));
@@ -73,6 +74,10 @@ const router = createBrowserRouter([
           {
             path: '/reviews',
             element: <Reviews />,
+          },
+          {
+            path: '/tasks',
+            element: <Tasks />,
           },
           {
             path: '/settings',
