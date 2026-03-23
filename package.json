@@ -12,7 +12,13 @@
     "check-format": "prettier --check .",
     "prepare": "husky",
     "check-types": "tsc --noEmit",
-    "do": "pnpm format && pnpm lint && pnpm build && git add ."
+    "do": "pnpm format && pnpm lint && pnpm build && git add .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -52,6 +58,15 @@
     "prettier": "^3.8.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "@playwright/test": "^1.54.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "dotenv": "^17.2.3",
+    "jsdom": "^26.1.0",
+    "msw": "^2.11.6",
+    "vitest": "^3.2.4"
   }
 }
