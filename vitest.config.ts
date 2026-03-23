@@ -9,6 +9,8 @@ export default defineConfig({
     globals: true,
     setupFiles: './src/test/setup.ts',
     css: true,
+    include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['e2e/**', 'playwright.config.ts', 'node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

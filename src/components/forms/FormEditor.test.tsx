@@ -86,7 +86,7 @@ describe('FormEditor', () => {
       }),
     );
 
-    await userEvent.click(screen.getByRole('button', { name: /duplicate/i }));
+    await userEvent.click(screen.getAllByRole('button', { name: /duplicate/i })[0]);
     expect(setCurrentForm).toHaveBeenCalledWith(
       expect.objectContaining({
         questions: expect.arrayContaining([

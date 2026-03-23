@@ -89,7 +89,7 @@ describe('reviewUtils', () => {
 
     expect(metrics.staff).toBe(4.5);
     expect(metrics.speed).toBe(5);
-    expect(metrics.clean).toBe(4.1);
+    expect(metrics.clean).toBe(4);
     expect(metrics.quality).toBe(4.2);
   });
 

@@ -47,12 +47,14 @@ describe('useImageUpload', () => {
     vi.mocked(getUploadSignature).mockRejectedValue(error);
     const { result } = renderHook(() => useImageUpload());
 
-    await expect(
-      result.current.upload(new File(['oops'], 'bad.png', { type: 'image/png' })),
-    ).rejects.toThrow(error);
+    await act(async () => {
+      await expect(
+        result.current.upload(new File(['oops'], 'bad.png', { type: 'image/png' })),
+      ).rejects.toThrow(error);
+    });
     await waitFor(() => expect(result.current.error).toEqual(error));
 
-    act(() => {
+    await act(async () => {
       result.current.clearError();
     });
 
