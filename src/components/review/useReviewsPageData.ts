@@ -16,7 +16,7 @@ type User = {
 type StoreInfo = {
   outletId: string;
   name: string;
-  managerName?: string;
+  managerNames?: string[];
   managerPhone?: string;
   rating?: number;
 };
@@ -60,7 +60,7 @@ export function useReviewsPageData(
       lookup.set(outletId, {
         outletId,
         name,
-        managerName: 'Manager not assigned',
+        managerNames: [],
         managerPhone: undefined,
         rating: round(rating, 1),
       });
@@ -125,7 +125,8 @@ export function useReviewsPageData(
       const reviews = grouped.get(outletId) ?? [];
       const store = storeLookup.get(outletId);
       const outletName = reviews[0] ? getOutletName(reviews[0]) : (store?.name ?? 'Unknown Outlet');
-      const managerName = store?.managerName ?? 'Manager not assigned';
+      const managerNames =
+        store?.managerNames && store.managerNames.length > 0 ? store.managerNames : [];
       const managerPhone = store?.managerPhone;
       const csat = round(
         reviews.length > 0
@@ -137,7 +138,7 @@ export function useReviewsPageData(
       rows.push({
         outletId,
         outletName,
-        managerName,
+        managerNames,
         managerPhone,
         csat,
         metrics: buildOutletMetrics(reviews, csat || 3.5),

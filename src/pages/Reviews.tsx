@@ -72,10 +72,16 @@ export default function Reviews() {
 
     const rows: OutletAggregate[] = franchiseRanking.map((ranking, index) => {
       const heatmap = metricsHeatmap[index];
+      const managerNames =
+        ranking.managerNames && ranking.managerNames.length > 0
+          ? ranking.managerNames
+          : ranking.managerName
+            ? [ranking.managerName]
+            : [];
       return {
         outletId: ranking.outletId,
         outletName: ranking.outletName,
-        managerName: ranking.managerName ?? 'Manager not assigned',
+        managerNames,
         csat: heatmap?.metrics.overall ?? ranking.csatScore,
         metrics: {
           staff: heatmap?.metrics.staff ?? 0,

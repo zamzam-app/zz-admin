@@ -3,7 +3,7 @@ export type MetricKey = 'staff' | 'speed' | 'clean' | 'quality';
 export type OutletAggregate = {
   outletId: string;
   outletName: string;
-  managerName: string;
+  managerNames: string[];
   managerPhone?: string;
   csat: number;
   metrics: Record<MetricKey, number>;
