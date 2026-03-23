@@ -5,7 +5,7 @@ import MainLayout from '../components/layout/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import RoleGuard from './RoleGuard';
-import CategoryGaurd from './CategoryGaurd';
+import CategoryGuard from './CategoryGuard';
 
 /* ============================
    Lazy loaded pages
@@ -109,25 +109,25 @@ const router = createBrowserRouter([
           {
             path: '/studio',
             element: (
-              <CategoryGaurd allowed={['cafe']}>
+              <CategoryGuard allowed={['cafe']}>
                 <Studio />
-              </CategoryGaurd>
+              </CategoryGuard>
             ),
           },
           {
             path: '/orders',
             element: (
-              <CategoryGaurd allowed={['cafe']}>
+              <CategoryGuard allowed={['cafe']}>
                 <Orders />
-              </CategoryGaurd>
+              </CategoryGuard>
             ),
           },
           {
             path: '/validations',
             element: (
-              <CategoryGaurd allowed={['cafe']}>
+              <CategoryGuard allowed={['cafe']}>
                 <Validation />
-              </CategoryGaurd>
+              </CategoryGuard>
             ),
           },
         ],

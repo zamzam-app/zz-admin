@@ -26,6 +26,7 @@ import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { FORM_KEYS } from '../lib/types/forms';
 import { MANAGER_KEYS } from '../lib/types/manager';
+import { useAuth } from '../lib/context/AuthContext';
 
 function toManagerOption(user: ManagerUser): ManagerOption {
   return {
@@ -37,7 +38,7 @@ function toManagerOption(user: ManagerUser): ManagerOption {
 
 export default function Infrastructure() {
   const queryClient = useQueryClient();
-  const CURRENT_USER_ID = JSON.parse(localStorage.getItem('user')!);
+  const { user } = useAuth();
 
   const {
     data: stores = [],
@@ -297,7 +298,7 @@ export default function Infrastructure() {
           } else {
             await createTable({
               outletId: selectedOutletForTables.id,
-              createdBy: CURRENT_USER_ID.id,
+              createdBy: user?.id || '',
               ...payload,
             });
           }
