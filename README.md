@@ -28,7 +28,7 @@ This is the administrative dashboard for managing outlets, users, forms, and vie
 - `src/lib`: Core logic including API services, context providers, and utility functions.
 - `src/pages`: Main application views.
 - `src/routes`: Routing configuration and navigation guards.
-- `src/styles`: Global styles and Tailwind configuration.
+- `src/theme`: Material UI theme and component configurations.
 
 ## Getting Started
 

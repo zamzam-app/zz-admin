@@ -36,9 +36,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         outletId: userData.user.outlets || [],
       };
 
+      // 1. Persist session first
+      try {
+        setSession(normalizedUser, userData.access_token);
+      } catch (storageErr) {
+        console.error('Session persistence failed:', storageErr);
+        throw new Error('Unable to persist session');
+      }
+
+      // 2. Only if persistence succeeds, update state
       setUser(normalizedUser);
       setIsAuthenticated(true);
-      setSession(normalizedUser, userData.access_token);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
