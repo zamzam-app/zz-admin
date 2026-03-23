@@ -87,10 +87,10 @@ describe('reviewUtils', () => {
       4,
     );
 
-    expect(metrics.staff).toBe(4);
+    expect(metrics.staff).toBe(4.5);
     expect(metrics.speed).toBe(5);
-    expect(metrics.clean).toBeGreaterThan(0);
-    expect(metrics.quality).toBeGreaterThan(0);
+    expect(metrics.clean).toBe(4.1);
+    expect(metrics.quality).toBe(4.2);
   });
 
   it('flags only pending complaints as action required', () => {
