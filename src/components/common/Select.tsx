@@ -17,10 +17,15 @@ export default function Select({ label, options, value, onChange }: Props) {
       value={value}
       onChange={onChange}
       fullWidth
+      InputLabelProps={{ shrink: true }}
       sx={{
         '& .MuiOutlinedInput-root': {
           borderRadius: 3,
           bgcolor: 'white',
+        },
+        '& .MuiInputLabel-root': {
+          bgcolor: 'white',
+          px: 0.5,
         },
       }}
     >

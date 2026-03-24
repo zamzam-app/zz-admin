@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Grid, Stack } from '@mui/material';
 import { reviewsApi } from '../lib/services/api/review.api';
+import { outletApi } from '../lib/services/api/outlet.api';
 import { useAuth } from '../lib/context/AuthContext';
 import {
   REVIEW_KEYS,
   FRANCHISE_ANALYTICS_KEYS,
   type ComplaintStatusValue,
 } from '../lib/types/review';
+import { OUTLET_KEYS } from '../lib/types/outlet';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
 import { ReviewPreviewModal } from '../components/review/ReviewPreviewModal';
 import { ReviewsPageHeader } from '../components/review/ReviewsPageHeader';
@@ -37,6 +39,9 @@ export default function Reviews() {
     FRANCHISE_ANALYTICS_KEYS,
     () => reviewsApi.getFranchiseAnalytics(),
   );
+  const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList(), {
+    enabled: !!user && user.role !== 'admin',
+  });
 
   const loading = reviewsLoading || franchiseLoading;
 
@@ -48,13 +53,28 @@ export default function Reviews() {
     { enabled: !!previewReviewId },
   );
 
+  const assignedOutletIds = useMemo(() => {
+    if (!user || user.role === 'admin') return null;
+    if (Array.isArray(user.outletId) && user.outletId.length > 0) return user.outletId;
+    const userId = user.id ?? user._id;
+    if (!userId) return [];
+    return outlets
+      .filter((outlet) => outlet.managerIds?.includes(userId) || outlet.managerId === userId)
+      .map((outlet) => outlet.id);
+  }, [outlets, user]);
+
   const { filteredReviews, criticalFeed, actionRequiredCount, groupedReviews, ratingOrder } =
-    useReviewsPageData(user, allReviews, selectedOutlet, statusFilter);
+    useReviewsPageData(user, allReviews, selectedOutlet, statusFilter, assignedOutletIds);
 
   const finalOutletOptions = useMemo((): [string, string][] => {
     if (!franchiseData?.franchiseRanking) return [];
-    return franchiseData.franchiseRanking.map((r) => [r.outletId, r.outletName]);
-  }, [franchiseData]);
+    const options: [string, string][] = franchiseData.franchiseRanking.map((r) => [
+      r.outletId,
+      r.outletName,
+    ]);
+    if (!assignedOutletIds || assignedOutletIds.length === 0) return options;
+    return options.filter(([id]) => assignedOutletIds.includes(id));
+  }, [assignedOutletIds, franchiseData]);
 
   useEffect(() => {
     if (selectedOutlet !== 'all') {
@@ -92,9 +112,14 @@ export default function Reviews() {
       };
     });
 
-    if (selectedOutlet === 'all') return rows;
-    return rows.filter((row) => row.outletId === selectedOutlet);
-  }, [franchiseData, selectedOutlet]);
+    const scopedRows =
+      assignedOutletIds && assignedOutletIds.length > 0
+        ? rows.filter((row) => assignedOutletIds.includes(row.outletId))
+        : rows;
+
+    if (selectedOutlet === 'all') return scopedRows;
+    return scopedRows.filter((row) => row.outletId === selectedOutlet);
+  }, [assignedOutletIds, franchiseData, selectedOutlet]);
 
   const handleClosePreview = () => {
     setPreviewReviewId(null);
