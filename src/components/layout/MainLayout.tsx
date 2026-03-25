@@ -43,15 +43,18 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f9fafb' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#F3F6F4' }}>
       {/* Mobile App Bar */}
       <AppBar
         position='fixed'
         sx={{
           display: { sm: 'none' },
           width: '100%',
-          bgcolor: '#1F2937',
-          zIndex: 1100, // Ensure it's above the drawer if needed, though usually drawer is higher
+          bgcolor: '#FFFFFF',
+          color: '#1F2937',
+          boxShadow: 'none',
+          borderBottom: '1px solid #E5E7EB',
+          zIndex: 1100,
         }}
       >
         <Toolbar>
@@ -60,7 +63,7 @@ const MainLayout: React.FC = () => {
             aria-label='open drawer'
             edge='start'
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' }, color: '#D4AF37' }}
+            sx={{ mr: 2, display: { sm: 'none' }, color: '#1F2937' }}
           >
             <MenuIcon />
           </IconButton>

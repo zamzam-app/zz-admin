@@ -23,9 +23,9 @@ export default function Input({ label, type, ...props }: Props) {
       sx={{
         '& .MuiOutlinedInput-root': {
           borderRadius: 2,
-          bgcolor: '#F9FAFB',
-          '&:hover fieldset': { borderColor: '#D4AF37' },
-          '&.Mui-focused fieldset': { borderColor: '#D4AF37' },
+          bgcolor: '#FFFFFF',
+          '&:hover fieldset': { borderColor: '#2F6B4F' },
+          '&.Mui-focused fieldset': { borderColor: '#2F6B4F' },
         },
       }}
       slotProps={{

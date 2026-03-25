@@ -120,7 +120,6 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* 2. LOGO SECTION UPDATED */}
       <Toolbar sx={{ flexDirection: 'column', py: 4, gap: 1, flexShrink: 0 }}>
         <Box sx={{ mb: 1 }}>
           <Logo className='w-16 h-16 shadow-2xl' />
@@ -189,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
               >
                 <ListItemIcon
                   sx={{
-                    color: active ? '#1F2937' : '#D4AF37', // Gold icons for inactive state
+                    color: active ? '#1F2937' : '#D4AF37',
                     minWidth: 40,
                   }}
                 >

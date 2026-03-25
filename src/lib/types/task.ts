@@ -9,6 +9,32 @@ export interface Task {
   description: string;
   priority: TaskPriority;
   dueDate: string;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  department?: string;
+  repeat?: string;
+  validations?: {
+    image?: boolean;
+    video?: boolean;
+    audio?: boolean;
+    file?: boolean;
+    checklist?: boolean;
+    qna?: boolean;
+    description?: boolean;
+  };
+  validationEvidence?: {
+    image?: Array<{ name: string; type: string; dataUrl: string }>;
+    video?: Array<{ name: string; type: string; dataUrl: string }>;
+    audio?: Array<{ name: string; type: string; dataUrl: string }>;
+    file?: Array<{ name: string; type: string; dataUrl: string }>;
+    checklist?: string[];
+    qna?: Array<{ question: string; answer: string }>;
+    description?: string;
+  };
+  validationSubmittedAt?: string | null;
+  validationSubmittedBy?: string | null;
   outletId?: string;
   outletName?: string;
   status: TaskStatus;
@@ -26,6 +52,32 @@ export interface CreateTaskPayload {
   description: string;
   priority: TaskPriority;
   dueDate: string;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  department?: string;
+  repeat?: string;
+  validations?: {
+    image?: boolean;
+    video?: boolean;
+    audio?: boolean;
+    file?: boolean;
+    checklist?: boolean;
+    qna?: boolean;
+    description?: boolean;
+  };
+  validationEvidence?: {
+    image?: Array<{ name: string; type: string; dataUrl: string }>;
+    video?: Array<{ name: string; type: string; dataUrl: string }>;
+    audio?: Array<{ name: string; type: string; dataUrl: string }>;
+    file?: Array<{ name: string; type: string; dataUrl: string }>;
+    checklist?: string[];
+    qna?: Array<{ question: string; answer: string }>;
+    description?: string;
+  };
+  validationSubmittedAt?: string | null;
+  validationSubmittedBy?: string | null;
   outletId?: string;
   outletName?: string;
   status?: TaskStatus;
@@ -38,6 +90,32 @@ export interface UpdateTaskPayload {
   description?: string;
   priority?: TaskPriority;
   dueDate?: string;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  department?: string;
+  repeat?: string;
+  validations?: {
+    image?: boolean;
+    video?: boolean;
+    audio?: boolean;
+    file?: boolean;
+    checklist?: boolean;
+    qna?: boolean;
+    description?: boolean;
+  };
+  validationEvidence?: {
+    image?: Array<{ name: string; type: string; dataUrl: string }>;
+    video?: Array<{ name: string; type: string; dataUrl: string }>;
+    audio?: Array<{ name: string; type: string; dataUrl: string }>;
+    file?: Array<{ name: string; type: string; dataUrl: string }>;
+    checklist?: string[];
+    qna?: Array<{ question: string; answer: string }>;
+    description?: string;
+  };
+  validationSubmittedAt?: string | null;
+  validationSubmittedBy?: string | null;
   outletId?: string;
   outletName?: string;
   status?: TaskStatus;

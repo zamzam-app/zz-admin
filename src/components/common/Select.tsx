@@ -22,6 +22,8 @@ export default function Select({ label, options, value, onChange }: Props) {
         '& .MuiOutlinedInput-root': {
           borderRadius: 3,
           bgcolor: 'white',
+          '&:hover fieldset': { borderColor: '#2F6B4F' },
+          '&.Mui-focused fieldset': { borderColor: '#2F6B4F' },
         },
         '& .MuiInputLabel-root': {
           bgcolor: 'white',
