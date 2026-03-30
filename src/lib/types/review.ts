@@ -193,7 +193,8 @@ export interface FranchiseRankingItemDto {
   rank: number;
   outletId: string;
   outletName: string;
-  managerName: string | null;
+  managerNames?: string[] | null;
+  managerName?: string | null;
   csatScore: number;
 }
 
