@@ -59,7 +59,10 @@ export const FranchiseRankingCard: React.FC<FranchiseRankingCardProps> = ({ outl
                     {row.outletName}
                   </Typography>
                   <Typography fontSize={12} color='#6B7280'>
-                    Manager: {row.managerName}
+                    Managers:{' '}
+                    {row.managerNames.length > 0
+                      ? row.managerNames.join(', ')
+                      : 'No managers assigned'}
                   </Typography>
                 </Box>
               </Stack>

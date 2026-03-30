@@ -5,7 +5,7 @@ import MainLayout from '../components/layout/MainLayout';
 import ProtectedRoute from './ProtectedRoute';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import RoleGuard from './RoleGuard';
-import CategoryGaurd from './CategoryGaurd';
+import CategoryGuard from './CategoryGuard';
 
 /* ============================
    Lazy loaded pages
@@ -15,6 +15,7 @@ const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
 const Overview = lazy(() => import('../pages/Overview'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Reviews = lazy(() => import('../pages/Reviews'));
+const Tasks = lazy(() => import('../pages/Tasks'));
 const Infrastructure = lazy(() => import('../pages/Infrastructure'));
 const FormBuilder = lazy(() => import('../pages/FormBuilder'));
 const ManagersPage = lazy(() => import('../pages/Managers'));
@@ -75,6 +76,10 @@ const router = createBrowserRouter([
             element: <Reviews />,
           },
           {
+            path: '/tasks',
+            element: <Tasks />,
+          },
+          {
             path: '/settings',
             element: <Settings />,
           },
@@ -109,25 +114,25 @@ const router = createBrowserRouter([
           {
             path: '/studio',
             element: (
-              <CategoryGaurd allowed={['cafe']}>
+              <CategoryGuard allowed={['cafe']}>
                 <Studio />
-              </CategoryGaurd>
+              </CategoryGuard>
             ),
           },
           {
             path: '/orders',
             element: (
-              <CategoryGaurd allowed={['cafe']}>
+              <CategoryGuard allowed={['cafe']}>
                 <Orders />
-              </CategoryGaurd>
+              </CategoryGuard>
             ),
           },
           {
             path: '/validations',
             element: (
-              <CategoryGaurd allowed={['cafe']}>
+              <CategoryGuard allowed={['cafe']}>
                 <Validation />
-              </CategoryGaurd>
+              </CategoryGuard>
             ),
           },
         ],

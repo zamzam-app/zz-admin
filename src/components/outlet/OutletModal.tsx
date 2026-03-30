@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { message, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Loader2 } from 'lucide-react';
+import { Autocomplete, TextField } from '@mui/material';
 import type { Outlet } from '../../lib/types/outlet';
 import { Button } from '../common/Button';
 import Input from '../common/Input';
@@ -117,6 +118,7 @@ export function OutletModal({
             description: editing.description ?? '',
             images: editing.images ?? [],
             menuItems: editing.menuItems ?? [],
+            managerIds: editing.managerIds ?? (editing.managerId ? [editing.managerId] : []),
           }
         : {};
       const t = setTimeout(() => {
@@ -154,7 +156,7 @@ export function OutletModal({
       images: form.images?.length ? form.images : undefined,
       address: form.address?.trim() ?? undefined,
       outletType: form.outletTypeId,
-      managerId: form.managerId || undefined,
+      managerIds: form.managerIds ?? [],
       formId: form.formId || undefined,
       menuItems,
     };
@@ -179,6 +181,11 @@ export function OutletModal({
         url,
       })),
     [form.images],
+  );
+
+  const selectedManagers = useMemo(
+    () => managers.filter((manager) => (form.managerIds ?? []).includes(manager.id)),
+    [form.managerIds, managers],
   );
 
   return (
@@ -254,20 +261,43 @@ export function OutletModal({
           </div>
 
           <div>
-            <Select
-              label='Assigned Manager'
-              options={managers.map((m) => ({ label: m.name, value: m.id }))}
-              value={form.managerId || ''}
-              onChange={(e) => {
-                const manager = managers.find((m) => m.id === e.target.value);
+            <Autocomplete
+              multiple
+              options={managers}
+              value={selectedManagers}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              onChange={(_, value) => {
                 setForm({
                   ...form,
-                  managerId: manager?.id,
-                  managerName: manager?.name,
-                  managerPhone: manager?.phone,
+                  managerIds: value.map((manager) => manager.id),
+                  managerNames: value.map((manager) => manager.name),
                 });
               }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label='Assigned Managers'
+                  placeholder='Select managers'
+                  variant='outlined'
+                />
+              )}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: '#F9FAFB',
+                  '&:hover fieldset': { borderColor: '#D4AF37' },
+                  '&.Mui-focused fieldset': { borderColor: '#D4AF37' },
+                },
+                '& .MuiChip-root': {
+                  bgcolor: '#F3F4F6',
+                  fontWeight: 600,
+                },
+              }}
             />
+            <p className='mt-2 text-xs text-gray-500'>
+              Assign one or more managers to this outlet.
+            </p>
           </div>
 
           <div>

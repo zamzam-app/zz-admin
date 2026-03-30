@@ -15,16 +15,19 @@
     "do": "pnpm format && pnpm lint && pnpm build && git add ."
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
+    "@ncdai/react-wheel-picker": "^1.2.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.20",
     "@tanstack/react-query-devtools": "^5.91.2",
     "antd": "^6.2.3",
     "axios": "^1.13.5",
     "browser-image-compression": "^2.0.2",
+    "dayjs": "^1.11.20",
     "lucide-react": "^0.563.0",
     "nanoid": "^5.1.6",
     "react": "^19.2.0",
@@ -53,5 +56,6 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
-  }
+  },
+  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
 }

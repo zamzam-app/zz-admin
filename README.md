@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# Admin Dashboard - Review & Analytics System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the administrative dashboard for managing outlets, users, forms, and viewing analytics for the review system.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React** with **TypeScript**
+- **Vite** for build and development
+- **Tailwind CSS** for styling
+- **Ant Design** & **Material UI** for UI components
+- **TanStack React Query** for data fetching and state management
+- **Axios** for API communication
+- **Lucide React** for iconography
 
-## React Compiler
+## Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Overview**: High-level metrics and recent activity across all outlets.
+- **Analytics**: Detailed breakdown of performance metrics (Staff, Speed, Cleanliness, Quality).
+- **Reviews**: Centralized view of all customer feedback with filtering capabilities.
+- **Infrastructure**: Management of physical outlets, including QR code generation and table configuration.
+- **Managers**: User management for staff and administrators.
+- **Form Builder**: Customizable review forms tailored to different outlet types.
+- **Studio**: Digital asset management and configuration.
 
-## Expanding the ESLint configuration
+## Project Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- `src/components`: Reusable UI components and layouts.
+- `src/lib`: Core logic including API services, context providers, and utility functions.
+- `src/pages`: Main application views.
+- `src/routes`: Routing configuration and navigation guards.
+- `src/theme`: Material UI theme and component configurations.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prerequisites
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+- Node.js (Latest LTS recommended)
+- pnpm
+
+### Installation
+
+```bash
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+```bash
+pnpm run dev
 ```
+
+### Build
+
+```bash
+pnpm run build
+```
+
+### Type Check
+
+```bash
+pnpm check-types
+```
+
+## Auth Flow
+
+The application uses a centralized authentication storage module (`src/lib/auth/auth-storage.ts`) to manage session state. Authentication state is exposed via the `useAuth` hook from `AuthContext`. API requests are automatically intercepted to include the bearer token.

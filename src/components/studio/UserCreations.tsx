@@ -22,33 +22,59 @@ import type { GeneratedCake, CustomCakesResponse } from '../../lib/types/product
 
 const CREATION_KEYS = 'user-creations';
 
-const calculateAge = (dobString: string | undefined): string => {
-  if (!dobString || dobString === '—') return '—';
+const parseDob = (dobString: string | undefined): Date | null => {
+  if (!dobString || dobString === '—') return null;
 
-  try {
-    let birthDate: Date;
+  let parsed: Date;
 
-    if (dobString.includes('/')) {
-      const parts = dobString.split('/');
-      birthDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-    } else {
-      birthDate = new Date(dobString);
-    }
-
-    if (isNaN(birthDate.getTime())) return dobString;
-
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-
-    return `${age} yr`;
-  } catch {
-    return dobString;
+  if (dobString.includes('/')) {
+    const parts = dobString.split('/');
+    if (parts.length < 3) return null;
+    const day = Number(parts[0]);
+    const month = Number(parts[1]);
+    const year = Number(parts[2]);
+    if (!day || !month || !year) return null;
+    parsed = new Date(year, month - 1, day);
+  } else {
+    parsed = new Date(dobString);
   }
+
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+const calculateAge = (dobString: string | undefined): string => {
+  const birthDate = parseDob(dobString);
+  if (!birthDate) return dobString && dobString !== '—' ? dobString : '—';
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return `${age} yr`;
+};
+
+const formatDobWithAge = (dobString: string | undefined): string => {
+  const birthDate = parseDob(dobString);
+  if (!birthDate) return dobString && dobString !== '—' ? dobString : '—';
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  const day = String(birthDate.getDate()).padStart(2, '0');
+  const month = String(birthDate.getMonth() + 1).padStart(2, '0');
+  const year = birthDate.getFullYear();
+
+  return `${day}/${month}/${year} (${age} years)`;
 };
 
 export const UserCreations = () => {
@@ -260,7 +286,7 @@ export const UserCreations = () => {
                   <DetailRow
                     icon={<Calendar size={18} />}
                     label='Age'
-                    value={calculateAge(selectedCreation.userId.dob)}
+                    value={formatDobWithAge(selectedCreation.userId.dob)}
                   />
                   <DetailRow
                     icon={<UserIcon size={18} />}

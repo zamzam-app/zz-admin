@@ -1,14 +1,42 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { Box, IconButton, AppBar, Toolbar } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import { message } from 'antd';
+import { useAuth } from '../../lib/context/AuthContext';
+import { tasksApi } from '../../lib/services/api/task.api';
 
 const drawerWidth = 280;
 
 const MainLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+  const toastShownRef = useRef(false);
+
+  useEffect(() => {
+    if (!user || user.role === 'admin') return;
+    if (toastShownRef.current) return;
+    const managerId = user.id ?? user._id ?? '';
+    if (!managerId) return;
+    const storageKey = `zz_task_last_seen_${managerId}`;
+    const lastSeen = localStorage.getItem(storageKey) ?? new Date(0).toISOString();
+    tasksApi
+      .getNewAssignmentsSince(managerId, lastSeen)
+      .then((newTasks) => {
+        if (newTasks.length > 0) {
+          message.info(
+            `${newTasks.length} new task${newTasks.length > 1 ? 's' : ''} assigned to you.`,
+          );
+        }
+        localStorage.setItem(storageKey, new Date().toISOString());
+        toastShownRef.current = true;
+      })
+      .catch(() => {
+        toastShownRef.current = true;
+      });
+  }, [user]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);

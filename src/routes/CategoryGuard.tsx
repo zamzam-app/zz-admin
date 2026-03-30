@@ -12,7 +12,7 @@ type Props = {
   children: ReactNode;
 };
 
-export default function CategoryGaurd({ allowed, children }: Props) {
+export default function CategoryGuard({ allowed, children }: Props) {
   const { isAuthenticated, user } = useAuth();
   const { data: outlets, isLoading } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
 

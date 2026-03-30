@@ -22,18 +22,23 @@ import {
   Logout,
   Cake,
   Computer,
+  Assignment,
 } from '@mui/icons-material';
+import { Badge } from '@mui/material';
 import type { Outlet } from '../../lib/types/outlet';
 import { Modal } from '../common/Modal';
 import { useApiQuery } from '../../lib/react-query/use-api-hooks';
 import { outletApi } from '../../lib/services/api/outlet.api';
 import { OUTLET_KEYS } from '../../lib/types/outlet';
+import { tasksApi } from '../../lib/services/api/task.api';
+import { TASK_KEYS } from '../../lib/types/task';
 
 const drawerWidth = 280;
 
 const adminNavItems = [
   { label: 'Overview', path: '/overview', icon: <Dashboard /> },
   { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
+  { label: 'Tasks', path: '/tasks', icon: <Assignment /> },
   { label: 'Outlet', path: '/infrastructure', icon: <Apartment /> },
   { label: 'Form Builder', path: '/form-builder', icon: <Build /> },
   { label: 'Managers', path: '/managers', icon: <People /> },
@@ -43,6 +48,7 @@ const adminNavItems = [
 const staffNavItems = [
   { label: 'Overview', path: '/overview', icon: <Dashboard /> },
   { label: 'Reviews', path: '/reviews', icon: <RateReview /> },
+  { label: 'Tasks', path: '/tasks', icon: <Assignment /> },
   { label: 'Settings', path: '/settings', icon: <Settings /> },
 ];
 
@@ -65,6 +71,9 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   const role = user?.role || 'staff';
 
   const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
+  const { data: tasks = [] } = useApiQuery(TASK_KEYS, () => tasksApi.getAll(), {
+    enabled: role !== 'admin',
+  });
 
   /* ================================
    1. Resolve user outlets safely
@@ -99,6 +108,15 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
 
     return [...base, ...cafeItems];
   }, [role, isCafeEnabled]);
+
+  const pendingTasksCount = React.useMemo(() => {
+    if (role === 'admin') return 0;
+    const managerId = user?.id ?? user?._id ?? '';
+    if (!managerId) return 0;
+    return tasks.filter(
+      (task) => task.assigneeIds.includes(managerId) && task.status !== 'completed',
+    ).length;
+  }, [role, tasks, user?._id, user?.id]);
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -175,7 +193,17 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
                     minWidth: 40,
                   }}
                 >
-                  {item.icon}
+                  {item.path === '/tasks' && pendingTasksCount > 0 && role !== 'admin' ? (
+                    <Badge
+                      color='error'
+                      badgeContent={pendingTasksCount}
+                      sx={{ '& .MuiBadge-badge': { fontSize: 10, fontWeight: 700 } }}
+                    >
+                      {item.icon}
+                    </Badge>
+                  ) : (
+                    item.icon
+                  )}
                 </ListItemIcon>
                 <ListItemText
                   primary={item.label}
