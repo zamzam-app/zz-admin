@@ -1,26 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
-import { Chip, Tooltip } from '@mui/material';
-import { Plus, CheckCircle2, Clock3 } from 'lucide-react';
+import { Chip } from '@mui/material';
+import { Clock3, Plus } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { tasksApi } from '../lib/services/api/task.api';
 import { usersApi } from '../lib/services/api/users.api';
 import { outletApi } from '../lib/services/api/outlet.api';
-import { TASK_KEYS, type Task, type TaskPriority, type TaskStatus } from '../lib/types/task';
+import { TASK_KEYS, type Task, type TaskStatus } from '../lib/types/task';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { MANAGER_KEYS } from '../lib/types/manager';
 import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
 import { TaskFormModal, type TaskFormState } from '../components/tasks/TaskFormModal';
-
-const PRIORITY_COLOR: Record<TaskPriority, string> = {
-  low: '#0EA5E9',
-  medium: '#6366F1',
-  high: '#F97316',
-  urgent: '#EF4444',
-};
+import { TaskCard } from '../components/tasks/TaskCard';
 
 const STATUS_BADGE: Record<TaskStatus, { label: string; color: string; bg: string }> = {
   open: { label: 'Open', color: '#1F2937', bg: '#F8FAFC' },
@@ -38,6 +32,10 @@ const EMPTY_FORM: TaskFormState = {
   assigneeIds: [],
 };
 
+function isMockTaskId(id: string) {
+  return id.startsWith('mock-');
+}
+
 export default function Tasks() {
   const { user } = useAuth();
   const role = user?.role ?? 'staff';
@@ -47,9 +45,23 @@ export default function Tasks() {
   const { data: managers = [] } = useApiQuery(MANAGER_KEYS, usersApi.getManagers);
   const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
 
+  const [mockTasks, setMockTasks] = useState<Task[]>([]);
+  const [hiddenMockIds, setHiddenMockIds] = useState<Set<string>>(() => new Set());
+  const [filterOutlet, setFilterOutlet] = useState('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<TaskFormState>(EMPTY_FORM);
+
+  useEffect(() => {
+    fetch('/mockdata-task.json')
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) setMockTasks(data as Task[]);
+      })
+      .catch(() => {});
+  }, []);
 
   const assignedOutletIds = useMemo(() => {
     if (!user || role === 'admin') return null;
@@ -69,6 +81,40 @@ export default function Tasks() {
     () => managerTasks.filter((task) => task.status !== 'completed'),
     [managerTasks],
   );
+
+  const tasksForBoard = useMemo(() => {
+    const apiIds = new Set(tasks.map((t) => t.id));
+    const merged =
+      role === 'admin'
+        ? [...tasks, ...mockTasks.filter((m) => !apiIds.has(m.id) && !hiddenMockIds.has(m.id))]
+        : tasks.filter((t) => !hiddenMockIds.has(t.id));
+    return merged;
+  }, [tasks, mockTasks, role, hiddenMockIds]);
+
+  const filteredManagerTasks = useMemo(() => {
+    if (!assignedOutletIds || assignedOutletIds.length === 0) return managerTasks;
+    return managerTasks.filter((task) =>
+      task.outletId ? assignedOutletIds.includes(task.outletId) : true,
+    );
+  }, [assignedOutletIds, managerTasks]);
+
+  const sourceTasks = role === 'admin' ? tasksForBoard : filteredManagerTasks;
+
+  const outletFilterOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const t of sourceTasks) {
+      if (t.outletName) names.add(t.outletName);
+    }
+    return ['all', ...Array.from(names).sort()];
+  }, [sourceTasks]);
+
+  const filteredTasks = useMemo(() => {
+    return sourceTasks.filter((t) => {
+      if (filterOutlet !== 'all' && t.outletName !== filterOutlet) return false;
+      if (filterStatus !== 'all' && t.status !== filterStatus) return false;
+      return true;
+    });
+  }, [sourceTasks, filterOutlet, filterStatus]);
 
   useEffect(() => {
     if (role === 'admin') return;
@@ -127,6 +173,10 @@ export default function Tasks() {
   };
 
   const handleOpenEdit = (task: Task) => {
+    if (isMockTaskId(task.id)) {
+      message.info('Demo tasks from mockdata-task.json are read-only.');
+      return;
+    }
     setEditing(task);
     setForm({
       description: task.description,
@@ -138,6 +188,23 @@ export default function Tasks() {
       assigneeIds: task.assigneeIds,
     });
     setModalOpen(true);
+  };
+
+  const handleDeleteTask = (task: Task) => {
+    if (isMockTaskId(task.id)) {
+      setHiddenMockIds((prev) => new Set(prev).add(task.id));
+      message.success('Demo task removed from the board.');
+      return;
+    }
+    deleteMutation.mutate(task.id);
+  };
+
+  const handleCompleteTask = (task: Task) => {
+    if (isMockTaskId(task.id)) {
+      message.info('Complete demo tasks by using real tasks from Assign Task.');
+      return;
+    }
+    completeMutation.mutate(task.id);
   };
 
   const handleSubmit = () => {
@@ -194,29 +261,6 @@ export default function Tasks() {
     }
   };
 
-  const header = (
-    <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
-      <div>
-        <div className='inline-flex items-center gap-2 rounded-full bg-[#EEF2FF] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#4338CA]'>
-          Tasks
-        </div>
-        <h1 className='mt-3 text-3xl font-black text-[#0F172A]'>Task Management</h1>
-        <p className='mt-1 text-sm text-slate-500'>
-          Assign tasks to managers and track completion in real time.
-        </p>
-      </div>
-      {role === 'admin' && (
-        <Button
-          variant='admin-primary'
-          onClick={handleOpenCreate}
-          className='rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.15)]'
-        >
-          <Plus size={18} /> New Task
-        </Button>
-      )}
-    </div>
-  );
-
   const notifications = useMemo(() => {
     if (!userId) return [];
     const lastSeen = localStorage.getItem(`zz_task_last_seen_${userId}`) ?? '';
@@ -226,29 +270,23 @@ export default function Tasks() {
     }));
   }, [pendingTasks, userId]);
 
-  const filteredManagerTasks = useMemo(() => {
-    if (!assignedOutletIds || assignedOutletIds.length === 0) return managerTasks;
-    return managerTasks.filter((task) =>
-      task.outletId ? assignedOutletIds.includes(task.outletId) : true,
-    );
-  }, [assignedOutletIds, managerTasks]);
+  const selectClass =
+    'h-10 w-full max-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400';
 
   return (
-    <div className='space-y-8'>
-      {header}
-
+    <div className='space-y-6 p-6 lg:p-8'>
       {role !== 'admin' && (
-        <Card className='p-0 overflow-hidden border border-slate-200'>
-          <div className='px-6 py-5 border-b border-slate-100'>
+        <Card className='overflow-hidden border border-slate-200 p-0'>
+          <div className='border-b border-slate-100 px-6 py-5'>
             <div className='flex items-center gap-2'>
               <Clock3 size={16} className='text-[#F97316]' />
-              <h3 className='font-bold text-lg text-[#0F172A]'>Notifications</h3>
+              <h3 className='text-lg font-bold text-[#0F172A]'>Notifications</h3>
               <span className='ml-2 rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-xs font-semibold text-[#92400E]'>
                 {notifications.length} pending
               </span>
             </div>
           </div>
-          <div className='px-6 py-4 space-y-3'>
+          <div className='space-y-3 px-6 py-4'>
             {notifications.length === 0 ? (
               <p className='text-sm text-slate-500'>No pending tasks assigned yet.</p>
             ) : (
@@ -288,141 +326,69 @@ export default function Tasks() {
         </Card>
       )}
 
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-        <Card className='p-0 overflow-hidden border border-slate-200'>
-          <div className='px-6 py-5 border-b border-slate-100'>
-            <h3 className='font-bold text-lg text-[#0F172A]'>
-              {role === 'admin' ? 'All Tasks' : 'My Tasks'}
-            </h3>
-            <p className='text-xs text-slate-500 mt-1'>
-              {role === 'admin'
-                ? 'View, edit, and manage every task across outlets.'
-                : 'Track tasks assigned to you and mark them complete.'}
-            </p>
-          </div>
-          <div className='px-6 py-4 space-y-3'>
-            {(role === 'admin' ? tasks : filteredManagerTasks).length === 0 ? (
-              <p className='text-sm text-slate-500'>No tasks found.</p>
-            ) : (
-              (role === 'admin' ? tasks : filteredManagerTasks).map((task) => (
-                <div
-                  key={task.id}
-                  className='rounded-2xl border border-slate-100 bg-white px-4 py-4'
-                >
-                  <div className='flex items-start justify-between gap-4'>
-                    <div>
-                      <div className='flex items-center gap-2'>
-                        <h4 className='font-semibold text-[#0F172A]'>{task.title}</h4>
-                        <span
-                          className='rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide'
-                          style={{
-                            backgroundColor: `${PRIORITY_COLOR[task.priority]}1A`,
-                            color: PRIORITY_COLOR[task.priority],
-                          }}
-                        >
-                          {task.priority}
-                        </span>
-                      </div>
-                      <p className='mt-1 text-sm text-slate-500'>{task.description}</p>
-                      <div className='mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400'>
-                        <span>Due {dayjs(task.dueDate).format('DD MMM YYYY')}</span>
-                        {task.category && (
-                          <span className='font-medium capitalize text-slate-500'>
-                            • {task.category}
-                          </span>
-                        )}
-                        {task.outletName && <span>• {task.outletName}</span>}
-                        {task.assigneeNames &&
-                          task.assigneeNames.length > 0 &&
-                          role === 'admin' && <span>• {task.assigneeNames.join(', ')}</span>}
-                      </div>
-                    </div>
-                    <div className='flex flex-col items-end gap-2'>
-                      <Chip
-                        label={STATUS_BADGE[task.status].label}
-                        size='small'
-                        sx={{
-                          bgcolor: STATUS_BADGE[task.status].bg,
-                          color: STATUS_BADGE[task.status].color,
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          fontSize: 10,
-                        }}
-                      />
-                      {role !== 'admin' && task.status !== 'completed' && (
-                        <Button
-                          variant='primary-feedback'
-                          className='rounded-xl px-4 py-2 text-xs'
-                          onClick={() => completeMutation.mutate(task.id)}
-                        >
-                          <CheckCircle2 size={14} className='mr-1' /> Complete
-                        </Button>
-                      )}
-                      {role === 'admin' && (
-                        <div className='flex items-center gap-2'>
-                          <Tooltip title='Edit Task'>
-                            <button
-                              onClick={() => handleOpenEdit(task)}
-                              className='px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50'
-                            >
-                              Edit
-                            </button>
-                          </Tooltip>
-                          <Tooltip title='Delete Task'>
-                            <button
-                              onClick={() => deleteMutation.mutate(task.id)}
-                              className='px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-100 text-red-500 hover:bg-red-50'
-                            >
-                              Delete
-                            </button>
-                          </Tooltip>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+        <div>
+          <h1 className='text-2xl font-bold text-slate-900'>Operations Notice Board</h1>
+          <p className='mt-1 text-sm text-slate-500'>
+            Assign, track, and review operational tasks across all outlets.
+          </p>
+        </div>
         {role === 'admin' && (
-          <Card className='p-0 overflow-hidden border border-slate-200'>
-            <div className='px-6 py-5 border-b border-slate-100'>
-              <h3 className='font-bold text-lg text-[#0F172A]'>Assignment Summary</h3>
-              <p className='text-xs text-slate-500 mt-1'>
-                Track workloads by manager to keep delivery balanced.
-              </p>
-            </div>
-            <div className='px-6 py-4 space-y-3'>
-              {managers.length === 0 ? (
-                <p className='text-sm text-slate-500'>No managers found.</p>
-              ) : (
-                managers.map((manager) => {
-                  const managerId = manager._id ?? manager.id ?? '';
-                  const activeCount = tasks.filter(
-                    (task) => task.assigneeIds.includes(managerId) && task.status !== 'completed',
-                  ).length;
-                  return (
-                    <div
-                      key={managerId}
-                      className='flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3'
-                    >
-                      <div>
-                        <p className='font-semibold text-[#0F172A]'>{manager.name}</p>
-                        <p className='text-xs text-slate-500'>{manager.email}</p>
-                      </div>
-                      <span className='rounded-full bg-[#E0F2FE] px-2.5 py-1 text-xs font-semibold text-[#0369A1]'>
-                        {activeCount} active
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </Card>
+          <Button
+            variant='admin-primary'
+            onClick={handleOpenCreate}
+            className='shrink-0 rounded-xl px-5 py-3 font-semibold shadow-sm'
+          >
+            <Plus size={18} /> Assign Task
+          </Button>
         )}
       </div>
+
+      <div className='flex flex-wrap gap-3'>
+        <select
+          className={selectClass}
+          value={filterOutlet}
+          onChange={(e) => setFilterOutlet(e.target.value)}
+          aria-label='Filter by outlet'
+        >
+          {outletFilterOptions.map((o) => (
+            <option key={o} value={o}>
+              {o === 'all' ? 'All outlets' : o}
+            </option>
+          ))}
+        </select>
+        <select
+          className={selectClass}
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          aria-label='Filter by status'
+        >
+          <option value='all'>All statuses</option>
+          <option value='open'>Open</option>
+          <option value='in_progress'>In progress</option>
+          <option value='completed'>Completed</option>
+        </select>
+      </div>
+
+      <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
+        {filteredTasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            isAdmin={role === 'admin'}
+            onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
+            onDelete={role === 'admin' ? () => handleDeleteTask(task) : undefined}
+            onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
+          />
+        ))}
+      </div>
+
+      {filteredTasks.length === 0 && (
+        <div className='py-16 text-center text-slate-500'>
+          <p className='text-lg font-medium'>No tasks found</p>
+          <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>
+        </div>
+      )}
 
       <TaskFormModal
         open={modalOpen}
