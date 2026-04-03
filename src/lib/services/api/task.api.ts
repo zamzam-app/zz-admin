@@ -42,6 +42,7 @@ export const tasksApi = {
       description: payload.description.trim(),
       priority: payload.priority,
       dueDate: payload.dueDate,
+      category: payload.category,
       outletId: payload.outletId,
       outletName: payload.outletName,
       status: payload.status ?? 'open',

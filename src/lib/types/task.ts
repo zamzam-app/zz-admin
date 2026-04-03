@@ -2,6 +2,7 @@ export const TASK_KEYS = ['tasks'];
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type TaskStatus = 'open' | 'in_progress' | 'completed';
+export type TaskCategory = 'hygiene' | 'maintenance' | 'inventory' | 'staffing';
 
 export interface Task {
   id: string;
@@ -9,6 +10,7 @@ export interface Task {
   description: string;
   priority: TaskPriority;
   dueDate: string;
+  category?: TaskCategory;
   outletId?: string;
   outletName?: string;
   status: TaskStatus;
@@ -26,6 +28,7 @@ export interface CreateTaskPayload {
   description: string;
   priority: TaskPriority;
   dueDate: string;
+  category?: TaskCategory;
   outletId?: string;
   outletName?: string;
   status?: TaskStatus;
@@ -38,6 +41,7 @@ export interface UpdateTaskPayload {
   description?: string;
   priority?: TaskPriority;
   dueDate?: string;
+  category?: TaskCategory;
   outletId?: string;
   outletName?: string;
   status?: TaskStatus;

@@ -1,16 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { message } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
-import {
-  Autocomplete,
-  Chip,
-  FormControlLabel,
-  MenuItem,
-  Select as MuiSelect,
-  TextField,
-  Tooltip,
-  Checkbox,
-} from '@mui/material';
+import dayjs from 'dayjs';
+import { Chip, Tooltip } from '@mui/material';
 import { Plus, CheckCircle2, Clock3 } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
@@ -20,15 +11,9 @@ import { outletApi } from '../lib/services/api/outlet.api';
 import { TASK_KEYS, type Task, type TaskPriority, type TaskStatus } from '../lib/types/task';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { MANAGER_KEYS } from '../lib/types/manager';
-import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
-import Input from '../components/common/Input';
-import Select from '../components/common/Select';
-import { DateWheelPicker } from '../components/common/DateWheelPicker';
-
-const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
-const STATUS_OPTIONS: TaskStatus[] = ['open', 'in_progress', 'completed'];
+import { TaskFormModal, type TaskFormState } from '../components/tasks/TaskFormModal';
 
 const PRIORITY_COLOR: Record<TaskPriority, string> = {
   low: '#0EA5E9',
@@ -43,26 +28,14 @@ const STATUS_BADGE: Record<TaskStatus, { label: string; color: string; bg: strin
   completed: { label: 'Completed', color: '#065F46', bg: '#ECFDF3' },
 };
 
-type TaskFormState = {
-  title: string;
-  description: string;
-  priority: TaskPriority;
-  dueDate: Dayjs | null;
-  outletId: string;
-  status: TaskStatus;
-  assigneeIds: string[];
-  assignAll: boolean;
-};
-
 const EMPTY_FORM: TaskFormState = {
-  title: '',
   description: '',
   priority: 'medium',
   dueDate: dayjs(),
   outletId: '',
+  category: '',
   status: 'open',
   assigneeIds: [],
-  assignAll: false,
 };
 
 export default function Tasks() {
@@ -156,25 +129,28 @@ export default function Tasks() {
   const handleOpenEdit = (task: Task) => {
     setEditing(task);
     setForm({
-      title: task.title,
       description: task.description,
       priority: task.priority,
       dueDate: dayjs(task.dueDate),
-      outletId: task.outletId ?? '',
+      outletId: task.outletId ? task.outletId : 'all',
+      category: task.category ?? '',
       status: task.status,
       assigneeIds: task.assigneeIds,
-      assignAll: false,
     });
     setModalOpen(true);
   };
 
   const handleSubmit = () => {
-    if (!form.title.trim()) {
-      message.error('Please add a task title.');
-      return;
-    }
     if (!form.description.trim()) {
       message.error('Please add a description.');
+      return;
+    }
+    if (form.outletId === '') {
+      message.error('Please select an outlet.');
+      return;
+    }
+    if (!form.category) {
+      message.error('Please select a task category.');
       return;
     }
     const dueDate = form.dueDate?.toISOString();
@@ -183,9 +159,7 @@ export default function Tasks() {
       return;
     }
 
-    const selectedManagers = form.assignAll
-      ? managers
-      : managers.filter((m) => form.assigneeIds.includes(m._id ?? m.id ?? ''));
+    const selectedManagers = managers.filter((m) => form.assigneeIds.includes(m._id ?? m.id ?? ''));
 
     const assigneeIds = selectedManagers.map((m) => m._id ?? m.id ?? '').filter(Boolean);
     if (assigneeIds.length === 0) {
@@ -193,13 +167,19 @@ export default function Tasks() {
       return;
     }
 
-    const outlet = outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
+    const outlet =
+      form.outletId === 'all'
+        ? undefined
+        : outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
+    const desc = form.description.trim();
+    const titleFromDescription = desc.split('\n')[0].trim().slice(0, 120) || 'Task';
     const payload = {
-      title: form.title.trim(),
-      description: form.description.trim(),
+      title: titleFromDescription,
+      description: desc,
       priority: form.priority,
       dueDate,
-      outletId: outlet?.id ?? (form.outletId || undefined),
+      category: form.category,
+      outletId: outlet?.id ?? (form.outletId !== 'all' ? form.outletId : undefined),
       outletName: outlet?.name,
       status: form.status,
       assigneeIds,
@@ -346,6 +326,11 @@ export default function Tasks() {
                       <p className='mt-1 text-sm text-slate-500'>{task.description}</p>
                       <div className='mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400'>
                         <span>Due {dayjs(task.dueDate).format('DD MMM YYYY')}</span>
+                        {task.category && (
+                          <span className='font-medium capitalize text-slate-500'>
+                            • {task.category}
+                          </span>
+                        )}
                         {task.outletName && <span>• {task.outletName}</span>}
                         {task.assigneeNames &&
                           task.assigneeNames.length > 0 &&
@@ -439,136 +424,16 @@ export default function Tasks() {
         )}
       </div>
 
-      <Modal
+      <TaskFormModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? 'Edit Task' : 'Assign Task'}
-        maxWidth='lg'
-        scrollableContent
-      >
-        <div className='space-y-6'>
-          <Input
-            label='Task Title'
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-          <Input
-            label='Description'
-            multiline
-            rows={4}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-
-          <div className='mt-2 grid grid-cols-1 md:grid-cols-2 gap-6'>
-            <Select
-              label='Priority'
-              options={PRIORITY_OPTIONS.map((priority) => ({
-                label: priority.toUpperCase(),
-                value: priority,
-              }))}
-              value={form.priority}
-              onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
-            />
-            <Select
-              label='Status'
-              options={STATUS_OPTIONS.map((status) => ({
-                label: status.replace('_', ' ').toUpperCase(),
-                value: status,
-              }))}
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value as TaskStatus })}
-            />
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>Due Date</label>
-            <DateWheelPicker
-              value={form.dueDate}
-              onChange={(date) => setForm({ ...form, dueDate: date })}
-            />
-          </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={form.assignAll}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      assignAll: e.target.checked,
-                      assigneeIds: e.target.checked ? [] : form.assigneeIds,
-                    })
-                  }
-                />
-              }
-              label='Assign to all managers'
-            />
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Outlet</label>
-              <MuiSelect
-                fullWidth
-                value={form.outletId}
-                onChange={(e) => setForm({ ...form, outletId: String(e.target.value) })}
-                size='small'
-                displayEmpty
-                sx={{ borderRadius: 3, bgcolor: 'white' }}
-              >
-                <MenuItem value=''>All Outlets</MenuItem>
-                {outlets.map((outlet) => (
-                  <MenuItem key={outlet.id} value={outlet.id}>
-                    {outlet.name}
-                  </MenuItem>
-                ))}
-              </MuiSelect>
-            </div>
-          </div>
-
-          <div>
-            <Autocomplete
-              multiple
-              disabled={form.assignAll}
-              options={managers}
-              value={managers.filter((m) => form.assigneeIds.includes(m._id ?? m.id ?? ''))}
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, value) =>
-                (option._id ?? option.id) === (value._id ?? value.id)
-              }
-              onChange={(_, value) =>
-                setForm({
-                  ...form,
-                  assigneeIds: value.map((v) => v._id ?? v.id ?? '').filter(Boolean),
-                })
-              }
-              renderInput={(params) => (
-                <TextField {...params} label='Assignees' placeholder='Select managers' />
-              )}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 3,
-                  bgcolor: '#F9FAFB',
-                  '&:hover fieldset': { borderColor: '#D4AF37' },
-                  '&.Mui-focused fieldset': { borderColor: '#D4AF37' },
-                },
-                '& .MuiChip-root': {
-                  bgcolor: '#F3F4F6',
-                  fontWeight: 600,
-                },
-              }}
-            />
-          </div>
-
-          <div className='flex justify-end gap-3'>
-            <Button variant='ghost' onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant='admin-primary' onClick={handleSubmit}>
-              {editing ? 'Update Task' : 'Assign Task'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        editing={editing}
+        form={form}
+        setForm={setForm}
+        onSubmit={handleSubmit}
+        outlets={outlets}
+        managers={managers}
+      />
     </div>
   );
 }
