@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { Autocomplete, MenuItem, Select as MuiSelect, TextField } from '@mui/material';
 import type { Outlet } from '../../lib/types/outlet';
 import type { User } from '../../lib/types/manager';
@@ -163,6 +164,8 @@ export function TaskFormModal({
           <DateWheelPicker
             value={form.dueDate}
             onChange={(date) => setForm({ ...form, dueDate: date })}
+            minDate={dayjs().startOf('day')}
+            maxYear={dayjs().year() + 10}
           />
         </div>
 
