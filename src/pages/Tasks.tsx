@@ -273,122 +273,147 @@ export default function Tasks() {
   const selectClass =
     'h-10 w-full max-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400';
 
+  /**
+   * Max height for the task grid scroll area only (not a fixed full-viewport block), so short lists
+   * don’t leave a large empty band below the cards. Header sits above this region.
+   */
+  const taskListScrollClass =
+    role === 'admin'
+      ? 'max-h-[calc(100dvh-15rem)] sm:max-h-[calc(100dvh-12.5rem)]'
+      : 'max-h-[calc(100dvh-28rem)] sm:max-h-[calc(100dvh-24rem)]';
+
+  /** Full-bleed within MUI main (p:3 = 24px); flush top for admin so header uses full main width. */
+  const pageBleedClass =
+    role === 'admin'
+      ? 'flex min-h-0 flex-col gap-0 -mx-6 -mt-6 -mb-6'
+      : 'flex min-h-0 flex-col gap-4 -mx-6 -mb-6';
+
   return (
-    <div className='space-y-6 p-6 lg:p-8'>
+    <div className={pageBleedClass}>
       {role !== 'admin' && (
-        <Card className='overflow-hidden border border-slate-200 p-0'>
-          <div className='border-b border-slate-100 px-6 py-5'>
-            <div className='flex items-center gap-2'>
-              <Clock3 size={16} className='text-[#F97316]' />
-              <h3 className='text-lg font-bold text-[#0F172A]'>Notifications</h3>
-              <span className='ml-2 rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-xs font-semibold text-[#92400E]'>
-                {notifications.length} pending
-              </span>
+        <div className='px-6 pt-2 lg:px-8'>
+          <Card className='overflow-hidden border border-slate-200 p-0'>
+            <div className='border-b border-slate-100 px-6 py-5'>
+              <div className='flex items-center gap-2'>
+                <Clock3 size={16} className='text-[#F97316]' />
+                <h3 className='text-lg font-bold text-[#0F172A]'>Notifications</h3>
+                <span className='ml-2 rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-xs font-semibold text-[#92400E]'>
+                  {notifications.length} pending
+                </span>
+              </div>
             </div>
-          </div>
-          <div className='space-y-3 px-6 py-4'>
-            {notifications.length === 0 ? (
-              <p className='text-sm text-slate-500'>No pending tasks assigned yet.</p>
-            ) : (
-              notifications.map((task) => (
-                <div
-                  key={task.id}
-                  className='flex items-start justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3'
-                >
-                  <div>
-                    <div className='flex items-center gap-2'>
-                      <h4 className='font-semibold text-[#0F172A]'>{task.title}</h4>
-                      {task.isNew && (
-                        <span className='rounded-full bg-[#DBEAFE] px-2 py-0.5 text-[10px] font-semibold text-[#1D4ED8]'>
-                          New
-                        </span>
-                      )}
+            <div className='space-y-3 px-6 py-4'>
+              {notifications.length === 0 ? (
+                <p className='text-sm text-slate-500'>No pending tasks assigned yet.</p>
+              ) : (
+                notifications.map((task) => (
+                  <div
+                    key={task.id}
+                    className='flex items-start justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3'
+                  >
+                    <div>
+                      <div className='flex items-center gap-2'>
+                        <h4 className='font-semibold text-[#0F172A]'>{task.title}</h4>
+                        {task.isNew && (
+                          <span className='rounded-full bg-[#DBEAFE] px-2 py-0.5 text-[10px] font-semibold text-[#1D4ED8]'>
+                            New
+                          </span>
+                        )}
+                      </div>
+                      <p className='text-xs text-slate-500'>
+                        Due {dayjs(task.dueDate).format('DD MMM YYYY')}
+                      </p>
                     </div>
-                    <p className='text-xs text-slate-500'>
-                      Due {dayjs(task.dueDate).format('DD MMM YYYY')}
-                    </p>
+                    <Chip
+                      label={STATUS_BADGE[task.status].label}
+                      size='small'
+                      sx={{
+                        bgcolor: STATUS_BADGE[task.status].bg,
+                        color: STATUS_BADGE[task.status].color,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        fontSize: 10,
+                      }}
+                    />
                   </div>
-                  <Chip
-                    label={STATUS_BADGE[task.status].label}
-                    size='small'
-                    sx={{
-                      bgcolor: STATUS_BADGE[task.status].bg,
-                      color: STATUS_BADGE[task.status].color,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      fontSize: 10,
-                    }}
-                  />
-                </div>
-              ))
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <section className='flex min-w-0 flex-col bg-[#f9fafb]' aria-label='Task board'>
+        <div className='shrink-0 border-b border-slate-200/70 bg-[#f9fafb] px-6 py-5 lg:px-8'>
+          <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+            <div>
+              <h1 className='text-2xl font-bold text-slate-900'>Operations Notice Board</h1>
+              <p className='mt-1 text-sm text-slate-500'>
+                Assign, track, and review operational tasks across all outlets.
+              </p>
+            </div>
+            {role === 'admin' && (
+              <Button
+                variant='admin-primary'
+                onClick={handleOpenCreate}
+                className='shrink-0 rounded-xl px-5 py-3 font-semibold shadow-sm'
+              >
+                <Plus size={18} /> Assign Task
+              </Button>
             )}
           </div>
-        </Card>
-      )}
 
-      <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
-        <div>
-          <h1 className='text-2xl font-bold text-slate-900'>Operations Notice Board</h1>
-          <p className='mt-1 text-sm text-slate-500'>
-            Assign, track, and review operational tasks across all outlets.
-          </p>
+          <div className='mt-4 flex flex-wrap gap-3'>
+            <select
+              className={selectClass}
+              value={filterOutlet}
+              onChange={(e) => setFilterOutlet(e.target.value)}
+              aria-label='Filter by outlet'
+            >
+              {outletFilterOptions.map((o) => (
+                <option key={o} value={o}>
+                  {o === 'all' ? 'All outlets' : o}
+                </option>
+              ))}
+            </select>
+            <select
+              className={selectClass}
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              aria-label='Filter by status'
+            >
+              <option value='all'>All statuses</option>
+              <option value='open'>Open</option>
+              <option value='in_progress'>In progress</option>
+              <option value='completed'>Completed</option>
+            </select>
+          </div>
         </div>
-        {role === 'admin' && (
-          <Button
-            variant='admin-primary'
-            onClick={handleOpenCreate}
-            className='shrink-0 rounded-xl px-5 py-3 font-semibold shadow-sm'
-          >
-            <Plus size={18} /> Assign Task
-          </Button>
-        )}
-      </div>
 
-      <div className='flex flex-wrap gap-3'>
-        <select
-          className={selectClass}
-          value={filterOutlet}
-          onChange={(e) => setFilterOutlet(e.target.value)}
-          aria-label='Filter by outlet'
+        <div
+          className={`overflow-y-auto overflow-x-hidden overscroll-contain bg-[#f9fafb] px-6 pt-4 pb-3 [scrollbar-gutter:stable] lg:px-8 ${taskListScrollClass}`}
         >
-          {outletFilterOptions.map((o) => (
-            <option key={o} value={o}>
-              {o === 'all' ? 'All outlets' : o}
-            </option>
-          ))}
-        </select>
-        <select
-          className={selectClass}
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          aria-label='Filter by status'
-        >
-          <option value='all'>All statuses</option>
-          <option value='open'>Open</option>
-          <option value='in_progress'>In progress</option>
-          <option value='completed'>Completed</option>
-        </select>
-      </div>
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
+            {filteredTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isAdmin={role === 'admin'}
+                onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
+                onDelete={role === 'admin' ? () => handleDeleteTask(task) : undefined}
+                onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
+              />
+            ))}
+          </div>
 
-      <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
-        {filteredTasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            isAdmin={role === 'admin'}
-            onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
-            onDelete={role === 'admin' ? () => handleDeleteTask(task) : undefined}
-            onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
-          />
-        ))}
-      </div>
-
-      {filteredTasks.length === 0 && (
-        <div className='py-16 text-center text-slate-500'>
-          <p className='text-lg font-medium'>No tasks found</p>
-          <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>
+          {filteredTasks.length === 0 && (
+            <div className='py-16 text-center text-slate-500'>
+              <p className='text-lg font-medium'>No tasks found</p>
+              <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>
+            </div>
+          )}
         </div>
-      )}
+      </section>
 
       <TaskFormModal
         open={modalOpen}
