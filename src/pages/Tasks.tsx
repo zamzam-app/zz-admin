@@ -39,6 +39,7 @@ export default function Tasks() {
   const { user } = useAuth();
   const role = user?.role ?? 'staff';
   const userId = user?.id ?? user?._id ?? '';
+  const canDeleteTask = role.toLowerCase() === 'admin' || role.toLowerCase() === 'manager';
 
   const [filterOutletId, setFilterOutletId] = useState('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -397,7 +398,7 @@ export default function Tasks() {
                 task={task}
                 isAdmin={role === 'admin'}
                 onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
-                onDelete={role === 'admin' ? () => handleDeleteTask(task) : undefined}
+                onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
                 onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
               />
             ))}

@@ -84,7 +84,7 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
           Assigned to: <span className='font-bold text-slate-900'>{assigneeLabel}</span>
         </p>
 
-        {(showComplete || (isAdmin && (onEdit || onDelete))) && (
+        {(showComplete || (isAdmin && onEdit) || onDelete) && (
           <div className='flex flex-wrap items-center justify-end gap-1 border-t border-slate-100 pt-4'>
             {showComplete && (
               <button
@@ -111,7 +111,7 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
                 <Pencil size={16} />
               </button>
             )}
-            {isAdmin && onDelete && (
+            {onDelete && (
               <button
                 type='button'
                 onClick={(e) => {
