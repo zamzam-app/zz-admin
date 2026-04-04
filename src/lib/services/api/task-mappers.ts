@@ -14,12 +14,16 @@ export interface ApiTaskRaw {
   status?: string;
   dueDate?: string | Date;
   outletId?: string | { _id?: string; name?: string };
+  /** Populated outlet from GET /tasks list (Nest populate) */
+  outlet?: { _id?: string; name?: string };
   outletName?: string;
   assigneeIds?: Array<string | { _id?: string }>;
   assigneeNames?: string[];
+  /** Populated assignees from GET /tasks list */
+  assignees?: Array<{ _id?: string; name?: string }>;
   imageUrls?: string[];
   videoUrls?: string[];
-  createdBy?: string | { _id?: string };
+  createdBy?: string | { _id?: string; name?: string };
   createdAt?: string;
   updatedAt?: string;
   completedAt?: string | null;
@@ -120,6 +124,37 @@ function normalizeAssigneeIds(ids: ApiTaskRaw['assigneeIds']): string[] {
     .filter(Boolean);
 }
 
+function extractAssignees(raw: ApiTaskRaw): { ids: string[]; names: string[] } {
+  if (Array.isArray(raw.assignees) && raw.assignees.length > 0) {
+    const ids: string[] = [];
+    const names: string[] = [];
+    for (const a of raw.assignees) {
+      if (!a || typeof a !== 'object') continue;
+      if (a._id) ids.push(String(a._id));
+      if (typeof a.name === 'string' && a.name.trim()) names.push(a.name.trim());
+    }
+    return { ids, names };
+  }
+  const ids = normalizeAssigneeIds(raw.assigneeIds);
+  const names = Array.isArray(raw.assigneeNames) ? raw.assigneeNames.filter(Boolean) : [];
+  return { ids, names };
+}
+
+function resolveOutletId(raw: ApiTaskRaw): string | undefined {
+  if (raw.outlet && typeof raw.outlet === 'object' && raw.outlet._id) {
+    return String(raw.outlet._id);
+  }
+  return extractOutletId(raw.outletId);
+}
+
+function resolveOutletName(raw: ApiTaskRaw): string | undefined {
+  if (raw.outletName?.trim()) return raw.outletName.trim();
+  if (raw.outlet && typeof raw.outlet === 'object' && typeof raw.outlet.name === 'string') {
+    return raw.outlet.name;
+  }
+  return extractOutletName(raw.outletId);
+}
+
 export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
   const id = String(raw._id ?? raw.id ?? '');
   const description = String(raw.description ?? '');
@@ -134,6 +169,8 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
   const imgs = raw.imageUrls;
   const firstImg = Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : undefined;
 
+  const { ids: assigneeIds, names: assigneeNames } = extractAssignees(raw);
+
   return {
     id,
     title,
@@ -141,13 +178,13 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     priority: parseApiPriority(raw.priority),
     dueDate: due,
     category: parseApiCategory(raw.category),
-    outletId: extractOutletId(raw.outletId),
-    outletName: raw.outletName ?? extractOutletName(raw.outletId),
+    outletId: resolveOutletId(raw),
+    outletName: resolveOutletName(raw),
     imageUrl: firstImg,
     imageUrls: imgs,
     status: parseApiStatus(raw.status),
-    assigneeIds: normalizeAssigneeIds(raw.assigneeIds),
-    assigneeNames: raw.assigneeNames,
+    assigneeIds,
+    assigneeNames: assigneeNames.length > 0 ? assigneeNames : raw.assigneeNames,
     createdAt: raw.createdAt ?? new Date().toISOString(),
     createdBy: raw.createdBy
       ? typeof raw.createdBy === 'string'
