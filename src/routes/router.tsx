@@ -6,6 +6,7 @@ import ProtectedRoute from './ProtectedRoute';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import RoleGuard from './RoleGuard';
 import CategoryGuard from './CategoryGuard';
+import BlockManagerRoute from './BlockManagerRoute';
 
 /* ============================
    Lazy loaded pages
@@ -77,7 +78,11 @@ const router = createBrowserRouter([
           },
           {
             path: '/tasks',
-            element: <Tasks />,
+            element: (
+              <BlockManagerRoute>
+                <Tasks />
+              </BlockManagerRoute>
+            ),
           },
           {
             path: '/settings',

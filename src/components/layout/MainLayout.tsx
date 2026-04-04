@@ -15,7 +15,7 @@ const MainLayout: React.FC = () => {
   const toastShownRef = useRef(false);
 
   useEffect(() => {
-    if (!user || user.role === 'admin') return;
+    if (!user || user.role === 'admin' || (user.role ?? '').toLowerCase() === 'manager') return;
     if (toastShownRef.current) return;
     const managerId = user.id ?? user._id ?? '';
     if (!managerId) return;
