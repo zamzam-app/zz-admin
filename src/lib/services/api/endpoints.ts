@@ -34,3 +34,8 @@ export const CATEGORY = {
   BASE: '/category',
   BY_ID: (id: string) => `/category/${id}`,
 };
+
+export const TASKS = {
+  BASE: '/tasks',
+  BY_ID: (id: string) => `/tasks/${id}`,
+};

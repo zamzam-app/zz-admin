@@ -28,10 +28,7 @@ import { Badge } from '@mui/material';
 import type { Outlet } from '../../lib/types/outlet';
 import { Modal } from '../common/Modal';
 import { useApiQuery } from '../../lib/react-query/use-api-hooks';
-import { outletApi } from '../../lib/services/api/outlet.api';
 import { OUTLET_KEYS } from '../../lib/types/outlet';
-import { tasksApi } from '../../lib/services/api/task.api';
-import { TASK_KEYS } from '../../lib/types/task';
 
 const drawerWidth = 280;
 
@@ -69,11 +66,19 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
   const [logoutOpen, setLogoutOpen] = React.useState(false);
 
   const role = user?.role || 'staff';
+  const managerId = user?.id ?? user?._id ?? '';
 
-  const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
-  const { data: tasks = [] } = useApiQuery(TASK_KEYS, () => tasksApi.getAll(), {
-    enabled: role !== 'admin',
-  });
+  const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () =>
+    import('../../lib/services/api/outlet.api').then((m) => m.outletApi.getOutletsList()),
+  );
+  const { data: tasks = [] } = useApiQuery(
+    ['tasks', 'sidebar', managerId],
+    () =>
+      import('../../lib/services/api/task.api').then((m) =>
+        m.tasksApi.findAll({ assigneeId: managerId, page: 1, limit: 100 }),
+      ),
+    { enabled: role !== 'admin' && !!managerId },
+  );
 
   /* ================================
    1. Resolve user outlets safely
