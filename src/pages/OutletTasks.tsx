@@ -37,10 +37,9 @@ export default function OutletTasks() {
   const role = user?.role ?? 'staff';
   const userId = user?.id ?? user?._id ?? '';
 
-  const [filterOutletId, setFilterOutletId] = useState('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  const listQueryKey: unknown[] = ['tasks', 'outlet-tasks', filterOutletId, filterStatus, userId];
+  const listQueryKey: unknown[] = ['tasks', 'outlet-tasks', filterStatus, userId];
 
   const { data: tasks = [] } = useApiQuery(
     listQueryKey,
@@ -50,7 +49,7 @@ export default function OutletTasks() {
           buildTaskListQuery({
             role,
             userId,
-            filterOutletId,
+            filterOutletId: 'all',
             filterStatus,
           }),
         ),
@@ -76,12 +75,6 @@ export default function OutletTasks() {
     return tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
   }, [tasks, assignedOutletIds]);
 
-  const outletsForFilter = useMemo(() => {
-    const ids = new Set(assignedOutletIds ?? []);
-    if (ids.size === 0) return outlets;
-    return outlets.filter((o) => ids.has(o.id) || ids.has(o.outletId));
-  }, [outlets, assignedOutletIds]);
-
   const completeMutation = useApiMutation(
     (id: string) => import('../lib/services/api/task.api').then((m) => m.tasksApi.complete(id)),
     [TASK_KEYS, [...listQueryKey]],
@@ -105,20 +98,7 @@ export default function OutletTasks() {
           <p className='mt-1 text-sm text-slate-500'>Complete assigned tasks</p>
         </div>
 
-        <div className='mx-auto mt-6 flex max-w-2xl flex-wrap justify-center gap-3'>
-          <select
-            className={selectClass}
-            value={filterOutletId}
-            onChange={(e) => setFilterOutletId(e.target.value)}
-            aria-label='Filter by outlet'
-          >
-            <option value='all'>All outlets</option>
-            {outletsForFilter.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+        <div className='mx-auto mt-6 flex max-w-2xl justify-center'>
           <select
             className={selectClass}
             value={filterStatus}
