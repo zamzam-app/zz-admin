@@ -13,8 +13,8 @@ export interface Task {
   category?: TaskCategory;
   outletId?: string;
   outletName?: string;
-  /** Optional cover image for notice-board cards */
   imageUrl?: string;
+  imageUrls?: string[];
   status: TaskStatus;
   assigneeIds: string[];
   assigneeNames?: string[];

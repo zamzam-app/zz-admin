@@ -67,10 +67,10 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
       <p className='text-sm leading-relaxed text-slate-600'>{task.description}</p>
 
       {/* Row 4: image */}
-      {task.imageUrl ? (
+      {(task.imageUrls?.[0] ?? task.imageUrl) ? (
         <div className='overflow-hidden rounded-lg'>
           <img
-            src={task.imageUrl}
+            src={task.imageUrls?.[0] ?? task.imageUrl}
             alt=''
             className='aspect-video w-full object-cover'
             loading='lazy'

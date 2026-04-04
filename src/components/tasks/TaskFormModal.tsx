@@ -4,15 +4,12 @@ import dayjs from 'dayjs';
 import { Autocomplete, MenuItem, Select as MuiSelect, TextField } from '@mui/material';
 import type { Outlet } from '../../lib/types/outlet';
 import type { User } from '../../lib/types/manager';
-import type { Task, TaskCategory, TaskPriority, TaskStatus } from '../../lib/types/task';
+import type { Task, TaskCategory, TaskPriority } from '../../lib/types/task';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import Input from '../common/Input';
-import Select from '../common/Select';
 import { DateWheelPicker } from '../common/DateWheelPicker';
 
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
-const STATUS_OPTIONS: TaskStatus[] = ['open', 'in_progress', 'completed'];
 
 const TASK_CATEGORY_OPTIONS: { value: TaskCategory; label: string }[] = [
   { value: 'hygiene', label: 'Hygiene' },
@@ -21,6 +18,28 @@ const TASK_CATEGORY_OPTIONS: { value: TaskCategory; label: string }[] = [
   { value: 'staffing', label: 'Staffing' },
 ];
 
+/** Same label style as “Select outlet” (uppercase via CSS) */
+const fieldLabelClass =
+  'mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400';
+
+const muiFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 3,
+    bgcolor: 'white',
+    '&:hover fieldset': { borderColor: '#D4AF37' },
+    '&.Mui-focused fieldset': { borderColor: '#D4AF37' },
+  },
+} as const;
+
+const descriptionFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 2,
+    bgcolor: '#F9FAFB',
+    '&:hover fieldset': { borderColor: '#D4AF37' },
+    '&.Mui-focused fieldset': { borderColor: '#D4AF37' },
+  },
+} as const;
+
 export type TaskFormState = {
   description: string;
   priority: TaskPriority;
@@ -28,7 +47,6 @@ export type TaskFormState = {
   /** '' = not selected yet, 'all' = all outlets, else outlet id */
   outletId: '' | 'all' | string;
   category: TaskCategory | '';
-  status: TaskStatus;
   assigneeIds: string[];
 };
 
@@ -64,51 +82,71 @@ export function TaskFormModal({
       scrollableContent
     >
       <div className='space-y-6'>
-        <div>
-          <label className='mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400'>
-            Select outlet
-          </label>
-          <MuiSelect
-            fullWidth
-            value={outletSelectValue}
-            onChange={(e) => {
-              const v = String(e.target.value);
-              if (v === '') {
-                setForm({ ...form, outletId: '' });
-              } else if (v === 'all') {
-                setForm({ ...form, outletId: 'all' });
-              } else {
-                setForm({ ...form, outletId: v });
-              }
-            }}
-            size='small'
-            displayEmpty
-            renderValue={(selected) => {
-              if (selected === '' || selected === undefined) {
-                return <span className='text-slate-400'>Choose outlet...</span>;
-              }
-              if (selected === 'all') return 'All outlets';
-              const o = outlets.find((x) => x.id === selected);
-              return o?.name ?? selected;
-            }}
-            sx={{ borderRadius: 3, bgcolor: 'white' }}
-          >
-            <MenuItem value='' disabled>
-              Choose outlet...
-            </MenuItem>
-            <MenuItem value='all'>All outlets</MenuItem>
-            {outlets.map((outlet) => (
-              <MenuItem key={outlet.id} value={outlet.id}>
-                {outlet.name}
+        <div className='grid grid-cols-1 gap-6 md:grid-cols-2 md:items-start'>
+          <div>
+            <label className={fieldLabelClass} htmlFor='task-outlet-select'>
+              Select outlet
+            </label>
+            <MuiSelect
+              id='task-outlet-select'
+              fullWidth
+              value={outletSelectValue}
+              onChange={(e) => {
+                const v = String(e.target.value);
+                if (v === '') {
+                  setForm({ ...form, outletId: '' });
+                } else if (v === 'all') {
+                  setForm({ ...form, outletId: 'all' });
+                } else {
+                  setForm({ ...form, outletId: v });
+                }
+              }}
+              size='small'
+              displayEmpty
+              renderValue={(selected) => {
+                if (selected === '' || selected === undefined) {
+                  return <span className='text-slate-400'>Choose outlet...</span>;
+                }
+                if (selected === 'all') return 'All outlets';
+                const o = outlets.find((x) => x.id === selected);
+                return o?.name ?? selected;
+              }}
+              sx={{ borderRadius: 3, bgcolor: 'white' }}
+            >
+              <MenuItem value='' disabled>
+                Choose outlet...
               </MenuItem>
-            ))}
-          </MuiSelect>
+              <MenuItem value='all'>All outlets</MenuItem>
+              {outlets.map((outlet) => (
+                <MenuItem key={outlet.id} value={outlet.id}>
+                  {outlet.name}
+                </MenuItem>
+              ))}
+            </MuiSelect>
+          </div>
+          <div className='min-w-0'>
+            <label className={fieldLabelClass} htmlFor='task-priority-select'>
+              Priority
+            </label>
+            <MuiSelect
+              id='task-priority-select'
+              fullWidth
+              value={form.priority}
+              onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
+              size='small'
+              sx={{ borderRadius: 3, bgcolor: 'white' }}
+            >
+              {PRIORITY_OPTIONS.map((priority) => (
+                <MenuItem key={priority} value={priority}>
+                  {priority.toUpperCase()}
+                </MenuItem>
+              ))}
+            </MuiSelect>
+          </div>
         </div>
 
         <div>
-          <label className='mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400'>
-            Task category
-          </label>
+          <label className={fieldLabelClass}>Task category</label>
           <div className='flex flex-wrap gap-2'>
             {TASK_CATEGORY_OPTIONS.map(({ value, label }) => {
               const selected = form.category === value;
@@ -130,37 +168,25 @@ export function TaskFormModal({
           </div>
         </div>
 
-        <Input
-          label='Description'
-          multiline
-          rows={4}
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-        />
-
-        <div className='mt-2 grid grid-cols-1 gap-6 md:grid-cols-2'>
-          <Select
-            label='Priority'
-            options={PRIORITY_OPTIONS.map((priority) => ({
-              label: priority.toUpperCase(),
-              value: priority,
-            }))}
-            value={form.priority}
-            onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
-          />
-          <Select
-            label='Status'
-            options={STATUS_OPTIONS.map((status) => ({
-              label: status.replace('_', ' ').toUpperCase(),
-              value: status,
-            }))}
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value as TaskStatus })}
+        <div>
+          <label className={fieldLabelClass} htmlFor='task-description'>
+            Description
+          </label>
+          <TextField
+            id='task-description'
+            multiline
+            rows={4}
+            fullWidth
+            variant='outlined'
+            placeholder='Describe the task…'
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            sx={descriptionFieldSx}
           />
         </div>
 
         <div>
-          <label className='mb-2 block text-sm font-medium text-gray-700'>Due Date</label>
+          <label className={fieldLabelClass}>Due date</label>
           <DateWheelPicker
             value={form.dueDate}
             onChange={(date) => setForm({ ...form, dueDate: date })}
@@ -170,8 +196,12 @@ export function TaskFormModal({
         </div>
 
         <div>
+          <label className={fieldLabelClass} htmlFor='task-assignees'>
+            Assignees
+          </label>
           <Autocomplete
             multiple
+            id='task-assignees'
             options={managers}
             value={managers.filter((m) => form.assigneeIds.includes(m._id ?? m.id ?? ''))}
             getOptionLabel={(option) => option.name}
@@ -185,15 +215,20 @@ export function TaskFormModal({
               })
             }
             renderInput={(params) => (
-              <TextField {...params} label='Assignees' placeholder='Select managers' />
+              <TextField
+                {...params}
+                hiddenLabel
+                placeholder='Select managers'
+                sx={{
+                  ...muiFieldSx,
+                  '& .MuiOutlinedInput-root': {
+                    ...muiFieldSx['& .MuiOutlinedInput-root'],
+                    bgcolor: '#F9FAFB',
+                  },
+                }}
+              />
             )}
             sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
-                bgcolor: '#F9FAFB',
-                '&:hover fieldset': { borderColor: '#D4AF37' },
-                '&.Mui-focused fieldset': { borderColor: '#D4AF37' },
-              },
               '& .MuiChip-root': {
                 bgcolor: '#F3F4F6',
                 fontWeight: 600,

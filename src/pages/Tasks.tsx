@@ -5,7 +5,7 @@ import { Chip } from '@mui/material';
 import { Clock3, Plus } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
-import { tasksApi } from '../lib/services/api/task.api';
+import { getTaskApiErrorMessage, tasksApi } from '../lib/services/api/task.api';
 import { usersApi } from '../lib/services/api/users.api';
 import { outletApi } from '../lib/services/api/outlet.api';
 import { TASK_KEYS, type Task, type TaskStatus } from '../lib/types/task';
@@ -28,7 +28,6 @@ const EMPTY_FORM: TaskFormState = {
   dueDate: dayjs(),
   outletId: '',
   category: '',
-  status: 'open',
   assigneeIds: [],
 };
 
@@ -133,6 +132,7 @@ export default function Tasks() {
         setEditing(null);
         setForm(EMPTY_FORM);
       },
+      onError: (e) => message.error(getTaskApiErrorMessage(e)),
     },
   );
 
@@ -147,6 +147,7 @@ export default function Tasks() {
         setEditing(null);
         setForm(EMPTY_FORM);
       },
+      onError: (e) => message.error(getTaskApiErrorMessage(e)),
     },
   );
 
@@ -155,14 +156,16 @@ export default function Tasks() {
     [TASK_KEYS, ['tasks', 'unread', userId]],
     {
       onSuccess: () => message.success('Task deleted.'),
+      onError: (e) => message.error(getTaskApiErrorMessage(e)),
     },
   );
 
   const completeMutation = useApiMutation(
-    (id: string) => tasksApi.complete(id, userId),
+    (id: string) => tasksApi.complete(id),
     [TASK_KEYS, ['tasks', 'unread', userId]],
     {
       onSuccess: () => message.success('Task marked as completed.'),
+      onError: (e) => message.error(getTaskApiErrorMessage(e)),
     },
   );
 
@@ -184,7 +187,6 @@ export default function Tasks() {
       dueDate: dayjs(task.dueDate),
       outletId: task.outletId ? task.outletId : 'all',
       category: task.category ?? '',
-      status: task.status,
       assigneeIds: task.assigneeIds,
     });
     setModalOpen(true);
@@ -212,8 +214,8 @@ export default function Tasks() {
       message.error('Please add a description.');
       return;
     }
-    if (form.outletId === '') {
-      message.error('Please select an outlet.');
+    if (form.outletId === '' || form.outletId === 'all') {
+      message.error('Please select a specific outlet. Each task must be tied to one outlet.');
       return;
     }
     if (!form.category) {
@@ -234,21 +236,19 @@ export default function Tasks() {
       return;
     }
 
-    const outlet =
-      form.outletId === 'all'
-        ? undefined
-        : outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
+    const outlet = outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
     const desc = form.description.trim();
     const titleFromDescription = desc.split('\n')[0].trim().slice(0, 120) || 'Task';
+    const outletMongoId = outlet?.id ?? form.outletId;
     const payload = {
       title: titleFromDescription,
       description: desc,
       priority: form.priority,
       dueDate,
       category: form.category,
-      outletId: outlet?.id ?? (form.outletId !== 'all' ? form.outletId : undefined),
+      outletId: outletMongoId,
       outletName: outlet?.name,
-      status: form.status,
+      status: editing ? editing.status : 'open',
       assigneeIds,
       assigneeNames: selectedManagers.map((m) => m.name).filter(Boolean),
       createdBy: userId || undefined,
