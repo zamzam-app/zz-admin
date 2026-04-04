@@ -23,6 +23,7 @@ import {
   Cake,
   Computer,
   Assignment,
+  AssignmentInd,
 } from '@mui/icons-material';
 import { Badge } from '@mui/material';
 import type { Outlet } from '../../lib/types/outlet';
@@ -118,7 +119,21 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
     }
 
     if ((role ?? '').toLowerCase() === 'manager') {
-      return items.filter((i) => i.path !== '/tasks');
+      const withoutTasks = items.filter((i) => i.path !== '/tasks');
+      const myTasksItem = {
+        label: 'My Tasks',
+        path: '/outlet-tasks',
+        icon: <AssignmentInd />,
+      };
+      const reviewsIdx = withoutTasks.findIndex((i) => i.path === '/reviews');
+      if (reviewsIdx >= 0) {
+        return [
+          ...withoutTasks.slice(0, reviewsIdx + 1),
+          myTasksItem,
+          ...withoutTasks.slice(reviewsIdx + 1),
+        ];
+      }
+      return [myTasksItem, ...withoutTasks];
     }
     return items;
   }, [role, isCafeEnabled]);

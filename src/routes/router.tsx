@@ -7,6 +7,7 @@ import ErrorBoundary from '../components/ui/ErrorBoundary';
 import RoleGuard from './RoleGuard';
 import CategoryGuard from './CategoryGuard';
 import BlockManagerRoute from './BlockManagerRoute';
+import ManagerOnlyRoute from './ManagerOnlyRoute';
 
 /* ============================
    Lazy loaded pages
@@ -17,6 +18,7 @@ const Overview = lazy(() => import('../pages/Overview'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Reviews = lazy(() => import('../pages/Reviews'));
 const Tasks = lazy(() => import('../pages/Tasks'));
+const OutletTasks = lazy(() => import('../pages/OutletTasks'));
 const Infrastructure = lazy(() => import('../pages/Infrastructure'));
 const FormBuilder = lazy(() => import('../pages/FormBuilder'));
 const ManagersPage = lazy(() => import('../pages/Managers'));
@@ -82,6 +84,14 @@ const router = createBrowserRouter([
               <BlockManagerRoute>
                 <Tasks />
               </BlockManagerRoute>
+            ),
+          },
+          {
+            path: '/outlet-tasks',
+            element: (
+              <ManagerOnlyRoute>
+                <OutletTasks />
+              </ManagerOnlyRoute>
             ),
           },
           {
