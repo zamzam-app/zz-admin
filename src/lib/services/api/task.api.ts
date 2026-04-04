@@ -1,7 +1,8 @@
 import axios from 'axios';
 import api from './axios';
 import { TASKS } from './endpoints';
-import type { CreateTaskPayload, Task, UpdateTaskPayload } from '../../types/task';
+import type { QueryTaskDto } from '../../types/task-query';
+import type { CreateTaskPayload, Task, TaskStatus, UpdateTaskPayload } from '../../types/task';
 import {
   mapApiTaskToTask,
   toApiCategory,
@@ -12,15 +13,23 @@ import {
 
 function unwrapTaskList(data: unknown): ApiTaskRaw[] {
   if (Array.isArray(data)) return data as ApiTaskRaw[];
-  if (
-    data &&
-    typeof data === 'object' &&
-    'data' in data &&
-    Array.isArray((data as { data: unknown }).data)
-  ) {
-    return (data as { data: ApiTaskRaw[] }).data;
+  if (!data || typeof data !== 'object') return [];
+  const o = data as Record<string, unknown>;
+  const candidates = [o.data, o.items, o.tasks, o.results];
+  for (const c of candidates) {
+    if (Array.isArray(c)) return c as ApiTaskRaw[];
   }
   return [];
+}
+
+/** Drop undefined so axios does not send empty query keys */
+function cleanQueryParams(q: QueryTaskDto): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  for (const [k, v] of Object.entries(q)) {
+    if (v === undefined || v === null || v === '') continue;
+    out[k] = v as string | number;
+  }
+  return out;
 }
 
 /** POST /tasks body — matches backend CreateTaskDto */
@@ -86,18 +95,46 @@ export function getTaskApiErrorMessage(error: unknown): string {
   return 'Request failed';
 }
 
+/**
+ * Maps Tasks page / sidebar filters to GET /tasks query (QueryTaskDto).
+ */
+export function buildTaskListQuery(input: {
+  role: string;
+  userId: string;
+  filterOutletId: string;
+  filterStatus: string;
+}): QueryTaskDto {
+  const q: QueryTaskDto = { page: 1, limit: 100 };
+  if (input.filterOutletId !== 'all') {
+    q.outletId = input.filterOutletId;
+  }
+  if (input.filterStatus !== 'all') {
+    q.status = toApiStatus(input.filterStatus as TaskStatus);
+  }
+  if (input.role !== 'admin' && input.userId) {
+    q.assigneeId = input.userId;
+  }
+  return q;
+}
+
 export const tasksApi = {
-  getAll: async (): Promise<Task[]> => {
-    const res = await api.get<unknown>(TASKS.BASE);
+  /**
+   * GET /tasks — QueryTaskDto as query string (page, limit, outletId, status, assigneeId, …).
+   */
+  findAll: async (query: QueryTaskDto = {}): Promise<Task[]> => {
+    const params = cleanQueryParams({ page: 1, limit: 100, ...query });
+    const res = await api.get<unknown>(TASKS.BASE, { params });
     const list = unwrapTaskList(res.data);
     return list.map((item) => mapApiTaskToTask(item));
   },
 
+  /** @deprecated Prefer findAll with explicit query */
+  getAll: async (): Promise<Task[]> => {
+    return tasksApi.findAll({ page: 1, limit: 100 });
+  },
+
   getByAssignee: async (assigneeId: string): Promise<Task[]> => {
-    const all = await tasksApi.getAll();
-    return all
-      .filter((task) => task.assigneeIds.includes(assigneeId))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return tasksApi.findAll({ assigneeId, page: 1, limit: 100 });
   },
 
   create: async (payload: CreateTaskPayload & { createdBy?: string }): Promise<Task> => {
@@ -109,7 +146,7 @@ export const tasksApi = {
   update: async (id: string, payload: UpdateTaskPayload): Promise<Task> => {
     const body = buildUpdateBody(payload);
     if (Object.keys(body).length === 0) {
-      const all = await tasksApi.getAll();
+      const all = await tasksApi.findAll({ page: 1, limit: 500 });
       const found = all.find((t) => t.id === id);
       if (!found) throw new Error('Task not found');
       return found;
@@ -131,19 +168,12 @@ export const tasksApi = {
   },
 
   getUnreadCount: async (assigneeId: string): Promise<number> => {
-    const all = await tasksApi.getAll();
-    return all.filter(
-      (task) => task.assigneeIds.includes(assigneeId) && task.status !== 'completed',
-    ).length;
+    const list = await tasksApi.findAll({ assigneeId, page: 1, limit: 200 });
+    return list.filter((task) => task.status !== 'completed').length;
   },
 
   getNewAssignmentsSince: async (assigneeId: string, sinceIso: string): Promise<Task[]> => {
-    const all = await tasksApi.getAll();
-    return all.filter(
-      (task) =>
-        task.assigneeIds.includes(assigneeId) &&
-        task.status !== 'completed' &&
-        task.createdAt > sinceIso,
-    );
+    const list = await tasksApi.findAll({ assigneeId, page: 1, limit: 200 });
+    return list.filter((task) => task.status !== 'completed' && task.createdAt > sinceIso);
   },
 };

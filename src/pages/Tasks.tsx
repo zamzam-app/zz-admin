@@ -5,10 +5,14 @@ import { Chip } from '@mui/material';
 import { Clock3, Plus } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
-import { getTaskApiErrorMessage, tasksApi } from '../lib/services/api/task.api';
 import { usersApi } from '../lib/services/api/users.api';
-import { outletApi } from '../lib/services/api/outlet.api';
-import { TASK_KEYS, type Task, type TaskStatus } from '../lib/types/task';
+import {
+  TASK_KEYS,
+  type CreateTaskPayload,
+  type Task,
+  type TaskStatus,
+  type UpdateTaskPayload,
+} from '../lib/types/task';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 import { MANAGER_KEYS } from '../lib/types/manager';
 import { Button } from '../components/common/Button';
@@ -31,36 +35,39 @@ const EMPTY_FORM: TaskFormState = {
   assigneeIds: [],
 };
 
-function isMockTaskId(id: string) {
-  return id.startsWith('mock-');
-}
-
 export default function Tasks() {
   const { user } = useAuth();
   const role = user?.role ?? 'staff';
   const userId = user?.id ?? user?._id ?? '';
 
-  const { data: tasks = [] } = useApiQuery(TASK_KEYS, () => tasksApi.getAll());
-  const { data: managers = [] } = useApiQuery(MANAGER_KEYS, usersApi.getManagers);
-  const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
-
-  const [mockTasks, setMockTasks] = useState<Task[]>([]);
-  const [hiddenMockIds, setHiddenMockIds] = useState<Set<string>>(() => new Set());
-  const [filterOutlet, setFilterOutlet] = useState('all');
+  const [filterOutletId, setFilterOutletId] = useState('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const taskListQueryKey = ['tasks', 'list', filterOutletId, filterStatus, role, userId] as const;
+
+  const { data: tasks = [] } = useApiQuery(
+    [...taskListQueryKey],
+    () =>
+      import('../lib/services/api/task.api').then((m) =>
+        m.tasksApi.findAll(
+          m.buildTaskListQuery({
+            role,
+            userId,
+            filterOutletId,
+            filterStatus,
+          }),
+        ),
+      ),
+    { enabled: role === 'admin' || !!userId },
+  );
+  const { data: managers = [] } = useApiQuery(MANAGER_KEYS, usersApi.getManagers);
+  const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () =>
+    import('../lib/services/api/outlet.api').then((m) => m.outletApi.getOutletsList()),
+  );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<TaskFormState>(EMPTY_FORM);
-
-  useEffect(() => {
-    fetch('/mockdata-task.json')
-      .then((r) => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) setMockTasks(data as Task[]);
-      })
-      .catch(() => {});
-  }, []);
 
   const assignedOutletIds = useMemo(() => {
     if (!user || role === 'admin') return null;
@@ -71,49 +78,24 @@ export default function Tasks() {
       .map((outlet) => outlet.id);
   }, [outlets, role, user, userId]);
 
-  const managerTasks = useMemo(() => {
-    if (!userId) return [];
-    return tasks.filter((task) => task.assigneeIds.includes(userId));
-  }, [tasks, userId]);
+  /** GET /tasks already scopes by assignee for non-admins; narrow by managed outlets if needed */
+  const boardTasks = useMemo(() => {
+    if (role === 'admin') return tasks;
+    if (!assignedOutletIds || assignedOutletIds.length === 0) return tasks;
+    return tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
+  }, [tasks, role, assignedOutletIds]);
 
-  const pendingTasks = useMemo(
-    () => managerTasks.filter((task) => task.status !== 'completed'),
-    [managerTasks],
-  );
+  const pendingTasks = useMemo(() => {
+    if (role === 'admin' || !userId) return [];
+    return boardTasks.filter((task) => task.status !== 'completed');
+  }, [boardTasks, role, userId]);
 
-  const tasksForBoard = useMemo(() => {
-    const apiIds = new Set(tasks.map((t) => t.id));
-    const merged =
-      role === 'admin'
-        ? [...tasks, ...mockTasks.filter((m) => !apiIds.has(m.id) && !hiddenMockIds.has(m.id))]
-        : tasks.filter((t) => !hiddenMockIds.has(t.id));
-    return merged;
-  }, [tasks, mockTasks, role, hiddenMockIds]);
-
-  const filteredManagerTasks = useMemo(() => {
-    if (!assignedOutletIds || assignedOutletIds.length === 0) return managerTasks;
-    return managerTasks.filter((task) =>
-      task.outletId ? assignedOutletIds.includes(task.outletId) : true,
-    );
-  }, [assignedOutletIds, managerTasks]);
-
-  const sourceTasks = role === 'admin' ? tasksForBoard : filteredManagerTasks;
-
-  const outletFilterOptions = useMemo(() => {
-    const names = new Set<string>();
-    for (const t of sourceTasks) {
-      if (t.outletName) names.add(t.outletName);
-    }
-    return ['all', ...Array.from(names).sort()];
-  }, [sourceTasks]);
-
-  const filteredTasks = useMemo(() => {
-    return sourceTasks.filter((t) => {
-      if (filterOutlet !== 'all' && t.outletName !== filterOutlet) return false;
-      if (filterStatus !== 'all' && t.status !== filterStatus) return false;
-      return true;
-    });
-  }, [sourceTasks, filterOutlet, filterStatus]);
+  const outletsForFilter = useMemo(() => {
+    if (role === 'admin') return outlets;
+    const ids = new Set(assignedOutletIds ?? []);
+    if (ids.size === 0) return outlets;
+    return outlets.filter((o) => ids.has(o.id) || ids.has(o.outletId));
+  }, [outlets, role, assignedOutletIds]);
 
   useEffect(() => {
     if (role === 'admin') return;
@@ -123,7 +105,8 @@ export default function Tasks() {
   }, [role, userId]);
 
   const createMutation = useApiMutation(
-    (payload: Parameters<typeof tasksApi.create>[0]) => tasksApi.create(payload),
+    (payload: CreateTaskPayload & { createdBy?: string }) =>
+      import('../lib/services/api/task.api').then((m) => m.tasksApi.create(payload)),
     [TASK_KEYS, ['tasks', 'unread', userId]],
     {
       onSuccess: () => {
@@ -132,13 +115,18 @@ export default function Tasks() {
         setEditing(null);
         setForm(EMPTY_FORM);
       },
-      onError: (e) => message.error(getTaskApiErrorMessage(e)),
+      onError: (e) =>
+        void import('../lib/services/api/task.api').then((m) =>
+          message.error(m.getTaskApiErrorMessage(e)),
+        ),
     },
   );
 
   const updateMutation = useApiMutation(
-    (payload: { id: string; data: Parameters<typeof tasksApi.update>[1] }) =>
-      tasksApi.update(payload.id, payload.data),
+    (payload: { id: string; data: UpdateTaskPayload }) =>
+      import('../lib/services/api/task.api').then((m) =>
+        m.tasksApi.update(payload.id, payload.data),
+      ),
     [TASK_KEYS, ['tasks', 'unread', userId]],
     {
       onSuccess: () => {
@@ -147,25 +135,34 @@ export default function Tasks() {
         setEditing(null);
         setForm(EMPTY_FORM);
       },
-      onError: (e) => message.error(getTaskApiErrorMessage(e)),
+      onError: (e) =>
+        void import('../lib/services/api/task.api').then((m) =>
+          message.error(m.getTaskApiErrorMessage(e)),
+        ),
     },
   );
 
   const deleteMutation = useApiMutation(
-    (id: string) => tasksApi.remove(id),
+    (id: string) => import('../lib/services/api/task.api').then((m) => m.tasksApi.remove(id)),
     [TASK_KEYS, ['tasks', 'unread', userId]],
     {
       onSuccess: () => message.success('Task deleted.'),
-      onError: (e) => message.error(getTaskApiErrorMessage(e)),
+      onError: (e) =>
+        void import('../lib/services/api/task.api').then((m) =>
+          message.error(m.getTaskApiErrorMessage(e)),
+        ),
     },
   );
 
   const completeMutation = useApiMutation(
-    (id: string) => tasksApi.complete(id),
+    (id: string) => import('../lib/services/api/task.api').then((m) => m.tasksApi.complete(id)),
     [TASK_KEYS, ['tasks', 'unread', userId]],
     {
       onSuccess: () => message.success('Task marked as completed.'),
-      onError: (e) => message.error(getTaskApiErrorMessage(e)),
+      onError: (e) =>
+        void import('../lib/services/api/task.api').then((m) =>
+          message.error(m.getTaskApiErrorMessage(e)),
+        ),
     },
   );
 
@@ -176,10 +173,6 @@ export default function Tasks() {
   };
 
   const handleOpenEdit = (task: Task) => {
-    if (isMockTaskId(task.id)) {
-      message.info('Demo tasks from mockdata-task.json are read-only.');
-      return;
-    }
     setEditing(task);
     setForm({
       description: task.description,
@@ -193,19 +186,10 @@ export default function Tasks() {
   };
 
   const handleDeleteTask = (task: Task) => {
-    if (isMockTaskId(task.id)) {
-      setHiddenMockIds((prev) => new Set(prev).add(task.id));
-      message.success('Demo task removed from the board.');
-      return;
-    }
     deleteMutation.mutate(task.id);
   };
 
   const handleCompleteTask = (task: Task) => {
-    if (isMockTaskId(task.id)) {
-      message.info('Complete demo tasks by using real tasks from Assign Task.');
-      return;
-    }
     completeMutation.mutate(task.id);
   };
 
@@ -366,13 +350,14 @@ export default function Tasks() {
           <div className='mt-4 flex flex-wrap gap-3'>
             <select
               className={selectClass}
-              value={filterOutlet}
-              onChange={(e) => setFilterOutlet(e.target.value)}
+              value={filterOutletId}
+              onChange={(e) => setFilterOutletId(e.target.value)}
               aria-label='Filter by outlet'
             >
-              {outletFilterOptions.map((o) => (
-                <option key={o} value={o}>
-                  {o === 'all' ? 'All outlets' : o}
+              <option value='all'>All outlets</option>
+              {outletsForFilter.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
                 </option>
               ))}
             </select>
@@ -394,7 +379,7 @@ export default function Tasks() {
           className={`overflow-y-auto overflow-x-hidden overscroll-contain bg-[#f9fafb] px-6 pt-4 pb-3 [scrollbar-gutter:stable] lg:px-8 ${taskListScrollClass}`}
         >
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
-            {filteredTasks.map((task) => (
+            {boardTasks.map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
@@ -406,7 +391,7 @@ export default function Tasks() {
             ))}
           </div>
 
-          {filteredTasks.length === 0 && (
+          {boardTasks.length === 0 && (
             <div className='py-16 text-center text-slate-500'>
               <p className='text-lg font-medium'>No tasks found</p>
               <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>

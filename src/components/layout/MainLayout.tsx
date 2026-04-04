@@ -6,7 +6,6 @@ import { Box, IconButton, AppBar, Toolbar } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { message } from 'antd';
 import { useAuth } from '../../lib/context/AuthContext';
-import { tasksApi } from '../../lib/services/api/task.api';
 
 const drawerWidth = 280;
 
@@ -22,8 +21,8 @@ const MainLayout: React.FC = () => {
     if (!managerId) return;
     const storageKey = `zz_task_last_seen_${managerId}`;
     const lastSeen = localStorage.getItem(storageKey) ?? new Date(0).toISOString();
-    tasksApi
-      .getNewAssignmentsSince(managerId, lastSeen)
+    import('../../lib/services/api/task.api')
+      .then((m) => m.tasksApi.getNewAssignmentsSince(managerId, lastSeen))
       .then((newTasks) => {
         if (newTasks.length > 0) {
           message.info(
