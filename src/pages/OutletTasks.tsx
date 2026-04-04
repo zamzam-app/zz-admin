@@ -6,7 +6,6 @@ import { useAuth } from '../lib/context/AuthContext';
 import { useApiMutation, useApiQuery } from '../lib/react-query/use-api-hooks';
 import { TASK_KEYS, type Task, type TaskStatus } from '../lib/types/task';
 import { OUTLET_KEYS } from '../lib/types/outlet';
-import { buildTaskListQuery } from '../lib/services/api/task.api';
 
 const STATUS_BADGE: Record<TaskStatus, { label: string; className: string }> = {
   open: {
@@ -39,14 +38,14 @@ export default function OutletTasks() {
 
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  const listQueryKey: unknown[] = ['tasks', 'outlet-tasks', filterStatus, userId];
+  const listQueryKey: unknown[] = ['tasks', 'outlet-tasks', userId, filterStatus];
 
   const { data: tasks = [] } = useApiQuery(
     listQueryKey,
     () =>
       import('../lib/services/api/task.api').then((m) =>
         m.tasksApi.findAll(
-          buildTaskListQuery({
+          m.buildTaskListQuery({
             role,
             userId,
             filterOutletId: 'all',
@@ -58,7 +57,7 @@ export default function OutletTasks() {
   );
 
   const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () =>
-    import('../lib/services/api/outlet.api').then((m) => m.outletApi.getOutletsList()),
+    import('../lib/services/api/outlet.api').then((mod) => mod.outletApi.getOutletsList()),
   );
 
   const assignedOutletIds = useMemo(() => {
@@ -70,6 +69,7 @@ export default function OutletTasks() {
       .map((outlet) => outlet.id);
   }, [outlets, user, userId]);
 
+  /** Same as Tasks.tsx: API scopes by assignee for non-admins; narrow by managed outlets when set */
   const boardTasks = useMemo(() => {
     if (!assignedOutletIds || assignedOutletIds.length === 0) return tasks;
     return tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
