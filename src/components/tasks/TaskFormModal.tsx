@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import { useMemo, type Dispatch, type SetStateAction } from 'react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Autocomplete, MenuItem, Select as MuiSelect, TextField } from '@mui/material';
@@ -40,6 +40,18 @@ const descriptionFieldSx = {
   },
 } as const;
 
+function filterManagersForOutlet(outlet: Outlet | undefined, allManagers: User[]): User[] {
+  if (!outlet) return [];
+  return allManagers.filter((m) => {
+    const mid = m._id ?? m.id ?? '';
+    if (!mid) return false;
+    if (outlet.managerIds?.includes(mid)) return true;
+    if (outlet.managerId === mid) return true;
+    const uo = m.outletId ?? [];
+    return uo.includes(outlet.id) || uo.includes(outlet.outletId);
+  });
+}
+
 export type TaskFormState = {
   description: string;
   priority: TaskPriority;
@@ -72,6 +84,20 @@ export function TaskFormModal({
   managers,
 }: TaskFormModalProps) {
   const outletSelectValue = form.outletId === '' ? '' : form.outletId;
+
+  const assigneesDisabled = !editing && (form.outletId === '' || form.outletId === 'all');
+
+  const assigneeOptions = useMemo(() => {
+    const outletId =
+      editing?.outletId ?? (form.outletId !== '' && form.outletId !== 'all' ? form.outletId : null);
+    if (!outletId) return [];
+
+    const outlet =
+      outlets.find((o) => o.id === outletId) ?? outlets.find((o) => o.outletId === outletId);
+    if (outlet) return filterManagersForOutlet(outlet, managers);
+
+    return managers.filter((m) => (m.outletId ?? []).includes(outletId));
+  }, [editing?.outletId, form.outletId, outlets, managers]);
 
   return (
     <Modal
@@ -108,11 +134,21 @@ export function TaskFormModal({
                 onChange={(e) => {
                   const v = String(e.target.value);
                   if (v === '') {
-                    setForm({ ...form, outletId: '' });
+                    setForm({ ...form, outletId: '', assigneeIds: [] });
                   } else if (v === 'all') {
-                    setForm({ ...form, outletId: 'all' });
+                    setForm({ ...form, outletId: 'all', assigneeIds: [] });
                   } else {
-                    setForm({ ...form, outletId: v });
+                    const o = outlets.find((x) => x.id === v);
+                    const allowed = new Set(
+                      filterManagersForOutlet(o, managers)
+                        .map((m) => m._id ?? m.id ?? '')
+                        .filter(Boolean),
+                    );
+                    setForm({
+                      ...form,
+                      outletId: v,
+                      assigneeIds: form.assigneeIds.filter((id) => allowed.has(id)),
+                    });
                   }
                 }}
                 size='small'
@@ -217,8 +253,9 @@ export function TaskFormModal({
           <Autocomplete
             multiple
             id='task-assignees'
-            options={managers}
-            value={managers.filter((m) => form.assigneeIds.includes(m._id ?? m.id ?? ''))}
+            disabled={assigneesDisabled}
+            options={assigneeOptions}
+            value={assigneeOptions.filter((m) => form.assigneeIds.includes(m._id ?? m.id ?? ''))}
             getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(option, value) =>
               (option._id ?? option.id) === (value._id ?? value.id)
@@ -233,12 +270,12 @@ export function TaskFormModal({
               <TextField
                 {...params}
                 hiddenLabel
-                placeholder='Select managers'
+                placeholder={assigneesDisabled ? 'Select an outlet first' : 'Select managers'}
                 sx={{
                   ...muiFieldSx,
                   '& .MuiOutlinedInput-root': {
                     ...muiFieldSx['& .MuiOutlinedInput-root'],
-                    bgcolor: '#F9FAFB',
+                    bgcolor: assigneesDisabled ? '#F3F4F6' : '#F9FAFB',
                   },
                 }}
               />
