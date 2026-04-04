@@ -105,7 +105,7 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
                   e.stopPropagation();
                   onEdit();
                 }}
-                className='rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
+                className='cursor-pointer rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
                 title='Edit'
               >
                 <Pencil size={16} />
@@ -118,7 +118,7 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
                   e.stopPropagation();
                   onDelete();
                 }}
-                className='rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50'
+                className='cursor-pointer rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50'
                 title='Delete'
               >
                 <Trash2 size={16} />

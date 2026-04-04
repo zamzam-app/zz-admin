@@ -39,16 +39,12 @@ export interface CreateTaskPayload {
 }
 
 export interface UpdateTaskPayload {
-  title?: string;
   description?: string;
   priority?: TaskPriority;
   dueDate?: string;
   category?: TaskCategory;
-  outletId?: string;
-  outletName?: string;
   status?: TaskStatus;
   assigneeIds?: string[];
-  assigneeNames?: string[];
-  completedAt?: string | null;
-  completedBy?: string | null;
+  imageUrls?: string[];
+  videoUrls?: string[];
 }

@@ -75,10 +75,9 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   if (payload.priority !== undefined) body.priority = toApiPriority(payload.priority);
   if (payload.status !== undefined) body.status = toApiStatus(payload.status);
   if (payload.dueDate !== undefined) body.dueDate = payload.dueDate;
-  if (payload.outletId !== undefined) body.outletId = payload.outletId;
   if (payload.assigneeIds !== undefined) body.assigneeIds = payload.assigneeIds;
-  if (payload.completedAt !== undefined) body.completedAt = payload.completedAt;
-  if (payload.completedBy !== undefined) body.completedBy = payload.completedBy;
+  if (payload.imageUrls !== undefined) body.imageUrls = payload.imageUrls;
+  if (payload.videoUrls !== undefined) body.videoUrls = payload.videoUrls;
   return body;
 }
 

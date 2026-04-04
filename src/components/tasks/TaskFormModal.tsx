@@ -84,45 +84,60 @@ export function TaskFormModal({
       <div className='space-y-6'>
         <div className='grid grid-cols-1 gap-6 md:grid-cols-2 md:items-start'>
           <div>
-            <label className={fieldLabelClass} htmlFor='task-outlet-select'>
-              Select outlet
-            </label>
-            <MuiSelect
-              id='task-outlet-select'
-              fullWidth
-              value={outletSelectValue}
-              onChange={(e) => {
-                const v = String(e.target.value);
-                if (v === '') {
-                  setForm({ ...form, outletId: '' });
-                } else if (v === 'all') {
-                  setForm({ ...form, outletId: 'all' });
-                } else {
-                  setForm({ ...form, outletId: v });
-                }
-              }}
-              size='small'
-              displayEmpty
-              renderValue={(selected) => {
-                if (selected === '' || selected === undefined) {
-                  return <span className='text-slate-400'>Choose outlet...</span>;
-                }
-                if (selected === 'all') return 'All outlets';
-                const o = outlets.find((x) => x.id === selected);
-                return o?.name ?? selected;
-              }}
-              sx={{ borderRadius: 3, bgcolor: 'white' }}
+            <label
+              className={fieldLabelClass}
+              htmlFor={editing ? 'task-outlet-readonly' : 'task-outlet-select'}
             >
-              <MenuItem value='' disabled>
-                Choose outlet...
-              </MenuItem>
-              <MenuItem value='all'>All outlets</MenuItem>
-              {outlets.map((outlet) => (
-                <MenuItem key={outlet.id} value={outlet.id}>
-                  {outlet.name}
+              {editing ? 'Outlet' : 'Select outlet'}
+            </label>
+            {editing ? (
+              <div
+                id='task-outlet-readonly'
+                className='flex min-h-[40px] items-center rounded-3xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800'
+              >
+                {editing.outletName?.trim() ||
+                  outlets.find((o) => o.id === editing.outletId)?.name ||
+                  editing.outletId ||
+                  '—'}
+              </div>
+            ) : (
+              <MuiSelect
+                id='task-outlet-select'
+                fullWidth
+                value={outletSelectValue}
+                onChange={(e) => {
+                  const v = String(e.target.value);
+                  if (v === '') {
+                    setForm({ ...form, outletId: '' });
+                  } else if (v === 'all') {
+                    setForm({ ...form, outletId: 'all' });
+                  } else {
+                    setForm({ ...form, outletId: v });
+                  }
+                }}
+                size='small'
+                displayEmpty
+                renderValue={(selected) => {
+                  if (selected === '' || selected === undefined) {
+                    return <span className='text-slate-400'>Choose outlet...</span>;
+                  }
+                  if (selected === 'all') return 'All outlets';
+                  const o = outlets.find((x) => x.id === selected);
+                  return o?.name ?? selected;
+                }}
+                sx={{ borderRadius: 3, bgcolor: 'white' }}
+              >
+                <MenuItem value='' disabled>
+                  Choose outlet...
                 </MenuItem>
-              ))}
-            </MuiSelect>
+                <MenuItem value='all'>All outlets</MenuItem>
+                {outlets.map((outlet) => (
+                  <MenuItem key={outlet.id} value={outlet.id}>
+                    {outlet.name}
+                  </MenuItem>
+                ))}
+              </MuiSelect>
+            )}
           </div>
           <div className='min-w-0'>
             <label className={fieldLabelClass} htmlFor='task-priority-select'>

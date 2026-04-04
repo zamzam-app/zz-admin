@@ -198,7 +198,7 @@ export default function Tasks() {
       message.error('Please add a description.');
       return;
     }
-    if (form.outletId === '' || form.outletId === 'all') {
+    if (!editing && (form.outletId === '' || form.outletId === 'all')) {
       message.error('Please select a specific outlet. Each task must be tied to one outlet.');
       return;
     }
@@ -220,8 +220,24 @@ export default function Tasks() {
       return;
     }
 
-    const outlet = outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
     const desc = form.description.trim();
+
+    if (editing) {
+      updateMutation.mutate({
+        id: editing.id,
+        data: {
+          description: desc,
+          priority: form.priority,
+          dueDate,
+          category: form.category,
+          status: editing.status,
+          assigneeIds,
+        },
+      });
+      return;
+    }
+
+    const outlet = outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
     const titleFromDescription = desc.split('\n')[0].trim().slice(0, 120) || 'Task';
     const outletMongoId = outlet?.id ?? form.outletId;
     const payload = {
@@ -232,17 +248,13 @@ export default function Tasks() {
       category: form.category,
       outletId: outletMongoId,
       outletName: outlet?.name,
-      status: editing ? editing.status : 'open',
+      status: 'open' as const,
       assigneeIds,
       assigneeNames: selectedManagers.map((m) => m.name).filter(Boolean),
       createdBy: userId || undefined,
     };
 
-    if (editing) {
-      updateMutation.mutate({ id: editing.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
+    createMutation.mutate(payload);
   };
 
   const notifications = useMemo(() => {
