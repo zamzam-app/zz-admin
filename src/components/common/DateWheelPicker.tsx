@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { WheelPicker, WheelPickerWrapper, type WheelPickerOption } from '@ncdai/react-wheel-picker';
 import '@ncdai/react-wheel-picker/style.css';
 import type { Dayjs } from 'dayjs';
@@ -23,9 +23,17 @@ function getDaysInMonth(year: number, month: number): number {
   return dayjs(`${year}-${month}-01`).daysInMonth();
 }
 
+function getMinDayForMonth(year: number, month: number, minDate: Dayjs | undefined): number {
+  if (!minDate) return 1;
+  if (year === minDate.year() && month === minDate.month() + 1) return minDate.date();
+  return 1;
+}
+
 export interface DateWheelPickerProps {
   value: Dayjs | null;
   onChange: (date: Dayjs) => void;
+  /** When set, the user cannot pick a calendar date before this (compare by day). */
+  minDate?: Dayjs;
   minYear?: number;
   maxYear?: number;
   id?: string;
@@ -40,6 +48,7 @@ const DEFAULT_MIN_YEAR = 1900;
 export function DateWheelPicker({
   value,
   onChange,
+  minDate,
   minYear = DEFAULT_MIN_YEAR,
   maxYear = CURRENT_YEAR,
   id,
@@ -47,6 +56,17 @@ export function DateWheelPicker({
   highlightTextClassName = "font-['Epilogue'] text-base leading-none text-[#923a3a]",
   optionTextClassName = "font-['Epilogue'] text-sm font-medium leading-none text-[#0D141C]/45",
 }: DateWheelPickerProps) {
+  const effectiveMinYear = useMemo(
+    () => (minDate ? Math.max(minYear, minDate.year()) : minYear),
+    [minYear, minDate],
+  );
+
+  useEffect(() => {
+    if (!minDate || !value?.isValid()) return;
+    if (value.isBefore(minDate, 'day')) {
+      onChange(minDate.startOf('day'));
+    }
+  }, [minDate, value, onChange]);
   const getDefaultParts = useCallback(
     () => ({
       year: maxYear - 25,
@@ -73,71 +93,80 @@ export function DateWheelPicker({
 
   const yearOptions = useMemo<WheelPickerOption<number>[]>(
     () =>
-      Array.from({ length: maxYear - minYear + 1 }, (_, i) => {
-        const y = minYear + i;
+      Array.from({ length: Math.max(0, maxYear - effectiveMinYear + 1) }, (_, i) => {
+        const y = effectiveMinYear + i;
         return { value: y, label: String(y) };
       }),
-    [minYear, maxYear],
+    [effectiveMinYear, maxYear],
   );
 
-  const monthOptions = useMemo<WheelPickerOption<number>[]>(
-    () =>
-      MONTH_LABELS.map((label, i) => ({
-        value: i + 1,
-        label,
-      })),
-    [],
-  );
+  const monthOptions = useMemo<WheelPickerOption<number>[]>(() => {
+    const base = MONTH_LABELS.map((label, i) => ({
+      value: i + 1,
+      label,
+    }));
+    if (!minDate || displayYear !== minDate.year()) return base;
+    return base.filter((o) => o.value >= minDate.month() + 1);
+  }, [displayYear, minDate]);
 
-  const dayOptions = useMemo<WheelPickerOption<number>[]>(
-    () =>
-      Array.from({ length: getDaysInMonth(displayYear, displayMonth) }, (_, i) => ({
-        value: i + 1,
-        label: String(i + 1),
-      })),
-    [displayYear, displayMonth],
-  );
+  const dayOptions = useMemo<WheelPickerOption<number>[]>(() => {
+    const dim = getDaysInMonth(displayYear, displayMonth);
+    const start = getMinDayForMonth(displayYear, displayMonth, minDate);
+    return Array.from({ length: dim - start + 1 }, (_, i) => ({
+      value: start + i,
+      label: String(start + i),
+    }));
+  }, [displayYear, displayMonth, minDate]);
 
   const notifyChange = useCallback(
     (y: number, m: number, d: number) => {
-      const date = dayjs(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-      if (date.isValid()) onChange(date);
+      let date = dayjs(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+      if (!date.isValid()) return;
+      if (minDate && date.isBefore(minDate, 'day')) {
+        date = minDate.startOf('day');
+      }
+      onChange(date);
     },
-    [onChange],
+    [onChange, minDate],
   );
 
   const handleDayChange = useCallback(
     (d: number) => {
-      if (!valueParts) setDay(d);
-      notifyChange(displayYear, displayMonth, d);
+      const minDay = getMinDayForMonth(displayYear, displayMonth, minDate);
+      const maxDay = getDaysInMonth(displayYear, displayMonth);
+      const clamped = Math.min(Math.max(d, minDay), maxDay);
+      if (!valueParts) setDay(clamped);
+      notifyChange(displayYear, displayMonth, clamped);
     },
-    [displayYear, displayMonth, valueParts, notifyChange],
+    [displayYear, displayMonth, valueParts, notifyChange, minDate],
   );
 
   const handleMonthChange = useCallback(
     (m: number) => {
       const maxDay = getDaysInMonth(displayYear, m);
-      const newDay = Math.min(displayDay, maxDay);
+      const minDay = getMinDayForMonth(displayYear, m, minDate);
+      const newDay = Math.min(Math.max(displayDay, minDay), maxDay);
       if (!valueParts) {
         setMonth(m);
         setDay(newDay);
       }
       notifyChange(displayYear, m, newDay);
     },
-    [displayYear, displayDay, valueParts, notifyChange],
+    [displayYear, displayDay, valueParts, notifyChange, minDate],
   );
 
   const handleYearChange = useCallback(
     (y: number) => {
       const maxDay = getDaysInMonth(y, displayMonth);
-      const newDay = Math.min(displayDay, maxDay);
+      const minDay = getMinDayForMonth(y, displayMonth, minDate);
+      const newDay = Math.min(Math.max(displayDay, minDay), maxDay);
       if (!valueParts) {
         setYear(y);
         setDay(newDay);
       }
       notifyChange(y, displayMonth, newDay);
     },
-    [displayMonth, displayDay, valueParts, notifyChange],
+    [displayMonth, displayDay, valueParts, notifyChange, minDate],
   );
 
   const wheelClassNames = {
