@@ -8,6 +8,7 @@ import { useMicRecording } from '../../lib/hooks/useMicRecording';
 import { useApiMutation, useApiQuery } from '../../lib/react-query/use-api-hooks';
 import { TASK_KEYS, type Task, type TaskStatus } from '../../lib/types/task';
 import { OUTLET_KEYS } from '../../lib/types/outlet';
+import { Button } from '../common/Button';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 const STATUS_BADGE: Record<TaskStatus, { label: string; className: string }> = {
@@ -98,11 +99,11 @@ function AttachmentPreviewCard({
 
   return (
     <>
-      <div className='flex max-w-[220px] min-w-0 items-center gap-2 rounded-lg bg-slate-100 py-1.5 pl-1.5 pr-1 ring-1 ring-slate-200/90'>
+      <div className='flex max-w-[220px] min-w-0 cursor-pointer items-center gap-2 rounded-lg bg-slate-100 py-1.5 pl-1.5 pr-1 ring-1 ring-slate-200/90'>
         <button
           type='button'
           onClick={() => setPreviewOpen(true)}
-          className='flex min-w-0 flex-1 items-center gap-2 rounded-md text-left transition-colors hover:bg-slate-200/60'
+          className='flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left transition-colors hover:bg-slate-200/60'
           aria-label={`Preview ${attachment.file.name}`}
         >
           <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-500 text-white'>
@@ -124,7 +125,7 @@ function AttachmentPreviewCard({
             e.stopPropagation();
             onRemove();
           }}
-          className='shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-200/80 hover:text-slate-700'
+          className='shrink-0 cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-200/80 hover:text-slate-700'
           aria-label={`Remove ${attachment.file.name}`}
         >
           <X size={14} aria-hidden />
@@ -455,7 +456,7 @@ function OutletTaskDetailContent({
                     type='button'
                     disabled={task.status === 'completed'}
                     onClick={() => imageInputRef.current?.click()}
-                    className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40'
+                    className='cursor-pointer rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40'
                     aria-label='Attach image'
                   >
                     <ImageIcon size={20} aria-hidden />
@@ -466,7 +467,7 @@ function OutletTaskDetailContent({
                     onClick={mic.toggleRecording}
                     aria-pressed={mic.isRecording}
                     aria-label={mic.isRecording ? 'Stop recording' : 'Start voice recording'}
-                    className={`rounded-lg p-2 transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+                    className={`cursor-pointer rounded-lg p-2 transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40 ${
                       mic.isRecording
                         ? 'bg-rose-100 text-rose-600 ring-2 ring-rose-300 ring-offset-1'
                         : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
@@ -478,24 +479,23 @@ function OutletTaskDetailContent({
                     type='button'
                     disabled={task.status === 'completed'}
                     onClick={() => videoInputRef.current?.click()}
-                    className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40'
+                    className='cursor-pointer rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40'
                     aria-label='Attach video'
                   >
                     <Video size={20} aria-hidden />
                   </button>
                   {task.status !== 'completed' && (
-                    <button
-                      type='button'
+                    <Button
+                      variant='admin-primary'
                       disabled={completeMutation.isPending || mic.isRecording}
                       onClick={handleCompleteTask}
                       title={
                         mic.isRecording ? 'Stop recording before completing the task' : undefined
                       }
-                      className='ml-1 inline-flex items-center gap-1.5 rounded-xl bg-[#705E0C] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#5c4d0a] disabled:opacity-50'
+                      endIcon={<ChevronRight size={16} aria-hidden />}
                     >
                       Complete task
-                      <ChevronRight size={16} className='shrink-0' aria-hidden />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
