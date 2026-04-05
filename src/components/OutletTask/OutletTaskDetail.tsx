@@ -334,6 +334,10 @@ function OutletTaskDetailContent({
 
   const handleCompleteTask = () => {
     if (task.status === 'completed') return;
+    if (!note.trim()) {
+      message.error('Enter your delivery notes before marking the task complete.');
+      return;
+    }
     // Upload + task update API will run here later; completion only for now.
     completeMutation.mutate(task.id);
   };
@@ -396,9 +400,7 @@ function OutletTaskDetailContent({
 
           <section className='mt-10 rounded-xl border border-slate-200/90 bg-slate-100/80 p-6 shadow-sm'>
             <h2 className='text-lg font-bold text-slate-900'>Notes &amp; Attachments</h2>
-            <p className='mt-1 text-sm text-slate-500'>
-              Provide delivery notes and required documentation
-            </p>
+            <p className='mt-1 text-sm text-slate-500'>Provide notes or required documentation</p>
 
             <div className='mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
               <input
