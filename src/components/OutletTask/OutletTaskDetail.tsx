@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { message } from 'antd';
+import { message, Modal } from 'antd';
 import dayjs from 'dayjs';
 import { ArrowLeft, ChevronRight, Image as ImageIcon, Mic, Video, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -73,53 +73,112 @@ function AttachmentPreviewCard({
   attachment: PendingAttachment;
   onRemove: () => void;
 }) {
-  const objectUrl = useMemo(() => URL.createObjectURL(attachment.file), [attachment.file]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [objectUrl]);
+    const url = URL.createObjectURL(attachment.file);
+    queueMicrotask(() => setObjectUrl(url));
+    return () => {
+      URL.revokeObjectURL(url);
+      queueMicrotask(() => setObjectUrl(null));
+    };
+  }, [attachment.id, attachment.file]);
+
+  const Icon = attachment.kind === 'image' ? ImageIcon : attachment.kind === 'video' ? Video : Mic;
+
+  const closePreview = () => {
+    setPreviewOpen(false);
+  };
+
+  /** WebM mic recordings are often `video/webm`; <audio> fails — use <video> for preview. */
+  const useVideoForAudioPreview =
+    attachment.kind === 'audio' &&
+    (attachment.file.type.includes('webm') || /\.webm$/i.test(attachment.file.name));
 
   return (
-    <div className='w-full max-w-[220px] min-w-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200/90'>
-      <div className='relative bg-slate-200/60'>
-        {attachment.kind === 'image' && (
-          <img src={objectUrl} alt='' className='h-32 w-full object-cover' />
-        )}
-        {attachment.kind === 'video' && (
-          <video
-            src={objectUrl}
-            className='h-32 w-full bg-black object-cover'
-            controls
-            playsInline
-            preload='metadata'
-          />
-        )}
-        {attachment.kind === 'audio' && (
-          <div className='flex flex-col items-center justify-center gap-2 px-3 py-4'>
-            <div className='flex h-12 w-12 items-center justify-center rounded-md bg-slate-500 text-white'>
-              <Mic size={22} className='text-white' aria-hidden />
-            </div>
-            <audio src={objectUrl} controls className='h-9 w-full max-w-full' preload='metadata' />
-          </div>
-        )}
+    <>
+      <div className='flex max-w-[220px] min-w-0 items-center gap-2 rounded-lg bg-slate-100 py-1.5 pl-1.5 pr-1 ring-1 ring-slate-200/90'>
         <button
           type='button'
-          onClick={onRemove}
-          className='absolute right-1.5 top-1.5 rounded-full bg-black/55 p-1.5 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-black/70'
+          onClick={() => setPreviewOpen(true)}
+          className='flex min-w-0 flex-1 items-center gap-2 rounded-md text-left transition-colors hover:bg-slate-200/60'
+          aria-label={`Preview ${attachment.file.name}`}
+        >
+          <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-500 text-white'>
+            <Icon size={18} className='text-white' aria-hidden />
+          </div>
+          <div className='min-w-0 flex-1 py-0.5'>
+            <p className='truncate text-sm font-bold text-slate-800' title={attachment.file.name}>
+              {attachment.file.name}
+            </p>
+            <p className='text-[10px] font-semibold uppercase tracking-wide text-slate-500'>
+              {KIND_LABEL[attachment.kind]}
+            </p>
+            <p className='text-[10px] text-slate-400'>Click to preview</p>
+          </div>
+        </button>
+        <button
+          type='button'
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className='shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-200/80 hover:text-slate-700'
           aria-label={`Remove ${attachment.file.name}`}
         >
           <X size={14} aria-hidden />
         </button>
       </div>
-      <div className='border-t border-slate-200/80 px-2.5 py-2'>
-        <p className='truncate text-xs font-bold text-slate-800' title={attachment.file.name}>
-          {attachment.file.name}
-        </p>
-        <p className='text-[10px] font-semibold uppercase tracking-wide text-slate-500'>
-          {KIND_LABEL[attachment.kind]}
-        </p>
-      </div>
-    </div>
+
+      <Modal
+        title={attachment.file.name}
+        open={previewOpen}
+        onCancel={closePreview}
+        footer={null}
+        width={attachment.kind === 'audio' ? 420 : 720}
+        centered
+        destroyOnHidden
+      >
+        {objectUrl && attachment.kind === 'image' && (
+          <div className='flex justify-center bg-slate-50 py-2'>
+            <img src={objectUrl} alt='' className='max-h-[70vh] max-w-full object-contain' />
+          </div>
+        )}
+        {objectUrl && attachment.kind === 'video' && (
+          <video
+            key={objectUrl}
+            src={objectUrl}
+            className='max-h-[70vh] w-full bg-black object-contain'
+            controls
+            playsInline
+            preload='auto'
+          />
+        )}
+        {objectUrl && attachment.kind === 'audio' && (
+          <div className='flex flex-col items-center gap-4 py-4'>
+            <div className='flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500'>
+              <Mic size={28} aria-hidden />
+            </div>
+            {useVideoForAudioPreview ? (
+              <video
+                key={objectUrl}
+                src={objectUrl}
+                controls
+                playsInline
+                preload='auto'
+                className='w-full bg-black'
+              />
+            ) : (
+              <audio key={objectUrl} src={objectUrl} controls className='w-full' preload='auto' />
+            )}
+          </div>
+        )}
+        {!objectUrl && (
+          <div className='py-8 text-center text-sm text-slate-500'>Preparing preview…</div>
+        )}
+      </Modal>
+    </>
   );
 }
 

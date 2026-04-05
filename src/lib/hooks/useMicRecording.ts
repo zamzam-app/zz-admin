@@ -115,7 +115,12 @@ export function useMicRecording(options: UseMicRecordingOptions = {}): UseMicRec
 
         const ext = extensionForAudioBlob(type);
         const name = `${fileNamePrefix}-${dayjs().format('YYYY-MM-DD-HHmmss')}.${ext}`;
-        const file = new File([blob], name, { type: blob.type || type });
+        // Chrome often tags mic-only WebM as video/webm; <audio> then shows 0:00. Normalize for playback.
+        let fileType = blob.type || type;
+        if (fileType === 'video/webm' || !fileType) {
+          fileType = 'audio/webm';
+        }
+        const file = new File([blob], name, { type: fileType });
         onRecordingCompleteRef.current?.(file);
       };
 
