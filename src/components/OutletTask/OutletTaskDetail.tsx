@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { ArrowLeft, ChevronRight, Image as ImageIcon, Mic, Video, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/context/AuthContext';
+import { useMicRecording } from '../../lib/hooks/useMicRecording';
 import { useApiMutation, useApiQuery } from '../../lib/react-query/use-api-hooks';
 import { TASK_KEYS, type Task, type TaskStatus } from '../../lib/types/task';
 import { OUTLET_KEYS } from '../../lib/types/outlet';
@@ -218,9 +219,18 @@ function OutletTaskDetailContent({
   const categoryLabel = formatCategoryLabel(task.category);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+
+  const mic = useMicRecording({
+    onRecordingComplete: (file) => {
+      setAttachments((prev) => [
+        ...prev,
+        { id: `${Date.now()}-${file.name}`, file, kind: 'audio' },
+      ]);
+    },
+    onError: (msg) => message.error(msg),
+  });
 
   const addAttachments = (files: FileList | null, kind: AttachmentKind) => {
     if (!files?.length) return;
@@ -317,17 +327,6 @@ function OutletTaskDetailContent({
                 }}
               />
               <input
-                ref={audioInputRef}
-                type='file'
-                accept='audio/*'
-                multiple
-                className='hidden'
-                onChange={(e) => {
-                  addAttachments(e.target.files, 'audio');
-                  e.target.value = '';
-                }}
-              />
-              <input
                 ref={videoInputRef}
                 type='file'
                 accept='video/*'
@@ -359,7 +358,16 @@ function OutletTaskDetailContent({
                   ))}
                 </div>
 
-                <div className='flex shrink-0 items-center justify-end gap-2'>
+                <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
+                  {mic.isRecording && (
+                    <span className='mr-1 inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100'>
+                      <span className='relative flex h-2 w-2'>
+                        <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75' />
+                        <span className='relative inline-flex h-2 w-2 rounded-full bg-rose-600' />
+                      </span>
+                      Recording… tap mic to stop
+                    </span>
+                  )}
                   <button
                     type='button'
                     disabled={task.status === 'completed'}
@@ -372,9 +380,14 @@ function OutletTaskDetailContent({
                   <button
                     type='button'
                     disabled={task.status === 'completed'}
-                    onClick={() => audioInputRef.current?.click()}
-                    className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40'
-                    aria-label='Attach audio'
+                    onClick={mic.toggleRecording}
+                    aria-pressed={mic.isRecording}
+                    aria-label={mic.isRecording ? 'Stop recording' : 'Start voice recording'}
+                    className={`rounded-lg p-2 transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+                      mic.isRecording
+                        ? 'bg-rose-100 text-rose-600 ring-2 ring-rose-300 ring-offset-1'
+                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                    }`}
                   >
                     <Mic size={20} aria-hidden />
                   </button>
@@ -390,8 +403,11 @@ function OutletTaskDetailContent({
                   {task.status !== 'completed' && (
                     <button
                       type='button'
-                      disabled={completeMutation.isPending}
+                      disabled={completeMutation.isPending || mic.isRecording}
                       onClick={handleCompleteTask}
+                      title={
+                        mic.isRecording ? 'Stop recording before completing the task' : undefined
+                      }
                       className='ml-1 inline-flex items-center gap-1.5 rounded-xl bg-[#705E0C] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#5c4d0a] disabled:opacity-50'
                     >
                       Complete task
