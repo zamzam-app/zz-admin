@@ -99,24 +99,23 @@ function AttachmentPreviewCard({
 
   return (
     <>
-      <div className='flex max-w-[220px] min-w-0 cursor-pointer items-center gap-2 rounded-lg bg-slate-100 py-1.5 pl-1.5 pr-1 ring-1 ring-slate-200/90'>
+      <div className='flex max-w-[190px] min-w-0 cursor-pointer items-center gap-1.5 rounded-lg bg-slate-100 py-1 pl-1 pr-1 ring-1 ring-slate-200/90'>
         <button
           type='button'
           onClick={() => setPreviewOpen(true)}
-          className='flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left transition-colors hover:bg-slate-200/60'
+          className='flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md text-left transition-colors hover:bg-slate-200/60'
           aria-label={`Preview ${attachment.file.name}`}
         >
-          <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-500 text-white'>
-            <Icon size={18} className='text-white' aria-hidden />
+          <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-500 text-white'>
+            <Icon size={16} className='text-white' aria-hidden />
           </div>
-          <div className='min-w-0 flex-1 py-0.5'>
-            <p className='truncate text-sm font-bold text-slate-800' title={attachment.file.name}>
+          <div className='min-w-0 flex-1 py-0.5 leading-tight'>
+            <p className='truncate text-xs font-bold text-slate-800' title={attachment.file.name}>
               {attachment.file.name}
             </p>
-            <p className='text-[10px] font-semibold uppercase tracking-wide text-slate-500'>
+            <p className='mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500'>
               {KIND_LABEL[attachment.kind]}
             </p>
-            <p className='text-[10px] text-slate-400'>Click to preview</p>
           </div>
         </button>
         <button
@@ -125,10 +124,10 @@ function AttachmentPreviewCard({
             e.stopPropagation();
             onRemove();
           }}
-          className='shrink-0 cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-200/80 hover:text-slate-700'
+          className='shrink-0 cursor-pointer rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-200/80 hover:text-slate-700'
           aria-label={`Remove ${attachment.file.name}`}
         >
-          <X size={14} aria-hidden />
+          <X size={12} aria-hidden />
         </button>
       </div>
 
