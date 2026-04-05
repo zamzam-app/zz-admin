@@ -154,16 +154,17 @@ export const tasksApi = {
     return mapApiTaskToTask(res.data);
   },
 
+  updateStatus: async (id: string, status: TaskStatus): Promise<Task> => {
+    const res = await api.patch<ApiTaskRaw>(TASKS.STATUS(id), { status: toApiStatus(status) });
+    return mapApiTaskToTask(res.data);
+  },
+
   remove: async (id: string): Promise<void> => {
     await api.delete(TASKS.BY_ID(id));
   },
 
   complete: async (id: string): Promise<Task> => {
-    const res = await api.patch<ApiTaskRaw>(TASKS.BY_ID(id), {
-      status: toApiStatus('completed'),
-      completedAt: new Date().toISOString(),
-    });
-    return mapApiTaskToTask(res.data);
+    return tasksApi.updateStatus(id, 'completed');
   },
 
   getUnreadCount: async (assigneeId: string): Promise<number> => {

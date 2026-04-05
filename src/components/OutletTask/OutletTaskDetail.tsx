@@ -230,7 +230,10 @@ export default function OutletTaskDetail() {
   const [note, setNote] = useState('');
 
   const completeMutation = useApiMutation(
-    (id: string) => import('../../lib/services/api/task.api').then((m) => m.tasksApi.complete(id)),
+    (id: string) =>
+      import('../../lib/services/api/task.api').then((m) =>
+        m.tasksApi.updateStatus(id, 'completed'),
+      ),
     [TASK_KEYS, listQueryKey],
     {
       onSuccess: () => {
