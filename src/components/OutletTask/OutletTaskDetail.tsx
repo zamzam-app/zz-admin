@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeft, CheckCircle2, Image as ImageIcon, Mic, Send, Video } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Image as ImageIcon, Mic, Video, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/context/AuthContext';
 import { useApiMutation, useApiQuery } from '../../lib/react-query/use-api-hooks';
@@ -49,6 +49,53 @@ function deadlineHint(dueDate: string) {
   if (d.isBefore(now)) return 'This deadline has passed';
   if (d.isSame(now, 'day')) return 'Delivery window closing soon';
   return 'Plan delivery before the deadline';
+}
+
+type AttachmentKind = 'image' | 'video' | 'audio';
+
+type PendingAttachment = {
+  id: string;
+  file: File;
+  kind: AttachmentKind;
+};
+
+const KIND_LABEL: Record<AttachmentKind, string> = {
+  image: 'IMAGE',
+  video: 'VIDEO',
+  audio: 'AUDIO',
+};
+
+function AttachmentChip({
+  attachment,
+  onRemove,
+}: {
+  attachment: PendingAttachment;
+  onRemove: () => void;
+}) {
+  const Icon = attachment.kind === 'image' ? ImageIcon : attachment.kind === 'video' ? Video : Mic;
+  return (
+    <div className='flex max-w-[220px] min-w-0 items-center gap-2 rounded-lg bg-slate-100 py-1.5 pl-1.5 pr-1 ring-1 ring-slate-200/90'>
+      <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-500 text-white'>
+        <Icon size={18} className='text-white' aria-hidden />
+      </div>
+      <div className='min-w-0 flex-1 py-0.5'>
+        <p className='truncate text-sm font-bold text-slate-800' title={attachment.file.name}>
+          {attachment.file.name}
+        </p>
+        <p className='text-[10px] font-semibold uppercase tracking-wide text-slate-500'>
+          {KIND_LABEL[attachment.kind]}
+        </p>
+      </div>
+      <button
+        type='button'
+        onClick={onRemove}
+        className='shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-200/80 hover:text-slate-700'
+        aria-label={`Remove ${attachment.file.name}`}
+      >
+        <X size={14} aria-hidden />
+      </button>
+    </div>
+  );
 }
 
 export default function OutletTaskDetail() {
@@ -170,13 +217,29 @@ function OutletTaskDetailContent({
   const headlineName = task.outletName?.trim() || task.title;
   const categoryLabel = formatCategoryLabel(task.category);
 
-  const handleSendNote = () => {
-    if (!note.trim()) {
-      message.warning('Add a note before sending.');
-      return;
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+
+  const addAttachments = (files: FileList | null, kind: AttachmentKind) => {
+    if (!files?.length) return;
+    const next: PendingAttachment[] = [];
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      if (file) next.push({ id: `${Date.now()}-${i}-${file.name}`, file, kind });
     }
-    message.success('Note recorded locally. Sync with your team as needed.');
-    setNote('');
+    if (next.length) setAttachments((prev) => [...prev, ...next]);
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleCompleteTask = () => {
+    if (task.status === 'completed') return;
+    // Upload + task update API will run here later; completion only for now.
+    completeMutation.mutate(task.id);
   };
 
   return (
@@ -232,20 +295,6 @@ function OutletTaskDetailContent({
                 </p>
                 <p className='mt-2 text-xs text-[#6B5A40]'>{deadlineHint(task.dueDate)}</p>
               </div>
-
-              {task.status !== 'completed' && (
-                <button
-                  type='button'
-                  disabled={completeMutation.isPending}
-                  onClick={() => completeMutation.mutate(task.id)}
-                  className='inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2D6A2E] px-4 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#256025] disabled:opacity-50'
-                >
-                  <span className='flex h-7 w-7 items-center justify-center rounded-full bg-white/20'>
-                    <CheckCircle2 size={18} className='text-white' aria-hidden />
-                  </span>
-                  Mark Complete
-                </button>
-              )}
             </div>
           </div>
 
@@ -256,43 +305,100 @@ function OutletTaskDetailContent({
             </p>
 
             <div className='mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
+              <input
+                ref={imageInputRef}
+                type='file'
+                accept='image/*'
+                multiple
+                className='hidden'
+                onChange={(e) => {
+                  addAttachments(e.target.files, 'image');
+                  e.target.value = '';
+                }}
+              />
+              <input
+                ref={audioInputRef}
+                type='file'
+                accept='audio/*'
+                multiple
+                className='hidden'
+                onChange={(e) => {
+                  addAttachments(e.target.files, 'audio');
+                  e.target.value = '';
+                }}
+              />
+              <input
+                ref={videoInputRef}
+                type='file'
+                accept='video/*'
+                multiple
+                className='hidden'
+                onChange={(e) => {
+                  addAttachments(e.target.files, 'video');
+                  e.target.value = '';
+                }}
+              />
+
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder='Type your delivery notes here...'
                 rows={6}
-                className='w-full resize-none border-0 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0'
+                disabled={task.status === 'completed'}
+                className='w-full resize-none border-0 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
               />
-              <div className='flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-3 py-2.5'>
-                <button
-                  type='button'
-                  className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700'
-                  aria-label='Attach image'
-                >
-                  <ImageIcon size={20} aria-hidden />
-                </button>
-                <button
-                  type='button'
-                  className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700'
-                  aria-label='Voice note'
-                >
-                  <Mic size={20} aria-hidden />
-                </button>
-                <button
-                  type='button'
-                  className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700'
-                  aria-label='Attach video'
-                >
-                  <Video size={20} aria-hidden />
-                </button>
-                <button
-                  type='button'
-                  onClick={handleSendNote}
-                  className='ml-1 inline-flex items-center gap-1.5 rounded-xl bg-[#705E0C] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#5c4d0a]'
-                >
-                  <Send size={14} className='shrink-0' aria-hidden />
-                  Send
-                </button>
+
+              <div className='flex flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3'>
+                <div className='flex min-h-[44px] min-w-0 flex-1 flex-wrap items-center gap-2'>
+                  {attachments.map((a) => (
+                    <AttachmentChip
+                      key={a.id}
+                      attachment={a}
+                      onRemove={() => removeAttachment(a.id)}
+                    />
+                  ))}
+                </div>
+
+                <div className='flex shrink-0 items-center justify-end gap-2'>
+                  <button
+                    type='button'
+                    disabled={task.status === 'completed'}
+                    onClick={() => imageInputRef.current?.click()}
+                    className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40'
+                    aria-label='Attach image'
+                  >
+                    <ImageIcon size={20} aria-hidden />
+                  </button>
+                  <button
+                    type='button'
+                    disabled={task.status === 'completed'}
+                    onClick={() => audioInputRef.current?.click()}
+                    className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40'
+                    aria-label='Attach audio'
+                  >
+                    <Mic size={20} aria-hidden />
+                  </button>
+                  <button
+                    type='button'
+                    disabled={task.status === 'completed'}
+                    onClick={() => videoInputRef.current?.click()}
+                    className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40'
+                    aria-label='Attach video'
+                  >
+                    <Video size={20} aria-hidden />
+                  </button>
+                  {task.status !== 'completed' && (
+                    <button
+                      type='button'
+                      disabled={completeMutation.isPending}
+                      onClick={handleCompleteTask}
+                      className='ml-1 inline-flex items-center gap-1.5 rounded-xl bg-[#705E0C] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#5c4d0a] disabled:opacity-50'
+                    >
+                      Complete task
+                      <ChevronRight size={16} className='shrink-0' aria-hidden />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </section>
