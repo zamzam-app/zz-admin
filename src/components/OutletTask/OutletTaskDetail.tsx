@@ -228,11 +228,13 @@ export default function OutletTaskDetail() {
   const task = useMemo(() => boardTasks.find((t) => t.id === taskId), [boardTasks, taskId]);
 
   const [note, setNote] = useState('');
+  const taskNoteSource = task?.managerComments ?? '';
+  const currentTaskId = task?.id ?? '';
 
   useEffect(() => {
-    if (!task) return;
-    setNote(task.managerComments ?? '');
-  }, [task?.id, task?.managerComments]);
+    if (!currentTaskId) return;
+    setNote(taskNoteSource);
+  }, [currentTaskId, taskNoteSource]);
 
   const completeMutation = useApiMutation(
     (payload: { id: string; managerComments: string }) =>
