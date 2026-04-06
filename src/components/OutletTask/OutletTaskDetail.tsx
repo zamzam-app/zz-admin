@@ -580,6 +580,24 @@ function OutletTaskDetailContent({
               <p className='max-w-2xl text-base leading-relaxed text-slate-600'>
                 {task.description}
               </p>
+              {task.adminAudioUrl && task.adminAudioUrl.length > 0 && (
+                <div className='max-w-2xl rounded-xl border border-slate-200 bg-white p-3'>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                    Admin audio
+                  </p>
+                  <div className='space-y-2'>
+                    {task.adminAudioUrl.map((url, idx) => (
+                      <audio
+                        key={`admin-audio-${idx}-${url}`}
+                        src={url}
+                        controls
+                        preload='metadata'
+                        className='w-full'
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className='flex w-full shrink-0 flex-col gap-3 sm:max-w-70 lg:items-stretch'>
