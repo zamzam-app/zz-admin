@@ -14,6 +14,7 @@ import { AddModal } from '../components/studio/AddModal';
 import { DeleteModal } from '../components/common/DeleteModal';
 import { CakeCategoriesModal } from '../components/studio/CakeCategoriesModal';
 import { UserCreations } from '../components/studio/UserCreations';
+import { UploadedCakes } from '../components/studio/UploadedCakes';
 import { Sparkles, ShoppingBag } from 'lucide-react';
 
 const PRODUCT_KEYS = ['products'];
@@ -408,7 +409,9 @@ const Studio = () => {
           <UserCreations />
         </div>
       ) : (
-        <div className='animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-80' />
+        <div className='animate-in fade-in slide-in-from-bottom-4 duration-500'>
+          <UploadedCakes />
+        </div>
       )}
 
       <AddModal
