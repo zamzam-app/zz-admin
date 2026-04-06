@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react';
-import { message } from 'antd';
 import dayjs from 'dayjs';
-import { CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/context/AuthContext';
-import { useApiMutation, useApiQuery } from '../lib/react-query/use-api-hooks';
-import { TASK_KEYS, type Task, type TaskStatus } from '../lib/types/task';
+import { useApiQuery } from '../lib/react-query/use-api-hooks';
+import { type Task, type TaskStatus } from '../lib/types/task';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 
 const STATUS_BADGE: Record<TaskStatus, { label: string; className: string }> = {
@@ -76,18 +74,6 @@ export default function OutletTasks() {
     return tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
   }, [tasks, assignedOutletIds]);
 
-  const completeMutation = useApiMutation(
-    (id: string) => import('../lib/services/api/task.api').then((m) => m.tasksApi.complete(id)),
-    [TASK_KEYS, [...listQueryKey]],
-    {
-      onSuccess: () => message.success('Task marked as completed.'),
-      onError: (e) =>
-        void import('../lib/services/api/task.api').then((m) =>
-          message.error(m.getTaskApiErrorMessage(e)),
-        ),
-    },
-  );
-
   const selectClass =
     'h-10 w-full max-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400';
 
@@ -117,14 +103,7 @@ export default function OutletTasks() {
       <div className='overflow-y-auto overflow-x-hidden overscroll-contain bg-[#f9fafb] px-6 pb-8 [scrollbar-gutter:stable] lg:px-8'>
         <div className='mx-auto w-full max-w-2xl space-y-4'>
           {boardTasks.map((task) => (
-            <MyTaskCard
-              key={task.id}
-              task={task}
-              onComplete={
-                task.status !== 'completed' ? () => completeMutation.mutate(task.id) : undefined
-              }
-              completing={completeMutation.isPending}
-            />
+            <MyTaskCard key={task.id} task={task} />
           ))}
         </div>
 
@@ -139,15 +118,7 @@ export default function OutletTasks() {
   );
 }
 
-function MyTaskCard({
-  task,
-  onComplete,
-  completing,
-}: {
-  task: Task;
-  onComplete?: () => void;
-  completing?: boolean;
-}) {
+function MyTaskCard({ task }: { task: Task }) {
   const navigate = useNavigate();
   const badge = STATUS_BADGE[task.status];
   const headlineName = task.outletName?.trim() || task.title;
@@ -185,23 +156,6 @@ function MyTaskCard({
       ) : null}
 
       <p className='mt-2 text-sm leading-relaxed text-slate-600'>{task.description}</p>
-
-      {onComplete && (
-        <div className='mt-4 flex justify-end border-t border-slate-100 pt-4'>
-          <button
-            type='button'
-            disabled={completing}
-            onClick={(e) => {
-              e.stopPropagation();
-              onComplete();
-            }}
-            className='inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-50'
-          >
-            <CheckCircle2 size={14} aria-hidden />
-            Mark complete
-          </button>
-        </div>
-      )}
     </article>
   );
 }
