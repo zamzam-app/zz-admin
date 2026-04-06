@@ -23,6 +23,7 @@ import {
   Cake,
   Computer,
   Assignment,
+  AssignmentInd,
 } from '@mui/icons-material';
 import { Badge } from '@mui/material';
 import type { Outlet } from '../../lib/types/outlet';
@@ -77,7 +78,9 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
       import('../../lib/services/api/task.api').then((m) =>
         m.tasksApi.findAll({ assigneeId: managerId, page: 1, limit: 100 }),
       ),
-    { enabled: role !== 'admin' && !!managerId },
+    {
+      enabled: role !== 'admin' && (role ?? '').toLowerCase() !== 'manager' && !!managerId,
+    },
   );
 
   /* ================================
@@ -100,18 +103,39 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) => {
    3. Build navigation (IMMUTABLE)
   ================================= */
   const navItems = React.useMemo(() => {
+    let items: typeof adminNavItems;
     if (role === 'admin') {
-      return [...adminNavItems, ...cafeNavItems];
+      items = [...adminNavItems, ...cafeNavItems];
+    } else {
+      const base = staffNavItems;
+
+      if (!isCafeEnabled) {
+        items = base;
+      } else {
+        const existingPaths = new Set(base.map((i) => i.path));
+        const cafeItems = cafeNavItems.filter((i) => !existingPaths.has(i.path));
+        items = [...base, ...cafeItems];
+      }
     }
 
-    const base = staffNavItems;
-
-    if (!isCafeEnabled) return base;
-
-    const existingPaths = new Set(base.map((i) => i.path));
-    const cafeItems = cafeNavItems.filter((i) => !existingPaths.has(i.path));
-
-    return [...base, ...cafeItems];
+    if ((role ?? '').toLowerCase() === 'manager') {
+      const withoutTasks = items.filter((i) => i.path !== '/tasks');
+      const myTasksItem = {
+        label: 'My Tasks',
+        path: '/outlet-tasks',
+        icon: <AssignmentInd />,
+      };
+      const reviewsIdx = withoutTasks.findIndex((i) => i.path === '/reviews');
+      if (reviewsIdx >= 0) {
+        return [
+          ...withoutTasks.slice(0, reviewsIdx + 1),
+          myTasksItem,
+          ...withoutTasks.slice(reviewsIdx + 1),
+        ];
+      }
+      return [myTasksItem, ...withoutTasks];
+    }
+    return items;
   }, [role, isCafeEnabled]);
 
   const pendingTasksCount = React.useMemo(() => {

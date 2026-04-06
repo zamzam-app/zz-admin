@@ -4,6 +4,7 @@ import { Button as MUIButton, SxProps, Theme } from '@mui/material';
 export type ButtonVariant =
   | 'primary-cake'
   | 'primary-feedback'
+  | 'primary-outlet'
   | 'outline'
   | 'ghost'
   | 'danger'
@@ -31,6 +32,18 @@ export const Button: React.FC<ButtonProps> = ({
       bgcolor: '#10B981',
       color: '#fff',
       '&:hover': { bgcolor: '#0da673' },
+    },
+    'primary-outlet': {
+      bgcolor: '#705E0C',
+      color: '#fff',
+      fontSize: '0.75rem',
+      px: 2,
+      py: 1,
+      minWidth: 'auto',
+      borderRadius: '12px',
+      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+      '&:hover': { bgcolor: '#5c4d0a' },
+      '&:disabled': { opacity: 0.5, cursor: 'not-allowed' },
     },
     'admin-primary': {
       bgcolor: '#1F2937',
