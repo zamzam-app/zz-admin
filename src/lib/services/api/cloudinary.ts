@@ -3,7 +3,7 @@ import type { CloudinaryUploadResult } from '../../types/upload';
 
 /**
  * Uploads a file directly to Cloudinary from the browser using signed params.
- * Does not send the file to your backend.
+ * Uses `auto/upload` so images, videos, and audio can all be uploaded.
  */
 export async function uploadImageToCloudinary(
   file: File,
@@ -16,7 +16,7 @@ export async function uploadImageToCloudinary(
   formData.append('signature', params.signature);
   formData.append('folder', params.folder);
 
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${params.cloudName}/image/upload`, {
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${params.cloudName}/auto/upload`, {
     method: 'POST',
     body: formData,
   });

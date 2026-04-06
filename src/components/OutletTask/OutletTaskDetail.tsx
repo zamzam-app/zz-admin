@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { ArrowLeft, ChevronRight, Image as ImageIcon, Mic, Video, X } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/context/AuthContext';
+import { useImageUpload } from '../../lib/hooks/useImageUpload';
 import { useMicRecording } from '../../lib/hooks/useMicRecording';
 import { useApiMutation, useApiQuery } from '../../lib/react-query/use-api-hooks';
 import { TASK_KEYS, type Task, type TaskStatus } from '../../lib/types/task';
@@ -228,6 +229,7 @@ export default function OutletTaskDetail() {
   const task = useMemo(() => boardTasks.find((t) => t.id === taskId), [boardTasks, taskId]);
 
   const [note, setNote] = useState('');
+  const { upload, clearError: clearUploadError } = useImageUpload('tasks');
   const taskNoteSource = task?.managerComments ?? '';
   const currentTaskId = task?.id ?? '';
 
@@ -237,11 +239,20 @@ export default function OutletTaskDetail() {
   }, [currentTaskId, taskNoteSource]);
 
   const completeMutation = useApiMutation(
-    (payload: { id: string; managerComments: string }) =>
+    (payload: {
+      id: string;
+      managerComments: string;
+      imageUrls: string[];
+      videoUrls: string[];
+      managerAudioUrl: string[];
+    }) =>
       import('../../lib/services/api/task.api').then((m) =>
         m.tasksApi.update(payload.id, {
           status: 'completed',
           managerComments: payload.managerComments,
+          imageUrls: payload.imageUrls,
+          videoUrls: payload.videoUrls,
+          managerAudioUrl: payload.managerAudioUrl,
         }),
       ),
     [TASK_KEYS, listQueryKey],
@@ -295,6 +306,8 @@ export default function OutletTaskDetail() {
       note={note}
       setNote={setNote}
       completeMutation={completeMutation}
+      upload={upload}
+      clearUploadError={clearUploadError}
     />
   );
 }
@@ -304,13 +317,26 @@ function OutletTaskDetailContent({
   note,
   setNote,
   completeMutation,
+  upload,
+  clearUploadError,
 }: {
   task: Task;
   note: string;
   setNote: (v: string) => void;
   completeMutation: ReturnType<
-    typeof useApiMutation<Task, { id: string; managerComments: string }>
+    typeof useApiMutation<
+      Task,
+      {
+        id: string;
+        managerComments: string;
+        imageUrls: string[];
+        videoUrls: string[];
+        managerAudioUrl: string[];
+      }
+    >
   >;
+  upload: (file: File) => Promise<string>;
+  clearUploadError: () => void;
 }) {
   const badge = STATUS_BADGE[task.status];
   const headlineName = task.outletName?.trim() || task.title;
@@ -319,6 +345,7 @@ function OutletTaskDetailContent({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const mic = useMicRecording({
     onRecordingComplete: (file) => {
@@ -344,14 +371,49 @@ function OutletTaskDetailContent({
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const handleCompleteTask = () => {
+  const handleCompleteTask = async () => {
     if (task.status === 'completed') return;
     if (!note.trim()) {
       message.error('Enter your delivery notes before marking the task complete.');
       return;
     }
-    // Upload + task update API will run here later; completion only for now.
-    completeMutation.mutate({ id: task.id, managerComments: note.trim() });
+    if (isCompleting) return;
+
+    setIsCompleting(true);
+    try {
+      clearUploadError();
+
+      let uploaded: Array<{ kind: AttachmentKind; url: string }> = [];
+      try {
+        uploaded = await Promise.all(
+          attachments.map(async (attachment) => ({
+            kind: attachment.kind,
+            url: await upload(attachment.file),
+          })),
+        );
+      } catch (error) {
+        if (error instanceof Error) {
+          message.error(error.message || 'Failed to upload attachments.');
+        } else {
+          message.error('Failed to upload attachments.');
+        }
+        return;
+      }
+
+      const uploadedImages = uploaded.filter((x) => x.kind === 'image').map((x) => x.url);
+      const uploadedVideos = uploaded.filter((x) => x.kind === 'video').map((x) => x.url);
+      const uploadedAudios = uploaded.filter((x) => x.kind === 'audio').map((x) => x.url);
+
+      await completeMutation.mutateAsync({
+        id: task.id,
+        managerComments: note.trim(),
+        imageUrls: [...(task.imageUrls ?? []), ...uploadedImages],
+        videoUrls: [...(task.videoUrls ?? []), ...uploadedVideos],
+        managerAudioUrl: [...(task.managerAudioUrl ?? []), ...uploadedAudios],
+      });
+    } finally {
+      setIsCompleting(false);
+    }
   };
 
   return (
@@ -503,14 +565,18 @@ function OutletTaskDetailContent({
                   {task.status !== 'completed' && (
                     <Button
                       variant='admin-primary'
-                      disabled={completeMutation.isPending || mic.isRecording}
-                      onClick={handleCompleteTask}
+                      disabled={completeMutation.isPending || isCompleting || mic.isRecording}
+                      onClick={() => void handleCompleteTask()}
                       title={
-                        mic.isRecording ? 'Stop recording before completing the task' : undefined
+                        mic.isRecording
+                          ? 'Stop recording before completing the task'
+                          : isCompleting
+                            ? 'Uploading attachments...'
+                            : undefined
                       }
                       endIcon={<ChevronRight size={16} aria-hidden />}
                     >
-                      Complete task
+                      {isCompleting ? 'Uploading...' : 'Complete task'}
                     </Button>
                   )}
                 </div>
