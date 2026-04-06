@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { Chip } from '@mui/material';
 import { Clock3, Plus } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
+import { useImageUpload } from '../lib/hooks/useImageUpload';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { usersApi } from '../lib/services/api/users.api';
 import {
@@ -34,6 +35,7 @@ const EMPTY_FORM: TaskFormState = {
   outletId: '',
   category: '',
   assigneeIds: [],
+  adminAudioFiles: [],
 };
 
 export default function Tasks() {
@@ -71,6 +73,11 @@ export default function Tasks() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<TaskFormState>(EMPTY_FORM);
+  const {
+    upload: uploadTaskMedia,
+    loading: uploadTaskMediaLoading,
+    clearError: clearUploadError,
+  } = useImageUpload('tasks');
 
   const assignedOutletIds = useMemo(() => {
     if (!user || role === 'admin') return null;
@@ -184,6 +191,7 @@ export default function Tasks() {
       outletId: task.outletId ? task.outletId : 'all',
       category: task.category ?? '',
       assigneeIds: task.assigneeIds,
+      adminAudioFiles: [],
     });
     setModalOpen(true);
   };
@@ -196,7 +204,7 @@ export default function Tasks() {
     completeMutation.mutate(task.id);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.description.trim()) {
       message.error('Please add a description.');
       return;
@@ -240,6 +248,21 @@ export default function Tasks() {
       return;
     }
 
+    let adminAudioUrl: string[] = [];
+    if (form.adminAudioFiles.length > 0) {
+      clearUploadError();
+      try {
+        adminAudioUrl = await Promise.all(
+          form.adminAudioFiles.map((file) => uploadTaskMedia(file)),
+        );
+      } catch (error) {
+        message.error(
+          error instanceof Error ? error.message : 'Failed to upload audio. Please try again.',
+        );
+        return;
+      }
+    }
+
     const outlet = outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
     const titleFromDescription = desc.split('\n')[0].trim().slice(0, 120) || 'Task';
     const outletMongoId = outlet?.id ?? form.outletId;
@@ -254,6 +277,7 @@ export default function Tasks() {
       status: 'open' as const,
       assigneeIds,
       assigneeNames: selectedManagers.map((m) => m.name).filter(Boolean),
+      adminAudioUrl,
       createdBy: userId || undefined,
     };
 
@@ -422,7 +446,10 @@ export default function Tasks() {
         editing={editing}
         form={form}
         setForm={setForm}
-        onSubmit={handleSubmit}
+        onSubmit={() => void handleSubmit()}
+        isSubmitting={
+          createMutation.isPending || updateMutation.isPending || uploadTaskMediaLoading
+        }
         outlets={outlets}
         managers={managers}
       />
