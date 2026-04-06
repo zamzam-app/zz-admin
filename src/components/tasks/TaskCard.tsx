@@ -51,7 +51,7 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
       }}
       className={`flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.06)] ${
         onOpen
-          ? 'cursor-pointer transition-shadow hover:shadow-[0_4px_14px_rgba(15,23,42,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400'
+          ? 'cursor-pointer transition-shadow hover:shadow-[0_4px_14px_rgba(15,23,42,0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400'
           : ''
       }`}
     >

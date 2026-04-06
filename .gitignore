@@ -27,3 +27,4 @@ dist-ssr
 temp
 .cursor
 .agents
+.codex

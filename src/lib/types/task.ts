@@ -8,6 +8,7 @@ export interface Task {
   id: string;
   title: string;
   description: string;
+  comment?: string;
   priority: TaskPriority;
   dueDate: string;
   category?: TaskCategory;
@@ -16,6 +17,10 @@ export interface Task {
   imageUrl?: string;
   imageUrls?: string[];
   videoUrls?: string[];
+  adminAudioUrl?: string[];
+  managerAudioUrl?: string[];
+  managerComments?: string;
+  /** @deprecated Use adminAudioUrl / managerAudioUrl */
   audioUrls?: string[];
   status: TaskStatus;
   assigneeIds: string[];
@@ -30,6 +35,7 @@ export interface Task {
 export interface CreateTaskPayload {
   title: string;
   description: string;
+  comment?: string;
   priority: TaskPriority;
   dueDate: string;
   category?: TaskCategory;
@@ -38,10 +44,16 @@ export interface CreateTaskPayload {
   status?: TaskStatus;
   assigneeIds: string[];
   assigneeNames?: string[];
+  imageUrls?: string[];
+  videoUrls?: string[];
+  adminAudioUrl?: string[];
+  managerAudioUrl?: string[];
+  managerComments?: string;
 }
 
 export interface UpdateTaskPayload {
   description?: string;
+  comment?: string;
   priority?: TaskPriority;
   dueDate?: string;
   category?: TaskCategory;
@@ -49,4 +61,7 @@ export interface UpdateTaskPayload {
   assigneeIds?: string[];
   imageUrls?: string[];
   videoUrls?: string[];
+  adminAudioUrl?: string[];
+  managerAudioUrl?: string[];
+  managerComments?: string;
 }

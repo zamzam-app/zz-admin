@@ -99,7 +99,7 @@ function AttachmentPreviewCard({
 
   return (
     <>
-      <div className='flex max-w-[190px] min-w-0 cursor-pointer items-center gap-1.5 rounded-lg bg-slate-100 py-1 pl-1 pr-1 ring-1 ring-slate-200/90'>
+      <div className='flex max-w-47.5 min-w-0 cursor-pointer items-center gap-1.5 rounded-lg bg-slate-100 py-1 pl-1 pr-1 ring-1 ring-slate-200/90'>
         <button
           type='button'
           onClick={() => setPreviewOpen(true)}
@@ -229,10 +229,18 @@ export default function OutletTaskDetail() {
 
   const [note, setNote] = useState('');
 
+  useEffect(() => {
+    if (!task) return;
+    setNote(task.managerComments ?? '');
+  }, [task?.id, task?.managerComments]);
+
   const completeMutation = useApiMutation(
-    (id: string) =>
+    (payload: { id: string; managerComments: string }) =>
       import('../../lib/services/api/task.api').then((m) =>
-        m.tasksApi.updateStatus(id, 'completed'),
+        m.tasksApi.update(payload.id, {
+          status: 'completed',
+          managerComments: payload.managerComments,
+        }),
       ),
     [TASK_KEYS, listQueryKey],
     {
@@ -298,7 +306,9 @@ function OutletTaskDetailContent({
   task: Task;
   note: string;
   setNote: (v: string) => void;
-  completeMutation: ReturnType<typeof useApiMutation<Task, string>>;
+  completeMutation: ReturnType<
+    typeof useApiMutation<Task, { id: string; managerComments: string }>
+  >;
 }) {
   const badge = STATUS_BADGE[task.status];
   const headlineName = task.outletName?.trim() || task.title;
@@ -339,7 +349,7 @@ function OutletTaskDetailContent({
       return;
     }
     // Upload + task update API will run here later; completion only for now.
-    completeMutation.mutate(task.id);
+    completeMutation.mutate({ id: task.id, managerComments: note.trim() });
   };
 
   return (
@@ -385,7 +395,7 @@ function OutletTaskDetailContent({
               </p>
             </div>
 
-            <div className='flex w-full shrink-0 flex-col gap-3 sm:max-w-[280px] lg:items-stretch'>
+            <div className='flex w-full shrink-0 flex-col gap-3 sm:max-w-70 lg:items-stretch'>
               <div className='rounded-xl bg-[#F5F0E6] px-5 py-4 shadow-sm ring-1 ring-[#E8DFD0]'>
                 <p className='text-[10px] font-bold uppercase tracking-[0.2em] text-[#5C4A2A]'>
                   Deadline
@@ -436,7 +446,7 @@ function OutletTaskDetailContent({
               />
 
               <div className='flex flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3'>
-                <div className='flex min-h-[44px] min-w-0 flex-1 flex-wrap items-start gap-3'>
+                <div className='flex min-h-11 min-w-0 flex-1 flex-wrap items-start gap-3'>
                   {attachments.map((a) => (
                     <AttachmentPreviewCard
                       key={a.id}

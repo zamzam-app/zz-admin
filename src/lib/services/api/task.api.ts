@@ -35,6 +35,7 @@ function cleanQueryParams(q: QueryTaskDto): Record<string, string | number> {
 /** POST /tasks body — matches backend CreateTaskDto */
 interface CreateTaskDtoBody {
   description: string;
+  comment?: string;
   category: string;
   priority?: string;
   status?: string;
@@ -43,6 +44,9 @@ interface CreateTaskDtoBody {
   assigneeIds?: string[];
   imageUrls?: string[];
   videoUrls?: string[];
+  adminAudioUrl?: string[];
+  managerAudioUrl?: string[];
+  managerComments?: string;
 }
 
 function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
@@ -65,12 +69,23 @@ function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
   if (payload.assigneeIds.length > 0) {
     body.assigneeIds = payload.assigneeIds;
   }
+  if (payload.comment?.trim()) body.comment = payload.comment.trim();
+  if (payload.imageUrls && payload.imageUrls.length > 0) body.imageUrls = payload.imageUrls;
+  if (payload.videoUrls && payload.videoUrls.length > 0) body.videoUrls = payload.videoUrls;
+  if (payload.adminAudioUrl && payload.adminAudioUrl.length > 0) {
+    body.adminAudioUrl = payload.adminAudioUrl;
+  }
+  if (payload.managerAudioUrl && payload.managerAudioUrl.length > 0) {
+    body.managerAudioUrl = payload.managerAudioUrl;
+  }
+  if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
   return body;
 }
 
 function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   if (payload.description !== undefined) body.description = payload.description.trim();
+  if (payload.comment !== undefined) body.comment = payload.comment.trim();
   if (payload.category !== undefined) body.category = toApiCategory(payload.category);
   if (payload.priority !== undefined) body.priority = toApiPriority(payload.priority);
   if (payload.status !== undefined) body.status = toApiStatus(payload.status);
@@ -78,6 +93,9 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   if (payload.assigneeIds !== undefined) body.assigneeIds = payload.assigneeIds;
   if (payload.imageUrls !== undefined) body.imageUrls = payload.imageUrls;
   if (payload.videoUrls !== undefined) body.videoUrls = payload.videoUrls;
+  if (payload.adminAudioUrl !== undefined) body.adminAudioUrl = payload.adminAudioUrl;
+  if (payload.managerAudioUrl !== undefined) body.managerAudioUrl = payload.managerAudioUrl;
+  if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
   return body;
 }
 

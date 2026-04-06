@@ -49,9 +49,12 @@ function mediaNameFromUrl(url: string, fallback: string) {
 
 function buildMediaItems(task: Task): MediaItem[] {
   const items: MediaItem[] = [];
+  const seen = new Set<string>();
   const imageUrls = task.imageUrls ?? (task.imageUrl ? [task.imageUrl] : []);
 
   imageUrls.forEach((url, idx) => {
+    if (seen.has(url)) return;
+    seen.add(url);
     items.push({
       id: `image-${idx}-${url}`,
       url,
@@ -61,6 +64,8 @@ function buildMediaItems(task: Task): MediaItem[] {
   });
 
   (task.videoUrls ?? []).forEach((url, idx) => {
+    if (seen.has(url)) return;
+    seen.add(url);
     const kind: MediaKind = isAudioUrl(url) ? 'audio' : 'video';
     items.push({
       id: `video-${idx}-${url}`,
@@ -70,7 +75,15 @@ function buildMediaItems(task: Task): MediaItem[] {
     });
   });
 
-  (task.audioUrls ?? []).forEach((url, idx) => {
+  const audioUrls = [
+    ...(task.adminAudioUrl ?? []),
+    ...(task.managerAudioUrl ?? []),
+    ...(task.audioUrls ?? []),
+  ];
+
+  audioUrls.forEach((url, idx) => {
+    if (seen.has(url)) return;
+    seen.add(url);
     items.push({
       id: `audio-${idx}-${url}`,
       url,
