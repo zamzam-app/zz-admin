@@ -15,6 +15,8 @@ export interface Task {
   outletName?: string;
   imageUrl?: string;
   imageUrls?: string[];
+  videoUrls?: string[];
+  audioUrls?: string[];
   status: TaskStatus;
   assigneeIds: string[];
   assigneeNames?: string[];

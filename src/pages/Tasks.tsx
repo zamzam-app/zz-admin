@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { Chip } from '@mui/material';
@@ -36,6 +37,7 @@ const EMPTY_FORM: TaskFormState = {
 };
 
 export default function Tasks() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const role = user?.role ?? 'staff';
   const userId = user?.id ?? user?._id ?? '';
@@ -400,6 +402,7 @@ export default function Tasks() {
                 onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
                 onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
                 onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
+                onOpen={() => navigate(`/tasks/${task.id}`)}
               />
             ))}
           </div>

@@ -23,6 +23,7 @@ export interface ApiTaskRaw {
   assignees?: Array<{ _id?: string; name?: string }>;
   imageUrls?: string[];
   videoUrls?: string[];
+  audioUrls?: string[];
   createdBy?: string | { _id?: string; name?: string };
   createdAt?: string;
   updatedAt?: string;
@@ -182,6 +183,8 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     outletName: resolveOutletName(raw),
     imageUrl: firstImg,
     imageUrls: imgs,
+    videoUrls: raw.videoUrls,
+    audioUrls: raw.audioUrls,
     status: parseApiStatus(raw.status),
     assigneeIds,
     assigneeNames: assigneeNames.length > 0 ? assigneeNames : raw.assigneeNames,

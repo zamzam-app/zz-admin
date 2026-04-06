@@ -18,6 +18,7 @@ const Overview = lazy(() => import('../pages/Overview'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Reviews = lazy(() => import('../pages/Reviews'));
 const Tasks = lazy(() => import('../pages/Tasks'));
+const TaskMediaDetail = lazy(() => import('../components/tasks/TaskMediaDetail'));
 const OutletTasks = lazy(() => import('../pages/OutletTasks'));
 const OutletTaskDetail = lazy(() => import('../components/OutletTask/OutletTaskDetail'));
 const Infrastructure = lazy(() => import('../pages/Infrastructure'));
@@ -83,9 +84,13 @@ const router = createBrowserRouter([
             path: '/tasks',
             element: (
               <BlockManagerRoute>
-                <Tasks />
+                <Outlet />
               </BlockManagerRoute>
             ),
+            children: [
+              { index: true, element: <Tasks /> },
+              { path: ':taskId', element: <TaskMediaDetail /> },
+            ],
           },
           {
             path: '/outlet-tasks',
