@@ -62,11 +62,28 @@ type PendingAttachment = {
   kind: AttachmentKind;
 };
 
+type UploadedAttachment = {
+  id: string;
+  url: string;
+  kind: AttachmentKind;
+  name: string;
+};
+
 const KIND_LABEL: Record<AttachmentKind, string> = {
   image: 'IMAGE',
   video: 'VIDEO',
   audio: 'AUDIO',
 };
+
+function mediaNameFromUrl(url: string, fallback: string) {
+  try {
+    const pathname = new URL(url).pathname;
+    const name = pathname.split('/').pop()?.trim();
+    return name || fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 function AttachmentPreviewCard({
   attachment,
@@ -177,6 +194,73 @@ function AttachmentPreviewCard({
         )}
         {!objectUrl && (
           <div className='py-8 text-center text-sm text-slate-500'>Preparing preview…</div>
+        )}
+      </Modal>
+    </>
+  );
+}
+
+function UploadedAttachmentCard({ attachment }: { attachment: UploadedAttachment }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const Icon = attachment.kind === 'image' ? ImageIcon : attachment.kind === 'video' ? Video : Mic;
+
+  return (
+    <>
+      <button
+        type='button'
+        onClick={() => setPreviewOpen(true)}
+        className='flex max-w-47.5 min-w-0 items-center gap-1.5 rounded-lg bg-slate-100 py-1 pl-1 pr-1 ring-1 ring-slate-200/90 transition-colors hover:bg-slate-200/60'
+      >
+        <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-500 text-white'>
+          <Icon size={16} className='text-white' aria-hidden />
+        </div>
+        <div className='min-w-0 flex-1 py-0.5 text-left leading-tight'>
+          <p className='truncate text-xs font-bold text-slate-800' title={attachment.name}>
+            {attachment.name}
+          </p>
+          <p className='mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500'>
+            {KIND_LABEL[attachment.kind]}
+          </p>
+        </div>
+      </button>
+
+      <Modal
+        title={attachment.name}
+        open={previewOpen}
+        onCancel={() => setPreviewOpen(false)}
+        footer={null}
+        width={attachment.kind === 'audio' ? 420 : 720}
+        centered
+        destroyOnHidden
+      >
+        {attachment.kind === 'image' && (
+          <div className='flex justify-center bg-slate-50 py-2'>
+            <img src={attachment.url} alt='' className='max-h-[70vh] max-w-full object-contain' />
+          </div>
+        )}
+        {attachment.kind === 'video' && (
+          <video
+            key={attachment.url}
+            src={attachment.url}
+            className='max-h-[70vh] w-full bg-black object-contain'
+            controls
+            playsInline
+            preload='auto'
+          />
+        )}
+        {attachment.kind === 'audio' && (
+          <div className='flex flex-col items-center gap-4 py-4'>
+            <div className='flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500'>
+              <Mic size={28} aria-hidden />
+            </div>
+            <audio
+              key={attachment.url}
+              src={attachment.url}
+              controls
+              className='w-full'
+              preload='auto'
+            />
+          </div>
         )}
       </Modal>
     </>
@@ -346,6 +430,45 @@ function OutletTaskDetailContent({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
+  const uploadedAttachments = useMemo<UploadedAttachment[]>(() => {
+    const items: UploadedAttachment[] = [];
+    const seen = new Set<string>();
+
+    (task.imageUrls ?? []).forEach((url, idx) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({
+        id: `uploaded-image-${idx}-${url}`,
+        url,
+        kind: 'image',
+        name: mediaNameFromUrl(url, `Image ${idx + 1}`),
+      });
+    });
+
+    (task.videoUrls ?? []).forEach((url, idx) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({
+        id: `uploaded-video-${idx}-${url}`,
+        url,
+        kind: 'video',
+        name: mediaNameFromUrl(url, `Video ${idx + 1}`),
+      });
+    });
+
+    (task.managerAudioUrl ?? []).forEach((url, idx) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({
+        id: `uploaded-audio-${idx}-${url}`,
+        url,
+        kind: 'audio',
+        name: mediaNameFromUrl(url, `Audio ${idx + 1}`),
+      });
+    });
+
+    return items;
+  }, [task.imageUrls, task.videoUrls, task.managerAudioUrl]);
 
   const mic = useMicRecording({
     onRecordingComplete: (file) => {
@@ -473,8 +596,19 @@ function OutletTaskDetailContent({
           </div>
 
           <section className='mt-10 rounded-xl border border-slate-200/90 bg-slate-100/80 p-6 shadow-sm'>
-            <h2 className='text-lg font-bold text-slate-900'>Notes &amp; Attachments</h2>
-            <p className='mt-1 text-sm text-slate-500'>Provide notes or required documentation</p>
+            <div className='flex flex-wrap items-start justify-between gap-3'>
+              <div>
+                <h2 className='text-lg font-bold text-slate-900'>Notes &amp; Attachments</h2>
+                <p className='mt-1 text-sm text-slate-500'>
+                  Provide notes or required documentation
+                </p>
+              </div>
+              {task.status === 'completed' && task.updatedAt && (
+                <p className='text-xs font-semibold text-slate-600'>
+                  Completed on {dayjs(task.updatedAt).format('MMM D, YYYY hh:mm A')}
+                </p>
+              )}
+            </div>
 
             <div className='mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
               <input
@@ -511,6 +645,9 @@ function OutletTaskDetailContent({
 
               <div className='flex flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3'>
                 <div className='flex min-h-11 min-w-0 flex-1 flex-wrap items-start gap-3'>
+                  {uploadedAttachments.map((attachment) => (
+                    <UploadedAttachmentCard key={attachment.id} attachment={attachment} />
+                  ))}
                   {attachments.map((a) => (
                     <AttachmentPreviewCard
                       key={a.id}
