@@ -183,7 +183,7 @@ const Studio = () => {
       <div className='flex gap-2 p-1.5 bg-[#F3F4F6] rounded-2xl w-fit mb-8 shadow-inner'>
         <button
           onClick={() => setActiveTab('catalogue')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none ${
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none cursor-pointer ${
             activeTab === 'catalogue'
               ? 'bg-white text-[#1F2937] shadow-sm'
               : 'text-gray-400 hover:text-gray-600'
@@ -194,7 +194,7 @@ const Studio = () => {
         </button>
         <button
           onClick={() => setActiveTab('creations')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none ${
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none cursor-pointer ${
             activeTab === 'creations'
               ? 'bg-white text-[#D4AF37] shadow-sm'
               : 'text-gray-400 hover:text-gray-600'
@@ -205,7 +205,7 @@ const Studio = () => {
         </button>
         <button
           onClick={() => setActiveTab('uploaded')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none ${
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 outline-none focus:outline-none cursor-pointer ${
             activeTab === 'uploaded'
               ? 'bg-white text-[#1F2937] shadow-sm'
               : 'text-gray-400 hover:text-gray-600'
