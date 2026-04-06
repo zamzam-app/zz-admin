@@ -3,7 +3,7 @@ import { getUploadSignature } from '../services/api/upload.api';
 import { uploadImageToCloudinary } from '../services/api/cloudinary';
 
 export interface UseImageUploadResult {
-  /** Upload a single file; returns the secure_url on success */
+  /** Upload a single file (image/video/audio); returns the secure_url on success */
   upload: (file: File) => Promise<string>;
   loading: boolean;
   error: Error | null;
@@ -12,7 +12,7 @@ export interface UseImageUploadResult {
 
 /**
  * Hook for Cloudinary signed upload: gets signature from backend, then uploads to Cloudinary.
- * Use the returned URL in form state (e.g. product images, outlet images, avatar).
+ * Use the returned URL in form state (e.g. task attachments, product images, outlet images).
  */
 export function useImageUpload(folder?: string): UseImageUploadResult {
   const [loading, setLoading] = useState(false);
