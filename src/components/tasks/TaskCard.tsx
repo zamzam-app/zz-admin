@@ -25,9 +25,10 @@ type Props = {
   onEdit?: () => void;
   onDelete?: () => void;
   onComplete?: () => void;
+  onOpen?: () => void;
 };
 
-export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props) {
+export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }: Props) {
   const showComplete = !isAdmin && task.status !== 'completed' && onComplete;
   const statusCfg = STATUS_ROW[task.status];
   const headlineName = task.outletName?.trim() || task.title;
@@ -37,8 +38,23 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
       : 'Unassigned';
 
   return (
-    <div className='flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.06)]'>
-      {/* Row 1: status + date */}
+    <div
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (!onOpen) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className={`flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.06)] ${
+        onOpen
+          ? 'cursor-pointer transition-shadow hover:shadow-[0_4px_14px_rgba(15,23,42,0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400'
+          : ''
+      }`}
+    >
       <div className='flex items-center justify-between gap-3'>
         <span
           className={`inline-flex max-w-[65%] items-center rounded-full px-3 py-1 text-[11px] font-semibold leading-none ${statusCfg.className}`}
@@ -51,7 +67,6 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
         </div>
       </div>
 
-      {/* Row 2: category + title (outlet / headline) */}
       <div className='flex flex-wrap items-center gap-2'>
         {task.category && (
           <span
@@ -63,10 +78,8 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
         <span className='text-base font-bold leading-snug text-slate-900'>{headlineName}</span>
       </div>
 
-      {/* Row 3: description */}
       <p className='text-sm leading-relaxed text-slate-600'>{task.description}</p>
 
-      {/* Row 4: image */}
       {(task.imageUrls?.[0] ?? task.imageUrl) ? (
         <div className='overflow-hidden rounded-lg'>
           <img
@@ -78,7 +91,6 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete }: Props)
         </div>
       ) : null}
 
-      {/* Footer: assignment + actions */}
       <div className='mt-auto flex flex-col gap-4'>
         <p className='text-sm text-slate-500'>
           Assigned to: <span className='font-bold text-slate-900'>{assigneeLabel}</span>

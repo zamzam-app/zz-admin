@@ -9,6 +9,7 @@ export interface ApiTaskRaw {
   _id?: string;
   id?: string;
   description?: string;
+  comment?: string;
   category?: string;
   priority?: string;
   status?: string;
@@ -23,6 +24,11 @@ export interface ApiTaskRaw {
   assignees?: Array<{ _id?: string; name?: string }>;
   imageUrls?: string[];
   videoUrls?: string[];
+  adminAudioUrl?: string[];
+  managerAudioUrl?: string[];
+  managerComments?: string;
+  /** @deprecated backend legacy */
+  audioUrls?: string[];
   createdBy?: string | { _id?: string; name?: string };
   createdAt?: string;
   updatedAt?: string;
@@ -175,6 +181,7 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     id,
     title,
     description,
+    comment: raw.comment,
     priority: parseApiPriority(raw.priority),
     dueDate: due,
     category: parseApiCategory(raw.category),
@@ -182,6 +189,11 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     outletName: resolveOutletName(raw),
     imageUrl: firstImg,
     imageUrls: imgs,
+    videoUrls: raw.videoUrls,
+    adminAudioUrl: raw.adminAudioUrl,
+    managerAudioUrl: raw.managerAudioUrl,
+    managerComments: raw.managerComments,
+    audioUrls: raw.audioUrls,
     status: parseApiStatus(raw.status),
     assigneeIds,
     assigneeNames: assigneeNames.length > 0 ? assigneeNames : raw.assigneeNames,

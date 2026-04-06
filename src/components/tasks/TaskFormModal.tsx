@@ -1,7 +1,9 @@
-import { useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useMemo, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Autocomplete, MenuItem, Select as MuiSelect, TextField } from '@mui/material';
+import { Mic, Paperclip, X } from 'lucide-react';
+import { useMicRecording } from '../../lib/hooks/useMicRecording';
 import type { Outlet } from '../../lib/types/outlet';
 import type { User } from '../../lib/types/manager';
 import type { Task, TaskCategory, TaskPriority } from '../../lib/types/task';
@@ -60,6 +62,8 @@ export type TaskFormState = {
   outletId: '' | 'all' | string;
   category: TaskCategory | '';
   assigneeIds: string[];
+  /** Uploaded to Cloudinary only when user clicks Assign Task */
+  adminAudioFiles: File[];
 };
 
 type TaskFormModalProps = {
@@ -69,6 +73,7 @@ type TaskFormModalProps = {
   form: TaskFormState;
   setForm: Dispatch<SetStateAction<TaskFormState>>;
   onSubmit: () => void;
+  isSubmitting?: boolean;
   outlets: Outlet[];
   managers: User[];
 };
@@ -80,9 +85,21 @@ export function TaskFormModal({
   form,
   setForm,
   onSubmit,
+  isSubmitting,
   outlets,
   managers,
 }: TaskFormModalProps) {
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
+  const mic = useMicRecording({
+    fileNamePrefix: 'task-admin-audio',
+    onRecordingComplete: (file) =>
+      setForm((prev) => ({
+        ...prev,
+        adminAudioFiles: [...prev.adminAudioFiles, file],
+      })),
+  });
+
   const outletSelectValue = form.outletId === '' ? '' : form.outletId;
 
   const assigneesDisabled = !editing && (form.outletId === '' || form.outletId === 'all');
@@ -98,6 +115,27 @@ export function TaskFormModal({
 
     return managers.filter((m) => (m.outletId ?? []).includes(outletId));
   }, [editing?.outletId, form.outletId, outlets, managers]);
+
+  const addAudioFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    const incoming: File[] = [];
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      if (file) incoming.push(file);
+    }
+    if (!incoming.length) return;
+    setForm((prev) => ({
+      ...prev,
+      adminAudioFiles: [...prev.adminAudioFiles, ...incoming],
+    }));
+  };
+
+  const removeAudioFile = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      adminAudioFiles: prev.adminAudioFiles.filter((_, i) => i !== index),
+    }));
+  };
 
   return (
     <Modal
@@ -119,7 +157,7 @@ export function TaskFormModal({
             {editing ? (
               <div
                 id='task-outlet-readonly'
-                className='flex min-h-[40px] items-center rounded-3xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800'
+                className='flex min-h-10 items-center rounded-3xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800'
               >
                 {editing.outletName?.trim() ||
                   outlets.find((o) => o.id === editing.outletId)?.name ||
@@ -247,6 +285,71 @@ export function TaskFormModal({
         </div>
 
         <div>
+          <label className={fieldLabelClass}>Admin audio</label>
+          <input
+            ref={audioInputRef}
+            type='file'
+            accept='audio/*'
+            multiple
+            className='hidden'
+            onChange={(e) => {
+              addAudioFiles(e.target.files);
+              e.target.value = '';
+            }}
+          />
+          <div className='rounded-xl border border-slate-200 bg-white p-3'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <button
+                type='button'
+                onClick={mic.toggleRecording}
+                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                  mic.isRecording
+                    ? 'border-rose-300 bg-rose-50 text-rose-700'
+                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Mic size={16} aria-hidden />
+                {mic.isRecording ? 'Stop recording' : 'Record audio'}
+              </button>
+              <button
+                type='button'
+                onClick={() => audioInputRef.current?.click()}
+                className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
+              >
+                <Paperclip size={16} aria-hidden />
+                Import audio
+              </button>
+            </div>
+            {form.adminAudioFiles.length > 0 ? (
+              <div className='mt-3 flex flex-wrap gap-2'>
+                {form.adminAudioFiles.map((file, idx) => (
+                  <div
+                    key={`${file.name}-${file.size}-${idx}`}
+                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700'
+                  >
+                    <span className='truncate' title={file.name}>
+                      {file.name}
+                    </span>
+                    <button
+                      type='button'
+                      onClick={() => removeAudioFile(idx)}
+                      className='rounded-full p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      <X size={12} aria-hidden />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className='mt-3 text-xs text-slate-500'>
+                Record or import audio files. They will be uploaded when you click Assign Task.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div>
           <label className={fieldLabelClass} htmlFor='task-assignees'>
             Assignees
           </label>
@@ -290,11 +393,11 @@ export function TaskFormModal({
         </div>
 
         <div className='flex justify-end gap-3'>
-          <Button variant='ghost' onClick={onClose}>
+          <Button variant='ghost' onClick={onClose} disabled={!!isSubmitting}>
             Cancel
           </Button>
-          <Button variant='admin-primary' onClick={onSubmit}>
-            {editing ? 'Update Task' : 'Assign Task'}
+          <Button variant='admin-primary' onClick={onSubmit} disabled={!!isSubmitting}>
+            {isSubmitting ? 'Please wait...' : editing ? 'Update Task' : 'Assign Task'}
           </Button>
         </div>
       </div>
