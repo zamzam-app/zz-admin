@@ -45,10 +45,7 @@ export default function Tasks() {
   const userId = user?.id ?? user?._id ?? '';
   const canDeleteTask = role.toLowerCase() === 'admin' || role.toLowerCase() === 'manager';
 
-  const [filterOutletId, setFilterOutletId] = useState('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-
-  const taskListQueryKey = ['tasks', 'list', filterOutletId, filterStatus, role, userId] as const;
+  const taskListQueryKey = ['tasks', 'list', 'all', 'all', role, userId] as const;
 
   const { data: tasks = [] } = useApiQuery(
     [...taskListQueryKey],
@@ -58,8 +55,8 @@ export default function Tasks() {
           m.buildTaskListQuery({
             role,
             userId,
-            filterOutletId,
-            filterStatus,
+            filterOutletId: 'all',
+            filterStatus: 'all',
           }),
         ),
       ),
@@ -90,22 +87,25 @@ export default function Tasks() {
 
   /** GET /tasks already scopes by assignee for non-admins; narrow by managed outlets if needed */
   const boardTasks = useMemo(() => {
-    if (role === 'admin') return tasks;
-    if (!assignedOutletIds || assignedOutletIds.length === 0) return tasks;
-    return tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
+    let filtered = tasks;
+    if (role !== 'admin' && assignedOutletIds && assignedOutletIds.length > 0) {
+      filtered = tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
+    }
+    return filtered.filter((t) => t.status !== 'in_progress');
   }, [tasks, role, assignedOutletIds]);
+
+  const openTasks = useMemo(() => {
+    return boardTasks.filter((t) => t.status === 'open');
+  }, [boardTasks]);
+
+  const completedTasks = useMemo(() => {
+    return boardTasks.filter((t) => t.status === 'completed');
+  }, [boardTasks]);
 
   const pendingTasks = useMemo(() => {
     if (role === 'admin' || !userId) return [];
     return boardTasks.filter((task) => task.status !== 'completed');
   }, [boardTasks, role, userId]);
-
-  const outletsForFilter = useMemo(() => {
-    if (role === 'admin') return outlets;
-    const ids = new Set(assignedOutletIds ?? []);
-    if (ids.size === 0) return outlets;
-    return outlets.filter((o) => ids.has(o.id) || ids.has(o.outletId));
-  }, [outlets, role, assignedOutletIds]);
 
   useEffect(() => {
     if (role === 'admin') return;
@@ -293,17 +293,14 @@ export default function Tasks() {
     }));
   }, [pendingTasks, userId]);
 
-  const selectClass =
-    'h-10 w-full max-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400';
-
   /**
    * Max height for the task grid scroll area only (not a fixed full-viewport block), so short lists
    * don’t leave a large empty band below the cards. Header sits above this region.
    */
   const taskListScrollClass =
     role === 'admin'
-      ? 'max-h-[calc(100dvh-15rem)] sm:max-h-[calc(100dvh-12.5rem)]'
-      : 'max-h-[calc(100dvh-28rem)] sm:max-h-[calc(100dvh-24rem)]';
+      ? 'max-h-[calc(100dvh-12rem)] sm:max-h-[calc(100dvh-10rem)]'
+      : 'max-h-[calc(100dvh-25rem)] sm:max-h-[calc(100dvh-21rem)]';
 
   /** Full-bleed within MUI main (p:3 = 24px); flush top for admin so header uses full main width. */
   const pageBleedClass =
@@ -386,55 +383,76 @@ export default function Tasks() {
             )}
           </div>
 
-          <div className='mt-4 flex flex-wrap gap-3'>
-            <select
-              className={selectClass}
-              value={filterOutletId}
-              onChange={(e) => setFilterOutletId(e.target.value)}
-              aria-label='Filter by outlet'
-            >
-              <option value='all'>All outlets</option>
-              {outletsForFilter.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className={selectClass}
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              aria-label='Filter by status'
-            >
-              <option value='all'>All statuses</option>
-              <option value='open'>Open</option>
-              <option value='in_progress'>In progress</option>
-              <option value='completed'>Completed</option>
-            </select>
-          </div>
         </div>
 
         <div
           className={`overflow-y-auto overflow-x-hidden overscroll-contain bg-[#f9fafb] px-6 pt-4 pb-3 [scrollbar-gutter:stable] lg:px-8 ${taskListScrollClass}`}
         >
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
-            {boardTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                isAdmin={role === 'admin'}
-                onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
-                onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
-                onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
-                onOpen={() => navigate(`/tasks/${task.id}`)}
-              />
-            ))}
+          {/* Open Tasks Section */}
+          <div className='mb-8'>
+            <div className='mb-4 flex items-center justify-between'>
+              <h2 className='text-lg font-bold text-slate-900'>
+                Open Tasks <span className='ml-2 text-sm font-normal text-slate-500'>({openTasks.length})</span>
+              </h2>
+            </div>
+
+            {openTasks.length > 0 ? (
+              <div className='flex flex-col gap-4 md:flex-row md:overflow-x-auto md:pb-4'>
+                {openTasks.map((task) => (
+                  <div key={task.id} className='w-full shrink-0 md:w-96'>
+                    <TaskCard
+                      task={task}
+                      isAdmin={role === 'admin'}
+                      onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
+                      onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
+                      onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
+                      onOpen={() => navigate(`/tasks/${task.id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className='rounded-2xl border-2 border-dashed border-slate-200 py-12 text-center text-slate-500'>
+                <p className='text-base font-medium'>No open tasks</p>
+                <p className='mt-1 text-sm'>All caught up! New tasks will appear here.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Completed Tasks Section */}
+          <div className='mt-8'>
+            <div className='mb-4 flex items-center justify-between'>
+              <h2 className='text-lg font-bold text-slate-900'>
+                Completed Tasks <span className='ml-2 text-sm font-normal text-slate-500'>({completedTasks.length})</span>
+              </h2>
+            </div>
+
+            {completedTasks.length > 0 ? (
+              <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
+                {completedTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isAdmin={role === 'admin'}
+                    onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
+                    onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
+                    onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
+                    onOpen={() => navigate(`/tasks/${task.id}`)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className='rounded-2xl border-2 border-dashed border-slate-200 py-12 text-center text-slate-500'>
+                <p className='text-base font-medium'>No completed tasks</p>
+                <p className='mt-1 text-sm'>Tasks you finish will be listed here.</p>
+              </div>
+            )}
           </div>
 
           {boardTasks.length === 0 && (
             <div className='py-16 text-center text-slate-500'>
               <p className='text-lg font-medium'>No tasks found</p>
-              <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>
+              <p className='mt-1 text-sm'>Try assigning a new task to get started.</p>
             </div>
           )}
         </div>
