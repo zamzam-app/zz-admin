@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Image as ImageIcon,
   Mic,
+  Paperclip,
   Pause,
   Play,
   Video,
@@ -36,6 +37,9 @@ const STATUS_BADGE: Record<TaskStatus, { label: string; className: string }> = {
   },
 };
 
+const MAX_ATTACHMENT_SIZE_BYTES = 50 * 1024 * 1024;
+const MAX_ATTACHMENT_SIZE_LABEL = '50 MB';
+
 function formatCategoryLabel(category: string | undefined) {
   if (!category) return '';
   const lower = category.toLowerCase();
@@ -52,15 +56,7 @@ function formatDeadlineLine(dueDate: string) {
   if (d.isSame(now, 'day')) datePart = 'Today';
   else if (d.isSame(now.add(1, 'day'), 'day')) datePart = 'Tomorrow';
   else datePart = d.format('MMM D, YYYY');
-  return `${datePart}, ${d.format('hh:mm A')}`;
-}
-
-function deadlineHint(dueDate: string) {
-  const d = dayjs(dueDate);
-  const now = dayjs();
-  if (d.isBefore(now)) return 'This deadline has passed';
-  if (d.isSame(now, 'day')) return 'Delivery window closing soon';
-  return 'Plan delivery before the deadline';
+  return datePart;
 }
 
 function formatAudioTime(seconds: number) {
@@ -226,7 +222,7 @@ function WhatsAppAudioPlayer({ src }: { src: string }) {
   );
 }
 
-type AttachmentKind = 'image' | 'video' | 'audio';
+type AttachmentKind = 'image' | 'video' | 'audio' | 'pdf' | 'doc' | 'file';
 
 type PendingAttachment = {
   id: string;
@@ -245,6 +241,9 @@ const KIND_LABEL: Record<AttachmentKind, string> = {
   image: 'IMAGE',
   video: 'VIDEO',
   audio: 'AUDIO',
+  pdf: 'PDF',
+  doc: 'DOC',
+  file: 'FILE',
 };
 
 function mediaNameFromUrl(url: string, fallback: string) {
@@ -255,6 +254,35 @@ function mediaNameFromUrl(url: string, fallback: string) {
   } catch {
     return fallback;
   }
+}
+
+function inferAttachmentKind(mimeType: string | undefined, nameOrUrl: string): AttachmentKind {
+  const lowerMime = (mimeType || '').toLowerCase();
+  const lowerName = nameOrUrl.toLowerCase();
+
+  if (lowerMime.startsWith('image/')) return 'image';
+  if (lowerMime.startsWith('video/')) return 'video';
+  if (lowerMime.startsWith('audio/')) return 'audio';
+  if (lowerMime === 'application/pdf') return 'pdf';
+  if (
+    lowerMime.includes('msword') ||
+    lowerMime.includes('officedocument') ||
+    lowerMime.includes('opendocument')
+  ) {
+    return 'doc';
+  }
+
+  if (/\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(lowerName)) return 'image';
+  if (/\.(mp4|webm|mov|mkv|avi|m4v)$/i.test(lowerName)) return 'video';
+  if (/\.(mp3|wav|ogg|m4a|aac|flac|weba|opus|webm)$/i.test(lowerName)) return 'audio';
+  if (/\.pdf$/i.test(lowerName)) return 'pdf';
+  if (/\.(doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp)$/i.test(lowerName)) return 'doc';
+  return 'file';
+}
+
+function isAllowedAttachmentFile(file: File) {
+  const kind = inferAttachmentKind(file.type, file.name);
+  return kind === 'image' || kind === 'video' || kind === 'pdf' || kind === 'doc';
 }
 
 function AttachmentPreviewCard({
@@ -276,7 +304,14 @@ function AttachmentPreviewCard({
     };
   }, [attachment.id, attachment.file]);
 
-  const Icon = attachment.kind === 'image' ? ImageIcon : attachment.kind === 'video' ? Video : Mic;
+  const Icon =
+    attachment.kind === 'image'
+      ? ImageIcon
+      : attachment.kind === 'video'
+        ? Video
+        : attachment.kind === 'audio'
+          ? Mic
+          : Paperclip;
 
   const closePreview = () => {
     setPreviewOpen(false);
@@ -326,7 +361,7 @@ function AttachmentPreviewCard({
         open={previewOpen}
         onCancel={closePreview}
         footer={null}
-        width={attachment.kind === 'audio' ? 420 : 720}
+        width={attachment.kind === 'audio' ? 420 : 760}
         centered
         destroyOnHidden
       >
@@ -364,6 +399,38 @@ function AttachmentPreviewCard({
             )}
           </div>
         )}
+        {objectUrl && attachment.kind === 'pdf' && (
+          <div className='space-y-3'>
+            <iframe
+              src={objectUrl}
+              title={attachment.file.name}
+              className='h-[70vh] w-full rounded-md border border-slate-200'
+            />
+            <a
+              href={objectUrl}
+              target='_blank'
+              rel='noreferrer'
+              className='inline-flex text-sm font-semibold text-[#705E0C] hover:underline'
+            >
+              Open in new tab
+            </a>
+          </div>
+        )}
+        {objectUrl && (attachment.kind === 'doc' || attachment.kind === 'file') && (
+          <div className='space-y-3 py-4'>
+            <p className='text-sm text-slate-600'>
+              Inline preview is not available for this file type.
+            </p>
+            <a
+              href={objectUrl}
+              target='_blank'
+              rel='noreferrer'
+              className='inline-flex text-sm font-semibold text-[#705E0C] hover:underline'
+            >
+              Open or download file
+            </a>
+          </div>
+        )}
         {!objectUrl && (
           <div className='py-8 text-center text-sm text-slate-500'>Preparing preview…</div>
         )}
@@ -374,7 +441,14 @@ function AttachmentPreviewCard({
 
 function UploadedAttachmentCard({ attachment }: { attachment: UploadedAttachment }) {
   const [previewOpen, setPreviewOpen] = useState(false);
-  const Icon = attachment.kind === 'image' ? ImageIcon : attachment.kind === 'video' ? Video : Mic;
+  const Icon =
+    attachment.kind === 'image'
+      ? ImageIcon
+      : attachment.kind === 'video'
+        ? Video
+        : attachment.kind === 'audio'
+          ? Mic
+          : Paperclip;
 
   return (
     <>
@@ -401,7 +475,7 @@ function UploadedAttachmentCard({ attachment }: { attachment: UploadedAttachment
         open={previewOpen}
         onCancel={() => setPreviewOpen(false)}
         footer={null}
-        width={attachment.kind === 'audio' ? 420 : 720}
+        width={attachment.kind === 'audio' ? 420 : 760}
         centered
         destroyOnHidden
       >
@@ -432,6 +506,38 @@ function UploadedAttachmentCard({ attachment }: { attachment: UploadedAttachment
               className='w-full'
               preload='auto'
             />
+          </div>
+        )}
+        {attachment.kind === 'pdf' && (
+          <div className='space-y-3'>
+            <iframe
+              src={attachment.url}
+              title={attachment.name}
+              className='h-[70vh] w-full rounded-md border border-slate-200'
+            />
+            <a
+              href={attachment.url}
+              target='_blank'
+              rel='noreferrer'
+              className='inline-flex text-sm font-semibold text-[#705E0C] hover:underline'
+            >
+              Open in new tab
+            </a>
+          </div>
+        )}
+        {(attachment.kind === 'doc' || attachment.kind === 'file') && (
+          <div className='space-y-3 py-4'>
+            <p className='text-sm text-slate-600'>
+              Inline preview is not available for this file type.
+            </p>
+            <a
+              href={attachment.url}
+              target='_blank'
+              rel='noreferrer'
+              className='inline-flex text-sm font-semibold text-[#705E0C] hover:underline'
+            >
+              Open or download file
+            </a>
           </div>
         )}
       </Modal>
@@ -598,8 +704,7 @@ function OutletTaskDetailContent({
   const headlineName = task.outletName?.trim() || task.title;
   const categoryLabel = formatCategoryLabel(task.category);
 
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
   const uploadedAttachments = useMemo<UploadedAttachment[]>(() => {
@@ -612,7 +717,7 @@ function OutletTaskDetailContent({
       items.push({
         id: `uploaded-image-${idx}-${url}`,
         url,
-        kind: 'image',
+        kind: inferAttachmentKind(undefined, url),
         name: mediaNameFromUrl(url, `Image ${idx + 1}`),
       });
     });
@@ -623,7 +728,7 @@ function OutletTaskDetailContent({
       items.push({
         id: `uploaded-video-${idx}-${url}`,
         url,
-        kind: 'video',
+        kind: inferAttachmentKind(undefined, url),
         name: mediaNameFromUrl(url, `Video ${idx + 1}`),
       });
     });
@@ -634,8 +739,8 @@ function OutletTaskDetailContent({
       items.push({
         id: `uploaded-audio-${idx}-${url}`,
         url,
-        kind: 'audio',
-        name: mediaNameFromUrl(url, `Audio ${idx + 1}`),
+        kind: inferAttachmentKind(undefined, url),
+        name: mediaNameFromUrl(url, `Attachment ${idx + 1}`),
       });
     });
 
@@ -644,6 +749,12 @@ function OutletTaskDetailContent({
 
   const mic = useMicRecording({
     onRecordingComplete: (file) => {
+      if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+        message.error(
+          `Recorded audio exceeds ${MAX_ATTACHMENT_SIZE_LABEL}. Please record a shorter clip.`,
+        );
+        return;
+      }
       setAttachments((prev) => [
         ...prev,
         { id: `${Date.now()}-${file.name}`, file, kind: 'audio' },
@@ -652,12 +763,40 @@ function OutletTaskDetailContent({
     onError: (msg) => message.error(msg),
   });
 
-  const addAttachments = (files: FileList | null, kind: AttachmentKind) => {
+  const addAttachments = (files: FileList | null) => {
     if (!files?.length) return;
     const next: PendingAttachment[] = [];
+    const rejected: string[] = [];
+    const invalidType: string[] = [];
     for (let i = 0; i < files.length; i += 1) {
       const file = files[i];
-      if (file) next.push({ id: `${Date.now()}-${i}-${file.name}`, file, kind });
+      if (file) {
+        if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+          rejected.push(file.name);
+          continue;
+        }
+        if (!isAllowedAttachmentFile(file)) {
+          invalidType.push(file.name);
+          continue;
+        }
+        next.push({
+          id: `${Date.now()}-${i}-${file.name}`,
+          file,
+          kind: inferAttachmentKind(file.type, file.name),
+        });
+      }
+    }
+    if (rejected.length > 0) {
+      const names = rejected.slice(0, 3).join(', ');
+      const suffix = rejected.length > 3 ? ` and ${rejected.length - 3} more` : '';
+      message.error(`File size limit is ${MAX_ATTACHMENT_SIZE_LABEL}. Skipped: ${names}${suffix}.`);
+    }
+    if (invalidType.length > 0) {
+      const names = invalidType.slice(0, 3).join(', ');
+      const suffix = invalidType.length > 3 ? ` and ${invalidType.length - 3} more` : '';
+      message.error(
+        `Unsupported file type. Only images, videos, PDFs, and docs are allowed. Skipped: ${names}${suffix}.`,
+      );
     }
     if (next.length) setAttachments((prev) => [...prev, ...next]);
   };
@@ -669,7 +808,7 @@ function OutletTaskDetailContent({
   const handleCompleteTask = async () => {
     if (task.status === 'completed') return;
     if (!note.trim()) {
-      message.error('Enter your delivery notes before marking the task complete.');
+      message.error('Enter your notes before marking the task complete.');
       return;
     }
     if (isCompleting) return;
@@ -677,6 +816,15 @@ function OutletTaskDetailContent({
     setIsCompleting(true);
     try {
       clearUploadError();
+      const oversized = attachments.find(
+        (attachment) => attachment.file.size > MAX_ATTACHMENT_SIZE_BYTES,
+      );
+      if (oversized) {
+        message.error(
+          `${oversized.file.name} exceeds ${MAX_ATTACHMENT_SIZE_LABEL}. Remove it before completing the task.`,
+        );
+        return;
+      }
 
       let uploaded: Array<{ kind: AttachmentKind; url: string }> = [];
       try {
@@ -697,7 +845,9 @@ function OutletTaskDetailContent({
 
       const uploadedImages = uploaded.filter((x) => x.kind === 'image').map((x) => x.url);
       const uploadedVideos = uploaded.filter((x) => x.kind === 'video').map((x) => x.url);
-      const uploadedAudios = uploaded.filter((x) => x.kind === 'audio').map((x) => x.url);
+      const uploadedAudios = uploaded
+        .filter((x) => x.kind === 'audio' || x.kind === 'pdf' || x.kind === 'doc')
+        .map((x) => x.url);
 
       await completeMutation.mutateAsync({
         id: task.id,
@@ -766,7 +916,7 @@ function OutletTaskDetailContent({
               )}
             </div>
 
-            <div className='flex w-full shrink-0 flex-col gap-3 sm:max-w-70 lg:items-stretch'>
+            <div className='flex w-full shrink-0 flex-col gap-3 sm:max-w-35 lg:items-stretch'>
               <div className='rounded-xl bg-[#F5F0E6] px-5 py-4 shadow-sm ring-1 ring-[#E8DFD0]'>
                 <p className='text-[10px] font-bold uppercase tracking-[0.2em] text-[#5C4A2A]'>
                   Deadline
@@ -774,7 +924,6 @@ function OutletTaskDetailContent({
                 <p className='mt-1 text-lg font-bold text-[#3D2F1A]'>
                   {formatDeadlineLine(task.dueDate)}
                 </p>
-                <p className='mt-2 text-xs text-[#6B5A40]'>{deadlineHint(task.dueDate)}</p>
               </div>
             </div>
           </div>
@@ -796,24 +945,13 @@ function OutletTaskDetailContent({
 
             <div className='mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
               <input
-                ref={imageInputRef}
+                ref={fileInputRef}
                 type='file'
-                accept='image/*'
+                accept='image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp'
                 multiple
                 className='hidden'
                 onChange={(e) => {
-                  addAttachments(e.target.files, 'image');
-                  e.target.value = '';
-                }}
-              />
-              <input
-                ref={videoInputRef}
-                type='file'
-                accept='video/*'
-                multiple
-                className='hidden'
-                onChange={(e) => {
-                  addAttachments(e.target.files, 'video');
+                  addAttachments(e.target.files);
                   e.target.value = '';
                 }}
               />
@@ -854,11 +992,11 @@ function OutletTaskDetailContent({
                   <button
                     type='button'
                     disabled={task.status === 'completed'}
-                    onClick={() => imageInputRef.current?.click()}
+                    onClick={() => fileInputRef.current?.click()}
                     className='cursor-pointer rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40'
-                    aria-label='Attach image'
+                    aria-label='Attach file'
                   >
-                    <ImageIcon size={20} aria-hidden />
+                    <Paperclip size={20} aria-hidden />
                   </button>
                   <button
                     type='button'
@@ -873,15 +1011,6 @@ function OutletTaskDetailContent({
                     }`}
                   >
                     <Mic size={20} aria-hidden />
-                  </button>
-                  <button
-                    type='button'
-                    disabled={task.status === 'completed'}
-                    onClick={() => videoInputRef.current?.click()}
-                    className='cursor-pointer rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40'
-                    aria-label='Attach video'
-                  >
-                    <Video size={20} aria-hidden />
                   </button>
                   {task.status !== 'completed' && (
                     <Button
