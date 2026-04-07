@@ -47,7 +47,6 @@ const PRIORITY_TO_API: Record<TaskPriority, ApiTaskPriority> = {
   low: 'LOW',
   medium: 'MEDIUM',
   high: 'HIGH',
-  urgent: 'URGENT',
 };
 
 const STATUS_TO_API: Record<TaskStatus, ApiTaskStatus> = {
@@ -80,7 +79,7 @@ function parseApiPriority(v: string | undefined): TaskPriority {
     LOW: 'low',
     MEDIUM: 'medium',
     HIGH: 'high',
-    URGENT: 'urgent',
+    URGENT: 'high',
   };
   return map[u] ?? 'medium';
 }

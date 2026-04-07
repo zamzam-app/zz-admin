@@ -1,23 +1,21 @@
-import dayjs from 'dayjs';
-import { Calendar, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
-import type { Task, TaskStatus } from '../../lib/types/task';
+import { Camera, CheckCircle2, File, Mic, Pencil, Trash2, Video } from 'lucide-react';
+import type { Task, TaskPriority } from '../../lib/types/task';
 
-const STATUS_ROW: Record<TaskStatus, { label: string; className: string }> = {
-  open: {
-    label: 'Open',
-    className: 'border border-slate-200 bg-slate-100 text-slate-700',
-  },
+const STATUS_ROW = {
   in_progress: {
-    label: 'Ready for review',
+    label: 'In progress',
     className: 'border border-sky-200/90 bg-sky-100 text-sky-900',
-  },
-  completed: {
-    label: 'Completed',
-    className: 'border border-emerald-200 bg-emerald-50 text-emerald-900',
   },
 };
 
 const CATEGORY_PILL = 'border border-emerald-200/90 bg-emerald-50 text-emerald-900';
+const MEDIA_ICON_CLASS =
+  'box-content cursor-pointer rounded-lg p-1.5 text-slate-500 transition-all duration-150 hover:-translate-y-0.5 hover:bg-slate-900/10 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400';
+const PRIORITY_BACKGROUND: Record<TaskPriority, string> = {
+  low: '#ecfdf5',
+  medium: '#fefce8',
+  high: '#fef2f2',
+};
 
 type Props = {
   task: Task;
@@ -30,8 +28,13 @@ type Props = {
 
 export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }: Props) {
   const showComplete = !isAdmin && task.status !== 'completed' && onComplete;
-  const statusCfg = STATUS_ROW[task.status];
-  const headlineName = task.outletName?.trim() || task.title;
+  const statusCfg = task.status === 'in_progress' ? STATUS_ROW.in_progress : null;
+  const title = task.title?.trim() || task.description?.trim() || 'Task';
+  const outletName = task.outletName?.trim();
+  const backgroundColor = PRIORITY_BACKGROUND[task.priority] ?? PRIORITY_BACKGROUND.medium;
+  const categoryLabel = task.category
+    ? task.category.charAt(0).toUpperCase() + task.category.slice(1)
+    : null;
   const assigneeLabel =
     task.assigneeNames && task.assigneeNames.length > 0
       ? task.assigneeNames.join(', ')
@@ -49,36 +52,45 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
           onOpen();
         }
       }}
-      className={`flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.06)] ${
+      className={`flex h-full flex-col gap-4 rounded-2xl border border-slate-200 p-5 shadow-sm ${
         onOpen
-          ? 'cursor-pointer transition-shadow hover:shadow-[0_4px_14px_rgba(15,23,42,0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400'
+          ? 'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400'
           : ''
       }`}
+      style={{ backgroundColor }}
     >
       <div className='flex items-center justify-between gap-3'>
-        <span
-          className={`inline-flex max-w-[65%] items-center rounded-full px-3 py-1 text-[11px] font-semibold leading-none ${statusCfg.className}`}
-        >
-          {statusCfg.label}
-        </span>
-        <div className='flex shrink-0 items-center gap-1.5 text-xs text-slate-400'>
-          <Calendar className='h-3.5 w-3.5' strokeWidth={2} aria-hidden />
-          <time dateTime={task.dueDate}>{dayjs(task.dueDate).format('YYYY-MM-DD')}</time>
-        </div>
+        {statusCfg ? (
+          <span
+            className={`inline-flex max-w-[65%] items-center rounded-full px-3 py-1 text-[11px] font-semibold leading-none ${statusCfg.className}`}
+          >
+            {statusCfg.label}
+          </span>
+        ) : (
+          <span aria-hidden />
+        )}
+        <span aria-hidden />
       </div>
 
       <div className='flex flex-wrap items-center gap-2'>
-        {task.category && (
+        {categoryLabel && (
           <span
             className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize leading-none ${CATEGORY_PILL}`}
           >
-            {task.category}
+            {categoryLabel}
           </span>
         )}
-        <span className='text-base font-bold leading-snug text-slate-900'>{headlineName}</span>
       </div>
 
-      <p className='text-sm leading-relaxed text-slate-600'>{task.description}</p>
+      <div>
+        <h3 className='text-base font-bold leading-snug text-slate-900'>{title}</h3>
+        {outletName && <p className='mt-1 text-sm font-medium text-slate-500'>{outletName}</p>}
+      </div>
+
+      <div>
+        <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>Comments</p>
+        <p className='mt-1 text-sm leading-relaxed text-slate-600'>{task.description}</p>
+      </div>
 
       {(task.imageUrls?.[0] ?? task.imageUrl) ? (
         <div className='overflow-hidden rounded-lg'>
@@ -96,48 +108,85 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
           Assigned to: <span className='font-bold text-slate-900'>{assigneeLabel}</span>
         </p>
 
-        {(showComplete || (isAdmin && onEdit) || onDelete) && (
-          <div className='flex flex-wrap items-center justify-end gap-1 border-t border-slate-100 pt-4'>
-            {showComplete && (
-              <button
-                type='button'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onComplete?.();
-                }}
-                className='inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100'
-              >
-                <CheckCircle2 size={14} /> Complete
-              </button>
-            )}
-            {isAdmin && onEdit && (
-              <button
-                type='button'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                className='cursor-pointer rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
-                title='Edit'
-              >
-                <Pencil size={16} />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type='button'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className='cursor-pointer rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50'
-                title='Delete'
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
+        <div className='flex items-center justify-between gap-3 border-t border-slate-100 pt-4'>
+          <div className='flex items-center gap-1'>
+            <button
+              type='button'
+              className={MEDIA_ICON_CLASS}
+              onClick={(e) => e.stopPropagation()}
+              aria-label='View photos'
+            >
+              <Camera size={16} />
+            </button>
+            <button
+              type='button'
+              className={MEDIA_ICON_CLASS}
+              onClick={(e) => e.stopPropagation()}
+              aria-label='View videos'
+            >
+              <Video size={16} />
+            </button>
+            <button
+              type='button'
+              className={MEDIA_ICON_CLASS}
+              onClick={(e) => e.stopPropagation()}
+              aria-label='View files'
+            >
+              <File size={16} />
+            </button>
+            <button
+              type='button'
+              className={MEDIA_ICON_CLASS}
+              onClick={(e) => e.stopPropagation()}
+              aria-label='Listen to audio'
+            >
+              <Mic size={16} />
+            </button>
           </div>
-        )}
+
+          {(showComplete || (isAdmin && onEdit) || onDelete) && (
+            <div className='flex flex-wrap items-center justify-end gap-1'>
+              {showComplete && (
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onComplete?.();
+                  }}
+                  className='inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100'
+                >
+                  <CheckCircle2 size={14} /> Complete
+                </button>
+              )}
+              {isAdmin && onEdit && (
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className='cursor-pointer rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
+                  title='Edit'
+                >
+                  <Pencil size={16} />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className='cursor-pointer rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50'
+                  title='Delete'
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

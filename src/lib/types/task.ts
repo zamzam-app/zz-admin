@@ -1,6 +1,6 @@
 export const TASK_KEYS = ['tasks'];
 
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskPriority = 'low' | 'medium' | 'high';
 export type TaskStatus = 'open' | 'in_progress' | 'completed';
 export type TaskCategory = 'hygiene' | 'maintenance' | 'inventory' | 'staffing';
 

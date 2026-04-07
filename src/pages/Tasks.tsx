@@ -11,8 +11,8 @@ import { usersApi } from '../lib/services/api/users.api';
 import {
   TASK_KEYS,
   type CreateTaskPayload,
+  type TaskPriority,
   type Task,
-  type TaskStatus,
   type UpdateTaskPayload,
 } from '../lib/types/task';
 import { OUTLET_KEYS } from '../lib/types/outlet';
@@ -22,11 +22,14 @@ import Card from '../components/common/Card';
 import { TaskFormModal, type TaskFormState } from '../components/tasks/TaskFormModal';
 import { TaskCard } from '../components/tasks/TaskCard';
 
-const STATUS_BADGE: Record<TaskStatus, { label: string; color: string; bg: string }> = {
+const STATUS_BADGE: Record<'open' | 'completed', { label: string; color: string; bg: string }> = {
   open: { label: 'Open', color: '#1F2937', bg: '#F8FAFC' },
-  in_progress: { label: 'In Progress', color: '#9A3412', bg: '#FFF7ED' },
   completed: { label: 'Completed', color: '#065F46', bg: '#ECFDF3' },
 };
+
+function getStatusBadge(status: Task['status']) {
+  return status === 'completed' ? STATUS_BADGE.completed : STATUS_BADGE.open;
+}
 
 const EMPTY_FORM: TaskFormState = {
   description: '',
@@ -47,8 +50,17 @@ export default function Tasks() {
 
   const [filterOutletId, setFilterOutletId] = useState('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<'all' | TaskPriority>('all');
 
-  const taskListQueryKey = ['tasks', 'list', filterOutletId, filterStatus, role, userId] as const;
+  const taskListQueryKey = [
+    'tasks',
+    'list',
+    filterOutletId,
+    filterStatus,
+    filterPriority,
+    role,
+    userId,
+  ] as const;
 
   const { data: tasks = [] } = useApiQuery(
     [...taskListQueryKey],
@@ -60,6 +72,7 @@ export default function Tasks() {
             userId,
             filterOutletId,
             filterStatus,
+            filterPriority,
           }),
         ),
       ),
@@ -347,17 +360,22 @@ export default function Tasks() {
                         Due {dayjs(task.dueDate).format('DD MMM YYYY')}
                       </p>
                     </div>
-                    <Chip
-                      label={STATUS_BADGE[task.status].label}
-                      size='small'
-                      sx={{
-                        bgcolor: STATUS_BADGE[task.status].bg,
-                        color: STATUS_BADGE[task.status].color,
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        fontSize: 10,
-                      }}
-                    />
+                    {(() => {
+                      const badge = getStatusBadge(task.status);
+                      return (
+                        <Chip
+                          label={badge.label}
+                          size='small'
+                          sx={{
+                            bgcolor: badge.bg,
+                            color: badge.color,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            fontSize: 10,
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                 ))
               )}
@@ -408,8 +426,18 @@ export default function Tasks() {
             >
               <option value='all'>All statuses</option>
               <option value='open'>Open</option>
-              <option value='in_progress'>In progress</option>
               <option value='completed'>Completed</option>
+            </select>
+            <select
+              className={selectClass}
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value as 'all' | TaskPriority)}
+              aria-label='Filter by priority'
+            >
+              <option value='all'>All priorities</option>
+              <option value='low'>Low</option>
+              <option value='medium'>Medium</option>
+              <option value='high'>High</option>
             </select>
           </div>
         </div>
