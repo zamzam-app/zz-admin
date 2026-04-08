@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/context/AuthContext';
@@ -13,9 +13,7 @@ export default function OutletTasks() {
   const role = user?.role ?? 'staff';
   const userId = user?.id ?? user?._id ?? '';
 
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-
-  const listQueryKey: unknown[] = ['tasks', 'outlet-tasks', userId, filterStatus];
+  const listQueryKey: unknown[] = ['tasks', 'outlet-tasks', userId, 'all'];
 
   const { data: tasks = [] } = useApiQuery(
     listQueryKey,
@@ -26,7 +24,7 @@ export default function OutletTasks() {
             role,
             userId,
             filterOutletId: 'all',
-            filterStatus,
+            filterStatus: 'all',
           }),
         ),
       ),
@@ -97,30 +95,14 @@ export default function OutletTasks() {
     });
   }, [boardTasks]);
 
-  const selectClass =
-    'h-10 w-full max-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400';
   const completedListScrollClass = 'max-h-[calc(100dvh-24rem)] sm:max-h-[calc(100dvh-21rem)]';
 
   return (
     <div className='flex min-h-0 flex-col gap-6 -mx-6 -mb-6'>
-      <div className='shrink-0 border-b border-slate-200/70 bg-[#f9fafb] px-6 py-6 lg:px-8'>
-        <div className='mx-auto max-w-2xl text-center'>
-          <h1 className='text-2xl font-bold tracking-tight text-[#0F172A]'>My Tasks</h1>
+      <div className='shrink-0 bg-[#f9fafb] px-6 pt-6 pb-1 lg:px-8'>
+        <div className='mx-auto w-full max-w-6xl'>
+          <h1 className='text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>My Tasks</h1>
           <p className='mt-1 text-sm text-slate-500'>Complete assigned tasks</p>
-        </div>
-
-        <div className='mx-auto mt-6 flex max-w-2xl justify-center'>
-          <select
-            className={selectClass}
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            aria-label='Filter by status'
-          >
-            <option value='all'>All statuses</option>
-            <option value='open'>Open</option>
-            <option value='in_progress'>In progress</option>
-            <option value='completed'>Completed</option>
-          </select>
         </div>
       </div>
 
