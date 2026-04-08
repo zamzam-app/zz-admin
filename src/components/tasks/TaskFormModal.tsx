@@ -7,18 +7,14 @@ import { useMicRecording } from '../../lib/hooks/useMicRecording';
 import type { Outlet } from '../../lib/types/outlet';
 import type { User } from '../../lib/types/manager';
 import type { Task, TaskCategory, TaskPriority } from '../../lib/types/task';
+import { useApiQuery } from '../../lib/react-query/use-api-hooks';
+import { taskCategoryApi } from '../../lib/services/api/task-category.api';
+import { TASK_CATEGORY_KEYS } from '../../lib/types/task-category';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { DateWheelPicker } from '../common/DateWheelPicker';
 
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high'];
-
-const TASK_CATEGORY_OPTIONS: { value: TaskCategory; label: string }[] = [
-  { value: 'hygiene', label: 'Hygiene' },
-  { value: 'maintenance', label: 'Maintenance' },
-  { value: 'inventory', label: 'Inventory' },
-  { value: 'staffing', label: 'Staffing' },
-];
 
 /** Same label style as “Select outlet” (uppercase via CSS) */
 const fieldLabelClass =
@@ -90,6 +86,11 @@ export function TaskFormModal({
   managers,
 }: TaskFormModalProps) {
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const { data: taskCategoriesResponse } = useApiQuery(
+    TASK_CATEGORY_KEYS,
+    () => taskCategoryApi.getTaskCategories({ page: 1, limit: 100 }),
+    { enabled: open },
+  );
 
   const mic = useMicRecording({
     fileNamePrefix: 'task-admin-audio',
@@ -115,6 +116,24 @@ export function TaskFormModal({
 
     return managers.filter((m) => (m.outletId ?? []).includes(outletId));
   }, [editing?.outletId, form.outletId, outlets, managers]);
+
+  const categoryOptions = useMemo(
+    () =>
+      (taskCategoriesResponse?.data ?? [])
+        .filter((category) => Boolean(category.name?.trim()))
+        .map((category) => ({
+          id: category._id,
+          value: category.name.trim(),
+        })),
+    [taskCategoriesResponse?.data],
+  );
+
+  const normalizedSelectedCategory = form.category.trim().toLowerCase();
+  const selectedCategoryMissing =
+    Boolean(normalizedSelectedCategory) &&
+    !categoryOptions.some(
+      (category) => category.value.toLowerCase() === normalizedSelectedCategory,
+    );
 
   const addAudioFiles = (files: FileList | null) => {
     if (!files?.length) return;
@@ -237,11 +256,11 @@ export function TaskFormModal({
         <div>
           <label className={fieldLabelClass}>Task category</label>
           <div className='flex flex-wrap gap-2'>
-            {TASK_CATEGORY_OPTIONS.map(({ value, label }) => {
-              const selected = form.category === value;
+            {categoryOptions.map(({ id, value }) => {
+              const selected = value.toLowerCase() === normalizedSelectedCategory;
               return (
                 <button
-                  key={value}
+                  key={id}
                   type='button'
                   onClick={() => setForm({ ...form, category: value })}
                   className={`rounded-full border px-4 py-2 text-sm font-bold transition-colors ${
@@ -250,11 +269,23 @@ export function TaskFormModal({
                       : 'border-slate-200 bg-white text-[#0F172A] hover:border-slate-300'
                   }`}
                 >
-                  {label}
+                  {value}
                 </button>
               );
             })}
+            {selectedCategoryMissing && (
+              <button
+                type='button'
+                onClick={() => setForm({ ...form, category: '' })}
+                className='rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-900 transition-colors hover:border-amber-400'
+              >
+                {form.category}
+              </button>
+            )}
           </div>
+          {categoryOptions.length === 0 && (
+            <p className='mt-2 text-xs text-slate-500'>No task categories available.</p>
+          )}
         </div>
 
         <div>

@@ -9,13 +9,7 @@ import type {
   TaskStatus,
   UpdateTaskPayload,
 } from '../../types/task';
-import {
-  mapApiTaskToTask,
-  toApiCategory,
-  toApiPriority,
-  toApiStatus,
-  type ApiTaskRaw,
-} from './task-mappers';
+import { mapApiTaskToTask, toApiPriority, toApiStatus, type ApiTaskRaw } from './task-mappers';
 
 function unwrapTaskList(data: unknown): ApiTaskRaw[] {
   if (Array.isArray(data)) return data as ApiTaskRaw[];
@@ -64,7 +58,7 @@ function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
   }
   const body: CreateTaskDtoBody = {
     description: payload.description.trim(),
-    category: toApiCategory(payload.category),
+    category: payload.category.trim(),
     dueDate: payload.dueDate,
     outletId: payload.outletId,
   };
@@ -92,7 +86,7 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   if (payload.description !== undefined) body.description = payload.description.trim();
   if (payload.comment !== undefined) body.comment = payload.comment.trim();
-  if (payload.category !== undefined) body.category = toApiCategory(payload.category);
+  if (payload.category !== undefined) body.category = payload.category.trim();
   if (payload.priority !== undefined) body.priority = toApiPriority(payload.priority);
   if (payload.status !== undefined) body.status = toApiStatus(payload.status);
   if (payload.dueDate !== undefined) body.dueDate = payload.dueDate;

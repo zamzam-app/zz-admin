@@ -2,7 +2,7 @@ export const TASK_KEYS = ['tasks'];
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type TaskStatus = 'open' | 'in_progress' | 'completed';
-export type TaskCategory = 'hygiene' | 'maintenance' | 'inventory' | 'staffing';
+export type TaskCategory = string;
 
 export interface Task {
   id: string;

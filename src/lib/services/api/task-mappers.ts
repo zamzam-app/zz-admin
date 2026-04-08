@@ -1,7 +1,6 @@
 import type { Task, TaskCategory, TaskPriority, TaskStatus } from '../../types/task';
 
 /** Backend enum strings (NestJS class-validator / Swagger) */
-export type ApiTaskCategory = 'HYGIENE' | 'MAINTENANCE' | 'INVENTORY' | 'STAFFING';
 export type ApiTaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type ApiTaskStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -36,13 +35,6 @@ export interface ApiTaskRaw {
   completedBy?: string | null;
 }
 
-const CATEGORY_TO_API: Record<TaskCategory, ApiTaskCategory> = {
-  hygiene: 'HYGIENE',
-  maintenance: 'MAINTENANCE',
-  inventory: 'INVENTORY',
-  staffing: 'STAFFING',
-};
-
 const PRIORITY_TO_API: Record<TaskPriority, ApiTaskPriority> = {
   low: 'LOW',
   medium: 'MEDIUM',
@@ -56,20 +48,7 @@ const STATUS_TO_API: Record<TaskStatus, ApiTaskStatus> = {
 };
 
 function parseApiCategory(v: string | undefined): TaskCategory | undefined {
-  if (!v) return undefined;
-  const u = v.toUpperCase();
-  const map: Record<string, TaskCategory> = {
-    HYGIENE: 'hygiene',
-    MAINTENANCE: 'maintenance',
-    INVENTORY: 'inventory',
-    STAFFING: 'staffing',
-  };
-  return (
-    map[u] ??
-    (['hygiene', 'maintenance', 'inventory', 'staffing'].includes(v.toLowerCase())
-      ? (v.toLowerCase() as TaskCategory)
-      : undefined)
-  );
+  return v?.trim() || undefined;
 }
 
 function parseApiPriority(v: string | undefined): TaskPriority {
@@ -206,10 +185,6 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     completedAt: raw.completedAt ?? null,
     completedBy: raw.completedBy ?? null,
   };
-}
-
-export function toApiCategory(c: TaskCategory): ApiTaskCategory {
-  return CATEGORY_TO_API[c];
 }
 
 export function toApiPriority(p: TaskPriority): ApiTaskPriority {
