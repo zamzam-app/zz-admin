@@ -49,6 +49,39 @@ export function WhatsAppAudioPlayer({
   const [bars, setBars] = useState<number[]>(() => fallbackBars(waveformBars));
 
   useEffect(() => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [src]);
+
+  useEffect(() => {
+    let mounted = true;
+    const probe = new Audio();
+    probe.preload = 'metadata';
+
+    const updateDuration = () => {
+      if (!mounted) return;
+      const next = getPlayableDuration(probe);
+      if (next > 0) setDuration((prev) => (next > 0 ? next : prev));
+    };
+
+    probe.addEventListener('loadedmetadata', updateDuration);
+    probe.addEventListener('durationchange', updateDuration);
+    probe.addEventListener('canplay', updateDuration);
+    probe.src = src;
+    probe.load();
+
+    return () => {
+      mounted = false;
+      probe.pause();
+      probe.removeEventListener('loadedmetadata', updateDuration);
+      probe.removeEventListener('durationchange', updateDuration);
+      probe.removeEventListener('canplay', updateDuration);
+      probe.src = '';
+    };
+  }, [src]);
+
+  useEffect(() => {
     let mounted = true;
     setBars(fallbackBars(waveformBars));
 
@@ -77,7 +110,12 @@ export function WhatsAppAudioPlayer({
           return Math.max(6, Math.min(24, Math.round(avg * 64)));
         });
 
-        if (mounted) setBars(nextBars);
+        if (mounted) {
+          setBars(nextBars);
+          if (decoded.duration > 0) {
+            setDuration((prev) => (decoded.duration > 0 ? decoded.duration : prev));
+          }
+        }
       } catch {
         // Keep fallback bars if waveform decode is blocked or unsupported.
       } finally {
@@ -95,6 +133,7 @@ export function WhatsAppAudioPlayer({
 
   const progressPercent =
     duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+  const remainingTime = duration > 0 ? Math.max(0, duration - currentTime) : 0;
 
   const togglePlayback = async () => {
     const audio = audioRef.current;
@@ -124,7 +163,7 @@ export function WhatsAppAudioPlayer({
       <audio
         ref={audioRef}
         src={src}
-        preload='metadata'
+        preload='auto'
         onLoadedMetadata={(e) => setDuration(getPlayableDuration(e.currentTarget))}
         onDurationChange={(e) => setDuration(getPlayableDuration(e.currentTarget))}
         onCanPlay={(e) => setDuration(getPlayableDuration(e.currentTarget))}
@@ -138,7 +177,11 @@ export function WhatsAppAudioPlayer({
         }}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={(e) => {
+          setIsPlaying(false);
+          e.currentTarget.currentTime = 0;
+          setCurrentTime(0);
+        }}
       />
 
       <div className='flex items-center gap-3'>
@@ -196,7 +239,7 @@ export function WhatsAppAudioPlayer({
 
       {showElapsedTime ? (
         <div className='mt-1 flex items-center px-11 text-[11px] text-slate-500'>
-          <span>{formatAudioTime(currentTime)}</span>
+          <span>{formatAudioTime(remainingTime)}</span>
         </div>
       ) : null}
     </div>
