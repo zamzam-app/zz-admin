@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { Chip } from '@mui/material';
-import { Clock3, Plus } from 'lucide-react';
+import { Clock3, Plus, Tags } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
 import { useImageUpload } from '../lib/hooks/useImageUpload';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
@@ -21,6 +21,7 @@ import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
 import { TaskFormModal, type TaskFormState } from '../components/tasks/TaskFormModal';
 import { TaskCard } from '../components/tasks/TaskCard';
+import { TaskCategoriesModal } from '../components/tasks/TaskCategoriesModal';
 
 const STATUS_BADGE: Record<'open' | 'completed', { label: string; color: string; bg: string }> = {
   open: { label: 'Open', color: '#1F2937', bg: '#F8FAFC' },
@@ -84,6 +85,7 @@ export default function Tasks() {
   );
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [taskCategoriesModalOpen, setTaskCategoriesModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<TaskFormState>(EMPTY_FORM);
   const {
@@ -435,13 +437,22 @@ export default function Tasks() {
               </p>
             </div>
             {role === 'admin' && (
-              <Button
-                variant='admin-primary'
-                onClick={handleOpenCreate}
-                className='shrink-0 rounded-xl px-5 py-3 font-semibold shadow-sm'
-              >
-                <Plus size={18} /> Assign Task
-              </Button>
+              <div className='flex shrink-0 items-center gap-3'>
+                <Button
+                  variant='outline'
+                  onClick={() => setTaskCategoriesModalOpen(true)}
+                  className='rounded-xl px-5 py-3 font-semibold shadow-sm'
+                >
+                  <Tags size={18} /> Task Categories
+                </Button>
+                <Button
+                  variant='admin-primary'
+                  onClick={handleOpenCreate}
+                  className='rounded-xl px-5 py-3 font-semibold shadow-sm'
+                >
+                  <Plus size={18} /> Assign Task
+                </Button>
+              </div>
             )}
           </div>
 
@@ -556,6 +567,10 @@ export default function Tasks() {
         }
         outlets={outlets}
         managers={managers}
+      />
+      <TaskCategoriesModal
+        open={taskCategoriesModalOpen}
+        onClose={() => setTaskCategoriesModalOpen(false)}
       />
     </div>
   );
