@@ -72,36 +72,31 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
         <span aria-hidden />
       </div>
 
-      <div className='flex flex-wrap items-center gap-2'>
-        {categoryLabel && (
-          <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize leading-none ${CATEGORY_PILL}`}
-          >
-            {categoryLabel}
-          </span>
-        )}
-      </div>
+      {(categoryLabel || outletName) && (
+        <div className='flex flex-wrap items-center gap-2'>
+          {categoryLabel && (
+            <span
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize leading-none ${CATEGORY_PILL}`}
+            >
+              {categoryLabel}
+            </span>
+          )}
+          {outletName && <p className='text-sm font-medium text-slate-500'>{outletName}</p>}
+        </div>
+      )}
 
       <div>
         <h3 className='text-base font-bold leading-snug text-slate-900'>{title}</h3>
-        {outletName && <p className='mt-1 text-sm font-medium text-slate-500'>{outletName}</p>}
       </div>
 
       <div>
-        <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>Comments</p>
-        <p className='mt-1 text-sm leading-relaxed text-slate-600'>{task.description}</p>
+        <p className='text-sm leading-relaxed text-slate-600'>
+          <span className='mr-1 text-xs font-semibold uppercase tracking-wide text-slate-500'>
+            Comments
+          </span>
+          {task.description}
+        </p>
       </div>
-
-      {(task.imageUrls?.[0] ?? task.imageUrl) ? (
-        <div className='overflow-hidden rounded-lg'>
-          <img
-            src={task.imageUrls?.[0] ?? task.imageUrl}
-            alt=''
-            className='aspect-video w-full object-cover'
-            loading='lazy'
-          />
-        </div>
-      ) : null}
 
       <div className='mt-auto flex flex-col gap-4'>
         <p className='text-sm text-slate-500'>
