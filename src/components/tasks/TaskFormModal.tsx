@@ -6,7 +6,7 @@ import { Mic, Paperclip, X } from 'lucide-react';
 import { useMicRecording } from '../../lib/hooks/useMicRecording';
 import type { Outlet } from '../../lib/types/outlet';
 import type { User } from '../../lib/types/manager';
-import type { Task, TaskCategory, TaskPriority } from '../../lib/types/task';
+import type { Task, TaskPriority } from '../../lib/types/task';
 import { useApiQuery } from '../../lib/react-query/use-api-hooks';
 import { taskCategoryApi } from '../../lib/services/api/task-category.api';
 import { TASK_CATEGORY_KEYS } from '../../lib/types/task-category';
@@ -56,7 +56,7 @@ export type TaskFormState = {
   dueDate: Dayjs | null;
   /** '' = not selected yet, 'all' = all outlets, else outlet id */
   outletId: '' | 'all' | string;
-  category: TaskCategory | '';
+  taskCategoryId: string;
   assigneeIds: string[];
   /** Uploaded to Cloudinary only when user clicks Assign Task */
   adminAudioFiles: File[];
@@ -128,12 +128,8 @@ export function TaskFormModal({
     [taskCategoriesResponse?.data],
   );
 
-  const normalizedSelectedCategory = form.category.trim().toLowerCase();
-  const selectedCategoryMissing =
-    Boolean(normalizedSelectedCategory) &&
-    !categoryOptions.some(
-      (category) => category.value.toLowerCase() === normalizedSelectedCategory,
-    );
+  const selectedCategory = categoryOptions.find((category) => category.id === form.taskCategoryId);
+  const selectedCategoryMissing = Boolean(form.taskCategoryId) && !selectedCategory;
 
   const addAudioFiles = (files: FileList | null) => {
     if (!files?.length) return;
@@ -257,12 +253,12 @@ export function TaskFormModal({
           <label className={fieldLabelClass}>Task category</label>
           <div className='flex flex-wrap gap-2'>
             {categoryOptions.map(({ id, value }) => {
-              const selected = value.toLowerCase() === normalizedSelectedCategory;
+              const selected = id === form.taskCategoryId;
               return (
                 <button
                   key={id}
                   type='button'
-                  onClick={() => setForm({ ...form, category: value })}
+                  onClick={() => setForm({ ...form, taskCategoryId: id })}
                   className={`rounded-full border px-4 py-2 text-sm font-bold transition-colors ${
                     selected
                       ? 'border-[#D4AF37] bg-[#FFFBF5] text-[#0F172A]'
@@ -276,10 +272,10 @@ export function TaskFormModal({
             {selectedCategoryMissing && (
               <button
                 type='button'
-                onClick={() => setForm({ ...form, category: '' })}
+                onClick={() => setForm({ ...form, taskCategoryId: '' })}
                 className='rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-900 transition-colors hover:border-amber-400'
               >
-                {form.category}
+                Unavailable category
               </button>
             )}
           </div>

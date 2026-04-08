@@ -36,7 +36,7 @@ function cleanQueryParams(q: QueryTaskDto): Record<string, string | number> {
 interface CreateTaskDtoBody {
   description: string;
   comment?: string;
-  category: string;
+  taskCategoryId: string;
   priority?: string;
   status?: string;
   dueDate: string;
@@ -53,12 +53,12 @@ function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
   if (!payload.outletId) {
     throw new Error('outletId is required');
   }
-  if (!payload.category) {
-    throw new Error('category is required');
+  if (!payload.taskCategoryId) {
+    throw new Error('taskCategoryId is required');
   }
   const body: CreateTaskDtoBody = {
     description: payload.description.trim(),
-    category: payload.category.trim(),
+    taskCategoryId: payload.taskCategoryId.trim(),
     dueDate: payload.dueDate,
     outletId: payload.outletId,
   };
@@ -86,7 +86,7 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   if (payload.description !== undefined) body.description = payload.description.trim();
   if (payload.comment !== undefined) body.comment = payload.comment.trim();
-  if (payload.category !== undefined) body.category = payload.category.trim();
+  if (payload.taskCategoryId !== undefined) body.taskCategoryId = payload.taskCategoryId.trim();
   if (payload.priority !== undefined) body.priority = toApiPriority(payload.priority);
   if (payload.status !== undefined) body.status = toApiStatus(payload.status);
   if (payload.dueDate !== undefined) body.dueDate = payload.dueDate;

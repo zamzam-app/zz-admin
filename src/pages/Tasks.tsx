@@ -37,7 +37,7 @@ const EMPTY_FORM: TaskFormState = {
   priority: 'medium',
   dueDate: dayjs(),
   outletId: '',
-  category: '',
+  taskCategoryId: '',
   assigneeIds: [],
   adminAudioFiles: [],
 };
@@ -249,7 +249,7 @@ export default function Tasks() {
       priority: task.priority,
       dueDate: dayjs(task.dueDate),
       outletId: task.outletId ? task.outletId : 'all',
-      category: task.category ?? '',
+      taskCategoryId: task.taskCategoryId ?? '',
       assigneeIds: task.assigneeIds,
       adminAudioFiles: [],
     });
@@ -273,7 +273,7 @@ export default function Tasks() {
       message.error('Please select a specific outlet. Each task must be tied to one outlet.');
       return;
     }
-    if (!form.category) {
+    if (!form.taskCategoryId) {
       message.error('Please select a task category.');
       return;
     }
@@ -300,7 +300,7 @@ export default function Tasks() {
           description: desc,
           priority: form.priority,
           dueDate,
-          category: form.category,
+          taskCategoryId: form.taskCategoryId,
           status: editing.status,
           assigneeIds,
         },
@@ -331,7 +331,7 @@ export default function Tasks() {
       description: desc,
       priority: form.priority,
       dueDate,
-      category: form.category,
+      taskCategoryId: form.taskCategoryId,
       outletId: outletMongoId,
       outletName: outlet?.name,
       status: 'open' as const,

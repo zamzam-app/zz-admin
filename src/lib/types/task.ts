@@ -12,6 +12,7 @@ export interface Task {
   priority: TaskPriority;
   dueDate: string;
   category?: TaskCategory;
+  taskCategoryId?: string;
   outletId?: string;
   outletName?: string;
   imageUrl?: string;
@@ -38,7 +39,7 @@ export interface CreateTaskPayload {
   comment?: string;
   priority: TaskPriority;
   dueDate: string;
-  category?: TaskCategory;
+  taskCategoryId?: string;
   outletId?: string;
   outletName?: string;
   status?: TaskStatus;
@@ -56,7 +57,7 @@ export interface UpdateTaskPayload {
   comment?: string;
   priority?: TaskPriority;
   dueDate?: string;
-  category?: TaskCategory;
+  taskCategoryId?: string;
   status?: TaskStatus;
   assigneeIds?: string[];
   imageUrls?: string[];

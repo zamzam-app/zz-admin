@@ -10,6 +10,9 @@ export interface ApiTaskRaw {
   description?: string;
   comment?: string;
   category?: string;
+  taskCategoryId?: string | { _id?: string; id?: string; name?: string };
+  taskCategory?: string | { _id?: string; id?: string; name?: string };
+  taskCategoryName?: string;
   priority?: string;
   status?: string;
   dueDate?: string | Date;
@@ -49,6 +52,26 @@ const STATUS_TO_API: Record<TaskStatus, ApiTaskStatus> = {
 
 function parseApiCategory(v: string | undefined): TaskCategory | undefined {
   return v?.trim() || undefined;
+}
+
+function extractEntityId(
+  input?: string | { _id?: string; id?: string; name?: string } | null,
+): string | undefined {
+  if (!input) return undefined;
+  if (typeof input === 'string') return input;
+  if (typeof input === 'object') {
+    if (input._id) return String(input._id);
+    if (input.id) return String(input.id);
+  }
+  return undefined;
+}
+
+function extractEntityName(
+  input?: string | { _id?: string; id?: string; name?: string } | null,
+): string | undefined {
+  if (!input || typeof input === 'string') return undefined;
+  if (typeof input.name === 'string' && input.name.trim()) return input.name.trim();
+  return undefined;
 }
 
 function parseApiPriority(v: string | undefined): TaskPriority {
@@ -139,6 +162,19 @@ function resolveOutletName(raw: ApiTaskRaw): string | undefined {
   return extractOutletName(raw.outletId);
 }
 
+function resolveTaskCategoryId(raw: ApiTaskRaw): string | undefined {
+  return extractEntityId(raw.taskCategoryId) ?? extractEntityId(raw.taskCategory);
+}
+
+function resolveTaskCategoryName(raw: ApiTaskRaw): string | undefined {
+  if (raw.taskCategoryName?.trim()) return raw.taskCategoryName.trim();
+  return (
+    extractEntityName(raw.taskCategoryId) ??
+    extractEntityName(raw.taskCategory) ??
+    parseApiCategory(raw.category)
+  );
+}
+
 export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
   const id = String(raw._id ?? raw.id ?? '');
   const description = String(raw.description ?? '');
@@ -162,7 +198,8 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     comment: raw.comment,
     priority: parseApiPriority(raw.priority),
     dueDate: due,
-    category: parseApiCategory(raw.category),
+    category: resolveTaskCategoryName(raw),
+    taskCategoryId: resolveTaskCategoryId(raw),
     outletId: resolveOutletId(raw),
     outletName: resolveOutletName(raw),
     imageUrl: firstImg,
