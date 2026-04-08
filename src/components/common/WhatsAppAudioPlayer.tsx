@@ -6,6 +6,7 @@ export type WhatsAppAudioPlayerProps = {
   className?: string;
   waveformBars?: number;
   showElapsedTime?: boolean;
+  fitContainer?: boolean;
 };
 
 function formatAudioTime(seconds: number) {
@@ -38,6 +39,7 @@ export function WhatsAppAudioPlayer({
   className,
   waveformBars = 36,
   showElapsedTime = true,
+  fitContainer = false,
 }: WhatsAppAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -162,19 +164,27 @@ export function WhatsAppAudioPlayer({
             audio.currentTime = nextTime;
             setCurrentTime(nextTime);
           }}
-          className='group w-[min(360px,calc(100vw-12rem))] min-w-0'
+          className={`group min-w-0 ${fitContainer ? 'flex-1 overflow-hidden' : 'w-[min(360px,calc(100vw-12rem))]'}`}
           aria-label='Audio progress'
         >
-          <div ref={waveformRef} className='flex items-center gap-1.5'>
+          <div
+            ref={waveformRef}
+            className={`items-center ${
+              fitContainer
+                ? 'grid grid-flow-col auto-cols-fr gap-1 overflow-hidden'
+                : 'flex gap-1.5'
+            }`}
+          >
             {bars.map((height, idx) => {
               const barProgress = ((idx + 1) / bars.length) * 100;
               const played = barProgress <= progressPercent;
               return (
                 <span
                   key={`wave-${idx}-${height}`}
-                  className={`w-1 shrink-0 rounded-full transition-colors ${
-                    played ? 'bg-[#2BA1F9]' : 'bg-slate-300'
-                  }`}
+                  className={`rounded-full transition-colors ${
+                    fitContainer ? 'w-full' : 'w-1 shrink-0'
+                  } ${played ? 'bg-[#2BA1F9]' : 'bg-slate-300'}
+                  `}
                   style={{ height }}
                   aria-hidden
                 />

@@ -1,5 +1,9 @@
+import { useMemo, useState } from 'react';
+import { Dropdown, Image } from 'antd';
+import type { MenuProps } from 'antd';
 import { Camera, CheckCircle2, File, Mic, Pencil, Trash2, Video } from 'lucide-react';
 import type { Task, TaskPriority } from '../../lib/types/task';
+import { WhatsAppAudioPlayer } from '../common/WhatsAppAudioPlayer';
 
 const STATUS_ROW = {
   in_progress: {
@@ -27,6 +31,9 @@ type Props = {
 };
 
 export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }: Props) {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [isAudioDropdownOpen, setIsAudioDropdownOpen] = useState(false);
   const showComplete = !isAdmin && task.status !== 'completed' && onComplete;
   const statusCfg = task.status === 'in_progress' ? STATUS_ROW.in_progress : null;
   const title = task.title?.trim() || task.description?.trim() || 'Task';
@@ -39,7 +46,116 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
     task.assigneeNames && task.assigneeNames.length > 0
       ? task.assigneeNames.join(', ')
       : 'Unassigned';
+  const imageUrls = useMemo(() => {
+    const urls = task.imageUrls ?? (task.imageUrl ? [task.imageUrl] : []);
+    return Array.from(new Set(urls.filter(Boolean)));
+  }, [task.imageUrl, task.imageUrls]);
+  const rawMediaUrls = useMemo(
+    () => Array.from(new Set((task.videoUrls ?? []).filter(Boolean))),
+    [task.videoUrls],
+  );
+  const videoUrls = useMemo(
+    () => rawMediaUrls.filter((url) => !/\.(mp3|wav|m4a|aac|ogg|oga|flac)(\?|#|$)/i.test(url)),
+    [rawMediaUrls],
+  );
+  const audioUrls = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...(task.adminAudioUrl ?? []),
+            ...(task.managerAudioUrl ?? []),
+            ...(task.audioUrls ?? []),
+            ...rawMediaUrls.filter((url) => /\.(mp3|wav|m4a|aac|ogg|oga|flac)(\?|#|$)/i.test(url)),
+          ].filter(Boolean),
+        ),
+      ),
+    [rawMediaUrls, task.adminAudioUrl, task.audioUrls, task.managerAudioUrl],
+  );
+  const fileUrls = useMemo(() => {
+    const files =
+      (task as Task & { fileUrls?: string[]; attachmentUrls?: string[]; files?: string[] })
+        .fileUrls ??
+      (task as Task & { fileUrls?: string[]; attachmentUrls?: string[]; files?: string[] })
+        .attachmentUrls ??
+      (task as Task & { fileUrls?: string[]; attachmentUrls?: string[]; files?: string[] }).files ??
+      [];
+    return Array.from(new Set(files.filter(Boolean)));
+  }, [task]);
 
+  const imageMenuItems = useMemo<MenuProps['items']>(() => {
+    if (imageUrls.length === 0) {
+      return [
+        {
+          key: 'no-images',
+          label: <span className='text-slate-500'>No images to show</span>,
+          disabled: true,
+        },
+      ];
+    }
+
+    return imageUrls.map((_, index) => ({
+      key: String(index),
+      label: (
+        <span className='block max-w-55 truncate' title={`Image ${index + 1}`}>
+          Image {index + 1}
+        </span>
+      ),
+      onClick: (e) => {
+        e.domEvent.stopPropagation();
+        setPreviewIndex(index);
+        setIsPreviewOpen(true);
+      },
+    }));
+  }, [imageUrls]);
+  const videoMenuItems = useMemo<MenuProps['items']>(() => {
+    if (videoUrls.length === 0) {
+      return [
+        {
+          key: 'no-videos',
+          label: <span className='text-slate-500'>No videos to show</span>,
+          disabled: true,
+        },
+      ];
+    }
+
+    return videoUrls.map((url, index) => ({
+      key: String(index),
+      label: (
+        <span className='block max-w-55 truncate' title={`Video ${index + 1}`}>
+          Video {index + 1}
+        </span>
+      ),
+      onClick: (e) => {
+        e.domEvent.stopPropagation();
+        window.open(url, '_blank', 'noopener,noreferrer');
+      },
+    }));
+  }, [videoUrls]);
+  const fileMenuItems = useMemo<MenuProps['items']>(() => {
+    if (fileUrls.length === 0) {
+      return [
+        {
+          key: 'no-files',
+          label: <span className='text-slate-500'>No files to show</span>,
+          disabled: true,
+        },
+      ];
+    }
+
+    return fileUrls.map((url, index) => ({
+      key: String(index),
+      label: (
+        <span className='block max-w-55 truncate' title={`File ${index + 1}`}>
+          File {index + 1}
+        </span>
+      ),
+      onClick: (e) => {
+        e.domEvent.stopPropagation();
+        window.open(url, '_blank', 'noopener,noreferrer');
+      },
+    }));
+  }, [fileUrls]);
   return (
     <div
       role={onOpen ? 'button' : undefined}
@@ -105,38 +221,76 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
 
         <div className='flex items-center justify-between gap-3 border-t border-slate-100 pt-4'>
           <div className='flex items-center gap-1'>
-            <button
-              type='button'
-              className={MEDIA_ICON_CLASS}
-              onClick={(e) => e.stopPropagation()}
-              aria-label='View photos'
+            <Dropdown trigger={['click']} menu={{ items: imageMenuItems }}>
+              <button
+                type='button'
+                className={MEDIA_ICON_CLASS}
+                onClick={(e) => e.stopPropagation()}
+                aria-label='View photos'
+                title='View photos'
+              >
+                <Camera size={16} />
+              </button>
+            </Dropdown>
+            <Dropdown trigger={['click']} menu={{ items: videoMenuItems }}>
+              <button
+                type='button'
+                className={MEDIA_ICON_CLASS}
+                onClick={(e) => e.stopPropagation()}
+                aria-label='View videos'
+              >
+                <Video size={16} />
+              </button>
+            </Dropdown>
+            <Dropdown trigger={['click']} menu={{ items: fileMenuItems }}>
+              <button
+                type='button'
+                className={MEDIA_ICON_CLASS}
+                onClick={(e) => e.stopPropagation()}
+                aria-label='View files'
+              >
+                <File size={16} />
+              </button>
+            </Dropdown>
+            <Dropdown
+              trigger={['click']}
+              open={isAudioDropdownOpen}
+              onOpenChange={setIsAudioDropdownOpen}
+              popupRender={() => (
+                <div
+                  className='w-75 overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-lg'
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {audioUrls.length === 0 ? (
+                    <p className='px-2 py-1.5 text-sm text-slate-500'>No audio to show</p>
+                  ) : (
+                    <div className='flex flex-col gap-2'>
+                      {audioUrls.map((url, index) => (
+                        <div key={`${url}-${index}`}>
+                          <p className='mb-1 truncate text-xs font-semibold text-slate-600'>
+                            Audio {index + 1}
+                          </p>
+                          <WhatsAppAudioPlayer
+                            src={url}
+                            className='w-full max-w-full'
+                            fitContainer
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             >
-              <Camera size={16} />
-            </button>
-            <button
-              type='button'
-              className={MEDIA_ICON_CLASS}
-              onClick={(e) => e.stopPropagation()}
-              aria-label='View videos'
-            >
-              <Video size={16} />
-            </button>
-            <button
-              type='button'
-              className={MEDIA_ICON_CLASS}
-              onClick={(e) => e.stopPropagation()}
-              aria-label='View files'
-            >
-              <File size={16} />
-            </button>
-            <button
-              type='button'
-              className={MEDIA_ICON_CLASS}
-              onClick={(e) => e.stopPropagation()}
-              aria-label='Listen to audio'
-            >
-              <Mic size={16} />
-            </button>
+              <button
+                type='button'
+                className={MEDIA_ICON_CLASS}
+                onClick={(e) => e.stopPropagation()}
+                aria-label='Listen to audio'
+              >
+                <Mic size={16} />
+              </button>
+            </Dropdown>
           </div>
 
           {(showComplete || (isAdmin && onEdit) || onDelete) && (
@@ -183,6 +337,23 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
           )}
         </div>
       </div>
+
+      {imageUrls.length > 0 ? (
+        <div className='hidden' onClick={(e) => e.stopPropagation()}>
+          <Image.PreviewGroup
+            preview={{
+              visible: isPreviewOpen,
+              current: previewIndex,
+              onVisibleChange: (visible) => setIsPreviewOpen(visible),
+              onChange: (current) => setPreviewIndex(current),
+            }}
+          >
+            {imageUrls.map((url, idx) => (
+              <Image key={`${url}-${idx}`} src={url} alt={`Task image ${idx + 1}`} />
+            ))}
+          </Image.PreviewGroup>
+        </div>
+      ) : null}
     </div>
   );
 }
