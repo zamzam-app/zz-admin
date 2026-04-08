@@ -2,7 +2,13 @@ import axios from 'axios';
 import api from './axios';
 import { TASKS } from './endpoints';
 import type { QueryTaskDto } from '../../types/task-query';
-import type { CreateTaskPayload, Task, TaskStatus, UpdateTaskPayload } from '../../types/task';
+import type {
+  CreateTaskPayload,
+  Task,
+  TaskPriority,
+  TaskStatus,
+  UpdateTaskPayload,
+} from '../../types/task';
 import {
   mapApiTaskToTask,
   toApiCategory,
@@ -120,6 +126,7 @@ export function buildTaskListQuery(input: {
   userId: string;
   filterOutletId: string;
   filterStatus: string;
+  filterPriority?: 'all' | TaskPriority;
 }): QueryTaskDto {
   const q: QueryTaskDto = { page: 1, limit: 100 };
   if (input.filterOutletId !== 'all') {
@@ -127,6 +134,9 @@ export function buildTaskListQuery(input: {
   }
   if (input.filterStatus !== 'all') {
     q.status = toApiStatus(input.filterStatus as TaskStatus);
+  }
+  if (input.filterPriority && input.filterPriority !== 'all') {
+    q.priority = toApiPriority(input.filterPriority);
   }
   if (input.role !== 'admin' && input.userId) {
     q.assigneeId = input.userId;
