@@ -200,19 +200,21 @@ export default function TaskMediaDetail() {
 
   return (
     <div className='flex min-h-0 flex-col gap-6 -mx-6 -mb-6 bg-[#F8F9FA]'>
-      <div className='shrink-0 border-b border-slate-200/70 bg-[#F8F9FA] px-6 py-5 lg:px-8'>
+      <div className='shrink-0 bg-[#F8F9FA] px-6 pt-6 pb-1 lg:px-8'>
         <div className='mx-auto max-w-4xl'>
-          <div className='flex flex-wrap items-center gap-2 text-sm'>
-            <Link
-              to='/tasks'
-              className='inline-flex items-center gap-1.5 font-medium text-slate-500 transition-colors hover:text-slate-700'
-            >
-              <ArrowLeft size={16} aria-hidden />
-              Back to Tasks
-            </Link>
-            <span className='hidden h-4 w-px bg-slate-300 sm:block' aria-hidden />
-            <span className='font-semibold tracking-tight text-[#8B6914]'>Task Media</span>
-          </div>
+          <Link
+            to='/tasks'
+            className='inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700'
+          >
+            <ArrowLeft size={16} aria-hidden />
+            Back to Tasks
+          </Link>
+          <h1 className='mt-3 text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>
+            Task Media
+          </h1>
+          <p className='mt-1 text-sm text-slate-500'>
+            Review task details and uploaded attachments.
+          </p>
         </div>
       </div>
 
