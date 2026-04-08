@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/context/AuthContext';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
+import { type TaskPriority } from '../lib/types/task';
 import { TaskCard } from '../components/tasks/TaskCard';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 
@@ -50,8 +52,54 @@ export default function OutletTasks() {
     return tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
   }, [tasks, assignedOutletIds]);
 
+  const openTasks = useMemo(() => {
+    const today = dayjs();
+    const priorityRank: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
+    const list = boardTasks.filter((task) => task.status !== 'completed');
+
+    const withMeta = list.map((task) => {
+      const isHigh = task.priority === 'high';
+      const isDueToday = dayjs(task.dueDate).isSame(today, 'day');
+      const group = isHigh ? 0 : isDueToday ? 1 : 2;
+      return { task, group };
+    });
+
+    withMeta.sort((a, b) => {
+      if (a.group !== b.group) return a.group - b.group;
+      if (a.group === 0) {
+        const byDue = dayjs(a.task.dueDate).valueOf() - dayjs(b.task.dueDate).valueOf();
+        if (byDue !== 0) return byDue;
+        return dayjs(b.task.createdAt).valueOf() - dayjs(a.task.createdAt).valueOf();
+      }
+      if (a.group === 1) {
+        const byPriority = priorityRank[a.task.priority] - priorityRank[b.task.priority];
+        if (byPriority !== 0) return byPriority;
+        return dayjs(a.task.dueDate).valueOf() - dayjs(b.task.dueDate).valueOf();
+      }
+      const byDue = dayjs(a.task.dueDate).valueOf() - dayjs(b.task.dueDate).valueOf();
+      if (byDue !== 0) return byDue;
+      return dayjs(b.task.createdAt).valueOf() - dayjs(a.task.createdAt).valueOf();
+    });
+
+    return withMeta.map((entry) => entry.task);
+  }, [boardTasks]);
+
+  const completedTasks = useMemo(() => {
+    const list = boardTasks.filter((task) => task.status === 'completed');
+    return [...list].sort((a, b) => {
+      const aCompletedAt = a.completedAt
+        ? dayjs(a.completedAt).valueOf()
+        : dayjs(a.updatedAt ?? a.createdAt).valueOf();
+      const bCompletedAt = b.completedAt
+        ? dayjs(b.completedAt).valueOf()
+        : dayjs(b.updatedAt ?? b.createdAt).valueOf();
+      return bCompletedAt - aCompletedAt;
+    });
+  }, [boardTasks]);
+
   const selectClass =
     'h-10 w-full max-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400';
+  const completedListScrollClass = 'max-h-[calc(100dvh-24rem)] sm:max-h-[calc(100dvh-21rem)]';
 
   return (
     <div className='flex min-h-0 flex-col gap-6 -mx-6 -mb-6'>
@@ -76,19 +124,49 @@ export default function OutletTasks() {
         </div>
       </div>
 
-      <div className='overflow-y-auto overflow-x-hidden overscroll-contain bg-[#f9fafb] px-6 pb-8 [scrollbar-gutter:stable] lg:px-8'>
-        <div className='mx-auto w-full max-w-2xl space-y-4'>
-          {boardTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onOpen={() => navigate(`/outlet-tasks/${task.id}`)}
-            />
-          ))}
+      <div className='space-y-5 bg-[#f9fafb] px-6 pb-8 lg:px-8'>
+        <div className='mx-auto w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+          <h2 className='mb-3 text-base font-bold text-slate-900'>Open Tasks</h2>
+          <div className='scrollbar-hide overflow-x-auto overflow-y-hidden pb-2 [scrollbar-gutter:stable]'>
+            <div className='flex min-w-max gap-4'>
+              {openTasks.map((task) => (
+                <div key={task.id} className='w-[320px] shrink-0 md:w-[340px]'>
+                  <TaskCard task={task} onOpen={() => navigate(`/outlet-tasks/${task.id}`)} />
+                </div>
+              ))}
+            </div>
+          </div>
+          {openTasks.length === 0 && (
+            <div className='py-10 text-center text-slate-500'>
+              <p className='text-sm font-medium'>No open tasks found</p>
+            </div>
+          )}
+        </div>
+
+        <div className='mx-auto w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+          <h2 className='mb-3 text-base font-bold text-slate-900'>Completed Tasks</h2>
+          <div
+            className={`scrollbar-hide overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-gutter:stable] ${completedListScrollClass}`}
+          >
+            <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
+              {completedTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onOpen={() => navigate(`/outlet-tasks/${task.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+          {completedTasks.length === 0 && (
+            <div className='py-10 text-center text-slate-500'>
+              <p className='text-sm font-medium'>No completed tasks found</p>
+            </div>
+          )}
         </div>
 
         {boardTasks.length === 0 && (
-          <div className='mx-auto max-w-2xl py-16 text-center text-slate-500'>
+          <div className='mx-auto w-full max-w-6xl rounded-2xl border border-slate-200 bg-white py-16 text-center text-slate-500 shadow-sm'>
             <p className='text-lg font-medium text-slate-700'>No tasks found</p>
             <p className='mt-1 text-sm'>Try adjusting your filters.</p>
           </div>
