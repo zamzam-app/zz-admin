@@ -11,7 +11,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { DateWheelPicker } from '../common/DateWheelPicker';
 
-const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
+const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high'];
 
 const TASK_CATEGORY_OPTIONS: { value: TaskCategory; label: string }[] = [
   { value: 'hygiene', label: 'Hygiene' },

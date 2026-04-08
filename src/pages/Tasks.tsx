@@ -11,8 +11,8 @@ import { usersApi } from '../lib/services/api/users.api';
 import {
   TASK_KEYS,
   type CreateTaskPayload,
+  type TaskPriority,
   type Task,
-  type TaskStatus,
   type UpdateTaskPayload,
 } from '../lib/types/task';
 import { OUTLET_KEYS } from '../lib/types/outlet';
@@ -22,11 +22,14 @@ import Card from '../components/common/Card';
 import { TaskFormModal, type TaskFormState } from '../components/tasks/TaskFormModal';
 import { TaskCard } from '../components/tasks/TaskCard';
 
-const STATUS_BADGE: Record<TaskStatus, { label: string; color: string; bg: string }> = {
+const STATUS_BADGE: Record<'open' | 'completed', { label: string; color: string; bg: string }> = {
   open: { label: 'Open', color: '#1F2937', bg: '#F8FAFC' },
-  in_progress: { label: 'In Progress', color: '#9A3412', bg: '#FFF7ED' },
   completed: { label: 'Completed', color: '#065F46', bg: '#ECFDF3' },
 };
+
+function getStatusBadge(status: Task['status']) {
+  return status === 'completed' ? STATUS_BADGE.completed : STATUS_BADGE.open;
+}
 
 const EMPTY_FORM: TaskFormState = {
   description: '',
@@ -47,8 +50,17 @@ export default function Tasks() {
 
   const [filterOutletId, setFilterOutletId] = useState('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<'all' | TaskPriority>('all');
 
-  const taskListQueryKey = ['tasks', 'list', filterOutletId, filterStatus, role, userId] as const;
+  const taskListQueryKey = [
+    'tasks',
+    'list',
+    filterOutletId,
+    filterStatus,
+    filterPriority,
+    role,
+    userId,
+  ] as const;
 
   const { data: tasks = [] } = useApiQuery(
     [...taskListQueryKey],
@@ -60,6 +72,7 @@ export default function Tasks() {
             userId,
             filterOutletId,
             filterStatus,
+            filterPriority,
           }),
         ),
       ),
@@ -99,6 +112,51 @@ export default function Tasks() {
     if (role === 'admin' || !userId) return [];
     return boardTasks.filter((task) => task.status !== 'completed');
   }, [boardTasks, role, userId]);
+
+  const openTasks = useMemo(() => {
+    const today = dayjs();
+    const priorityRank: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
+    const tasks = boardTasks.filter((task) => task.status !== 'completed');
+
+    const withMeta = tasks.map((task) => {
+      const isHigh = task.priority === 'high';
+      const isDueToday = dayjs(task.dueDate).isSame(today, 'day');
+      const group = isHigh ? 0 : isDueToday ? 1 : 2;
+      return { task, group, isDueToday };
+    });
+
+    withMeta.sort((a, b) => {
+      if (a.group !== b.group) return a.group - b.group;
+      if (a.group === 0) {
+        const byDue = dayjs(a.task.dueDate).valueOf() - dayjs(b.task.dueDate).valueOf();
+        if (byDue !== 0) return byDue;
+        return dayjs(b.task.createdAt).valueOf() - dayjs(a.task.createdAt).valueOf();
+      }
+      if (a.group === 1) {
+        const byPriority = priorityRank[a.task.priority] - priorityRank[b.task.priority];
+        if (byPriority !== 0) return byPriority;
+        return dayjs(a.task.dueDate).valueOf() - dayjs(b.task.dueDate).valueOf();
+      }
+      const byDue = dayjs(a.task.dueDate).valueOf() - dayjs(b.task.dueDate).valueOf();
+      if (byDue !== 0) return byDue;
+      return dayjs(b.task.createdAt).valueOf() - dayjs(a.task.createdAt).valueOf();
+    });
+
+    return withMeta.map((entry) => entry.task);
+  }, [boardTasks]);
+
+  const completedTasks = useMemo(() => {
+    const tasks = boardTasks.filter((task) => task.status === 'completed');
+    return [...tasks].sort((a, b) => {
+      const aCompletedAt = a.completedAt
+        ? dayjs(a.completedAt).valueOf()
+        : dayjs(a.updatedAt ?? a.createdAt).valueOf();
+      const bCompletedAt = b.completedAt
+        ? dayjs(b.completedAt).valueOf()
+        : dayjs(b.updatedAt ?? b.createdAt).valueOf();
+      return bCompletedAt - aCompletedAt;
+    });
+  }, [boardTasks]);
 
   const outletsForFilter = useMemo(() => {
     if (role === 'admin') return outlets;
@@ -296,14 +354,10 @@ export default function Tasks() {
   const selectClass =
     'h-10 w-full max-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400';
 
-  /**
-   * Max height for the task grid scroll area only (not a fixed full-viewport block), so short lists
-   * don’t leave a large empty band below the cards. Header sits above this region.
-   */
-  const taskListScrollClass =
+  const completedListScrollClass =
     role === 'admin'
-      ? 'max-h-[calc(100dvh-15rem)] sm:max-h-[calc(100dvh-12.5rem)]'
-      : 'max-h-[calc(100dvh-28rem)] sm:max-h-[calc(100dvh-24rem)]';
+      ? 'max-h-[calc(100dvh-25rem)] sm:max-h-[calc(100dvh-22rem)]'
+      : 'max-h-[calc(100dvh-36rem)] sm:max-h-[calc(100dvh-32rem)]';
 
   /** Full-bleed within MUI main (p:3 = 24px); flush top for admin so header uses full main width. */
   const pageBleedClass =
@@ -347,17 +401,22 @@ export default function Tasks() {
                         Due {dayjs(task.dueDate).format('DD MMM YYYY')}
                       </p>
                     </div>
-                    <Chip
-                      label={STATUS_BADGE[task.status].label}
-                      size='small'
-                      sx={{
-                        bgcolor: STATUS_BADGE[task.status].bg,
-                        color: STATUS_BADGE[task.status].color,
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        fontSize: 10,
-                      }}
-                    />
+                    {(() => {
+                      const badge = getStatusBadge(task.status);
+                      return (
+                        <Chip
+                          label={badge.label}
+                          size='small'
+                          sx={{
+                            bgcolor: badge.bg,
+                            color: badge.color,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            fontSize: 10,
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                 ))
               )}
@@ -408,31 +467,76 @@ export default function Tasks() {
             >
               <option value='all'>All statuses</option>
               <option value='open'>Open</option>
-              <option value='in_progress'>In progress</option>
               <option value='completed'>Completed</option>
+            </select>
+            <select
+              className={selectClass}
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value as 'all' | TaskPriority)}
+              aria-label='Filter by priority'
+            >
+              <option value='all'>All priorities</option>
+              <option value='low'>Low</option>
+              <option value='medium'>Medium</option>
+              <option value='high'>High</option>
             </select>
           </div>
         </div>
 
-        <div
-          className={`overflow-y-auto overflow-x-hidden overscroll-contain bg-[#f9fafb] px-6 pt-4 pb-3 [scrollbar-gutter:stable] lg:px-8 ${taskListScrollClass}`}
-        >
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
-            {boardTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                isAdmin={role === 'admin'}
-                onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
-                onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
-                onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
-                onOpen={() => navigate(`/tasks/${task.id}`)}
-              />
-            ))}
+        <div className='space-y-5 bg-[#f9fafb] px-6 pt-4 pb-3 lg:px-8'>
+          <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+            <h2 className='mb-3 text-base font-bold text-slate-900'>Open Tasks</h2>
+            <div className='scrollbar-hide overflow-x-auto overflow-y-hidden pb-2 [scrollbar-gutter:stable]'>
+              <div className='flex min-w-max gap-4'>
+                {openTasks.map((task) => (
+                  <div key={task.id} className='w-[320px] shrink-0 md:w-[340px]'>
+                    <TaskCard
+                      task={task}
+                      isAdmin={role === 'admin'}
+                      onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
+                      onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
+                      onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
+                      onOpen={() => navigate(`/tasks/${task.id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            {openTasks.length === 0 && (
+              <div className='py-10 text-center text-slate-500'>
+                <p className='text-sm font-medium'>No open tasks found</p>
+              </div>
+            )}
+          </div>
+
+          <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+            <h2 className='mb-3 text-base font-bold text-slate-900'>Completed Tasks</h2>
+            <div
+              className={`scrollbar-hide overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-gutter:stable] ${completedListScrollClass}`}
+            >
+              <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
+                {completedTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isAdmin={role === 'admin'}
+                    onEdit={role === 'admin' ? () => handleOpenEdit(task) : undefined}
+                    onDelete={canDeleteTask ? () => handleDeleteTask(task) : undefined}
+                    onComplete={role !== 'admin' ? () => handleCompleteTask(task) : undefined}
+                    onOpen={() => navigate(`/tasks/${task.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+            {completedTasks.length === 0 && (
+              <div className='py-10 text-center text-slate-500'>
+                <p className='text-sm font-medium'>No completed tasks found</p>
+              </div>
+            )}
           </div>
 
           {boardTasks.length === 0 && (
-            <div className='py-16 text-center text-slate-500'>
+            <div className='rounded-2xl border border-slate-200 bg-white py-16 text-center text-slate-500 shadow-sm'>
               <p className='text-lg font-medium'>No tasks found</p>
               <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>
             </div>

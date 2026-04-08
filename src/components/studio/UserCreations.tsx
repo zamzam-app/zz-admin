@@ -156,7 +156,7 @@ export const UserCreations = () => {
       {/* Sticky Header with Search & Filters */}
       <div className='sticky top-0 z-20 bg-gray-50/80 backdrop-blur-xl pb-6 pt-2'>
         <div className='flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-100/50'>
-          <div className='relative flex-grow max-w-md group'>
+          <div className='relative grow max-w-md group'>
             <Search
               className='absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#D4AF37] transition-colors'
               size={20}
@@ -193,7 +193,7 @@ export const UserCreations = () => {
       </div>
 
       {/* Scrollable Gallery Area */}
-      <div className='flex-grow px-2 pb-12 overflow-y-auto scrollbar-hide'>
+      <div className='grow px-2 pb-12 overflow-y-auto scrollbar-hide'>
         {filteredCreations.length === 0 ? (
           <NoDataFallback
             title='No creations found'
@@ -224,9 +224,9 @@ export const UserCreations = () => {
           ) : (
             filteredCreations.length > 0 && (
               <div className='text-[10px] font-black uppercase tracking-[0.3em] text-gray-300 flex items-center gap-4'>
-                <div className='h-[1px] w-12 bg-gray-100' />
+                <div className='h-px w-12 bg-gray-100' />
                 End of Gallery
-                <div className='h-[1px] w-12 bg-gray-100' />
+                <div className='h-px w-12 bg-gray-100' />
               </div>
             )
           )}
@@ -262,7 +262,7 @@ export const UserCreations = () => {
             </div>
 
             <div className='lg:w-1/2 p-8 lg:p-12 flex flex-col overflow-y-auto bg-white'>
-              <div className='flex-grow uppercase font-black'>
+              <div className='grow uppercase font-black'>
                 <div className='flex items-center gap-2 text-[#D4AF37] mb-2 tracking-[0.2em] text-[10px]'>
                   <Sparkles size={14} /> AI Generation Analysis
                 </div>
@@ -310,7 +310,7 @@ export const UserCreations = () => {
               <div className='flex items-center gap-4 mt-auto pt-8 border-t border-gray-100 sticky bottom-0 bg-white'>
                 <Button
                   variant='admin-primary'
-                  className='flex-grow h-14 rounded-2xl shadow-xl shadow-[#D4AF37]/20 flex items-center justify-center gap-3'
+                  className='grow h-14 rounded-2xl shadow-xl shadow-[#D4AF37]/20 flex items-center justify-center gap-3'
                   onClick={(e) =>
                     handleDownload(e, selectedCreation.imageUrl, selectedCreation._id)
                   }
@@ -340,7 +340,7 @@ const CreationCard = ({
     onClick={onSelect}
     className='group bg-white rounded-[2.5rem] border border-transparent hover:border-[#D4AF37]/20 p-2.5 transition-all duration-500 hover:shadow-2xl hover:shadow-[#D4AF37]/5 cursor-pointer transform hover:-translate-y-1'
   >
-    <div className='relative h-64 rounded-[2rem] overflow-hidden bg-[#F9FAFB]'>
+    <div className='relative h-64 rounded-4xl overflow-hidden bg-[#F9FAFB]'>
       <Image
         src={creation.imageUrl}
         alt='Generated Cake'
@@ -348,7 +348,7 @@ const CreationCard = ({
         className='w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110'
       />
 
-      <div className='absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500' />
+      <div className='absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500' />
 
       <div className='absolute bottom-6 left-6 right-6 flex items-center justify-between translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500'>
         <div className='flex items-center gap-3'>
@@ -408,7 +408,7 @@ const CreationCard = ({
         )}
       </div>
 
-      <div className='flex items-center gap-4 text-[9px] font-black uppercase text-gray-400 tracking-[0.1em]'>
+      <div className='flex items-center gap-4 text-[9px] font-black uppercase text-gray-400 tracking-widest'>
         <div className='flex items-center gap-1.5'>
           <Calendar size={12} className='text-gray-300' />
           {calculateAge(creation.userId.dob)}
