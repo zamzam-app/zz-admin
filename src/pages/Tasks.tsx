@@ -489,7 +489,7 @@ export default function Tasks() {
             <div className='scrollbar-hide overflow-x-auto overflow-y-hidden pb-2 [scrollbar-gutter:stable]'>
               <div className='flex min-w-max gap-4'>
                 {openTasks.map((task) => (
-                  <div key={task.id} className='w-[320px] shrink-0 md:w-[340px]'>
+                  <div key={task.id} className='w-[320px] shrink-0 md:w-85'>
                     <TaskCard
                       task={task}
                       isAdmin={role === 'admin'}
