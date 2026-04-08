@@ -545,13 +545,6 @@ export default function Tasks() {
               </div>
             )}
           </div>
-
-          {boardTasks.length === 0 && (
-            <div className='rounded-2xl border border-slate-200 bg-white py-16 text-center text-slate-500 shadow-sm'>
-              <p className='text-lg font-medium'>No tasks found</p>
-              <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>
-            </div>
-          )}
         </div>
       </section>
 
