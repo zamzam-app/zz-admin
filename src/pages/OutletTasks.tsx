@@ -1,36 +1,12 @@
 import { useMemo, useState } from 'react';
-import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/context/AuthContext';
 import { useApiQuery } from '../lib/react-query/use-api-hooks';
-import { type Task, type TaskStatus } from '../lib/types/task';
+import { TaskCard } from '../components/tasks/TaskCard';
 import { OUTLET_KEYS } from '../lib/types/outlet';
 
-const STATUS_BADGE: Record<TaskStatus, { label: string; className: string }> = {
-  open: {
-    label: 'Assigned',
-    className: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-100',
-  },
-  in_progress: {
-    label: 'In progress',
-    className: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-100',
-  },
-  completed: {
-    label: 'Completed',
-    className: 'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-100',
-  },
-};
-
-function formatCategoryLabel(category: string | undefined) {
-  if (!category) return '';
-  const lower = category.toLowerCase();
-  if (['hygiene', 'maintenance', 'inventory', 'staffing'].includes(lower)) {
-    return lower.charAt(0).toUpperCase() + lower.slice(1);
-  }
-  return category;
-}
-
 export default function OutletTasks() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const role = user?.role ?? 'staff';
   const userId = user?.id ?? user?._id ?? '';
@@ -103,7 +79,11 @@ export default function OutletTasks() {
       <div className='overflow-y-auto overflow-x-hidden overscroll-contain bg-[#f9fafb] px-6 pb-8 [scrollbar-gutter:stable] lg:px-8'>
         <div className='mx-auto w-full max-w-2xl space-y-4'>
           {boardTasks.map((task) => (
-            <MyTaskCard key={task.id} task={task} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onOpen={() => navigate(`/outlet-tasks/${task.id}`)}
+            />
           ))}
         </div>
 
@@ -115,47 +95,5 @@ export default function OutletTasks() {
         )}
       </div>
     </div>
-  );
-}
-
-function MyTaskCard({ task }: { task: Task }) {
-  const navigate = useNavigate();
-  const badge = STATUS_BADGE[task.status];
-  const headlineName = task.outletName?.trim() || task.title;
-  const categoryLabel = formatCategoryLabel(task.category);
-
-  return (
-    <article
-      role='button'
-      tabIndex={0}
-      onClick={() => navigate(`/outlet-tasks/${task.id}`)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          navigate(`/outlet-tasks/${task.id}`);
-        }
-      }}
-      className='cursor-pointer rounded-lg border border-slate-200/90 bg-white p-5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D4AF37]'
-      aria-label={headlineName}
-    >
-      <div className='flex items-start justify-between gap-3'>
-        <span
-          className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${badge.className}`}
-        >
-          {badge.label}
-        </span>
-        <time className='shrink-0 text-xs text-slate-400' dateTime={task.dueDate}>
-          {dayjs(task.dueDate).format('YYYY-MM-DD')}
-        </time>
-      </div>
-
-      <h2 className='mt-3 text-base font-bold leading-snug text-[#0F172A]'>{headlineName}</h2>
-
-      {categoryLabel ? (
-        <p className='mt-1.5 text-sm font-medium capitalize text-blue-600'>{categoryLabel}</p>
-      ) : null}
-
-      <p className='mt-2 text-sm leading-relaxed text-slate-600'>{task.description}</p>
-    </article>
   );
 }
