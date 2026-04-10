@@ -26,6 +26,7 @@ export function AttachmentPreviewModal({
       onCancel={onClose}
       footer={null}
       width={kind === 'audio' ? 420 : 760}
+      zIndex={2000}
       centered
       destroyOnHidden
     >

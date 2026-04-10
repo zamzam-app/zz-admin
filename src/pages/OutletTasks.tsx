@@ -135,7 +135,7 @@ export default function OutletTasks() {
                 <TaskCard
                   key={task.id}
                   task={task}
-                  onOpen={() => navigate(`/outlet-tasks/${task.id}`)}
+                  onOpen={() => navigate(`/outlet-tasks/completed/${task.id}`)}
                 />
               ))}
             </div>

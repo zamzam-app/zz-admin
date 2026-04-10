@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Modal } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeft, FileText, Image as ImageIcon, Mic, Paperclip, Video } from 'lucide-react';
+import { ArrowLeft, FileText, Image as ImageIcon, Paperclip, Video } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/context/AuthContext';
 import { useApiQuery } from '../../lib/react-query/use-api-hooks';
@@ -135,13 +135,10 @@ function AttachmentTile({ item, onOpen }: { item: MediaItem; onOpen: () => void 
     <button
       type='button'
       onClick={onOpen}
-      className='h-20 rounded-2xl border border-slate-300 bg-white px-3 py-2 text-left transition-colors hover:bg-slate-50'
+      className='aspect-square w-12.5 cursor-pointer rounded-2xl border border-slate-300 bg-white transition-colors hover:bg-slate-50'
     >
-      <div className='flex h-full items-start justify-between'>
-        <span className='text-sm font-bold uppercase text-slate-900'>
-          {item.kind === 'doc' ? 'DOC' : item.kind.toUpperCase()}
-        </span>
-        <Icon size={16} className='text-slate-500' aria-hidden />
+      <div className='flex h-full items-center justify-center'>
+        <Icon size={20} className='text-slate-500' aria-hidden />
       </div>
     </button>
   );
@@ -193,6 +190,73 @@ export default function TaskMediaDetail() {
   const task = useMemo(() => boardTasks.find((t) => t.id === taskId), [boardTasks, taskId]);
   const mediaItems = useMemo(() => (task ? buildMediaItems(task) : []), [task]);
 
+  const adminMedia = useMemo(() => {
+    if (!task) return [];
+    if (task.adminSubmission) {
+      const items: MediaItem[] = [];
+      const att = task.adminSubmission.attachments ?? {
+        images: [],
+        videos: [],
+        audios: [],
+        files: [],
+      };
+      att.images.forEach((url, i) =>
+        items.push({ id: `admin-img-${i}`, url, kind: 'image', name: `Image ${i + 1}` }),
+      );
+      att.videos.forEach((url, i) =>
+        items.push({ id: `admin-vid-${i}`, url, kind: 'video', name: `Video ${i + 1}` }),
+      );
+      att.audios.forEach((url, i) =>
+        items.push({ id: `admin-aud-${i}`, url, kind: 'audio', name: `Audio ${i + 1}` }),
+      );
+      att.files.forEach((url, i) =>
+        items.push({
+          id: `admin-file-${i}`,
+          url,
+          kind: inferMediaKind(url),
+          name: `File ${i + 1}`,
+        }),
+      );
+      return items;
+    }
+    // Legacy fallback: if no submission objects exist, show available media in top box.
+    if (!task.managerSubmission) return mediaItems;
+    return [];
+  }, [task, mediaItems]);
+
+  const managerMedia = useMemo(() => {
+    if (!task) return [];
+    if (task.managerSubmission) {
+      const items: MediaItem[] = [];
+      const att = task.managerSubmission.attachments ?? {
+        images: [],
+        videos: [],
+        audios: [],
+        files: [],
+      };
+      att.images.forEach((url, i) =>
+        items.push({ id: `mgr-img-${i}`, url, kind: 'image', name: `Image ${i + 1}` }),
+      );
+      att.videos.forEach((url, i) =>
+        items.push({ id: `mgr-vid-${i}`, url, kind: 'video', name: `Video ${i + 1}` }),
+      );
+      att.audios.forEach((url, i) =>
+        items.push({ id: `mgr-aud-${i}`, url, kind: 'audio', name: `Audio ${i + 1}` }),
+      );
+      att.files.forEach((url, i) =>
+        items.push({ id: `mgr-file-${i}`, url, kind: inferMediaKind(url), name: `File ${i + 1}` }),
+      );
+      return items;
+    }
+    // Bottom box should only show managerSubmission attachments.
+    return [];
+  }, [task]);
+
+  const adminAudioItems = adminMedia.filter((m) => m.kind === 'audio');
+  const adminOtherItems = adminMedia.filter((m) => m.kind !== 'audio');
+  const managerAudioItems = managerMedia.filter((m) => m.kind === 'audio');
+  const managerOtherItems = managerMedia.filter((m) => m.kind !== 'audio');
+
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
   if (!taskId) return null;
@@ -226,36 +290,30 @@ export default function TaskMediaDetail() {
   }
 
   const badge = STATUS_BADGE[task.status];
-  const headlineName = task.outletName?.trim() || task.title;
+  const outletHeadline = task.outletName?.trim() || task.outletId?.trim() || '';
   const categoryLabel = formatCategoryLabel(task.category);
   const assigneeNames =
     task.assigneeNames && task.assigneeNames.length > 0 ? task.assigneeNames : [];
-  const ownerAudioItems = mediaItems.filter(
-    (item) => (task.adminAudioUrl ?? []).includes(item.url) && item.kind === 'audio',
-  );
-  const ownerAudioSet = new Set(ownerAudioItems.map((item) => item.url));
-  const managerAttachmentItems = mediaItems.filter(
-    (item) => item.kind !== 'audio' && !ownerAudioSet.has(item.url),
-  );
-  const managerAudioItems = mediaItems.filter(
-    (item) => item.kind === 'audio' && !ownerAudioSet.has(item.url),
-  );
+  const managerCompletedDate =
+    task.managerSubmission?.updatedAt ?? task.completedAt ?? task.updatedAt ?? null;
 
   return (
     <div className='flex min-h-0 flex-col gap-6 -mx-6 -mb-6 bg-[#F8F9FA]'>
       <div className='shrink-0 bg-[#F8F9FA] px-6 pt-6 pb-1 lg:px-8'>
-        <div className='mx-auto max-w-4xl'>
+        <div className='relative mt-3 min-h-11'>
           <Link
             to='/tasks'
-            className='inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700'
+            className='absolute left-0 top-1/2 inline-flex -translate-y-1/2 items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700'
           >
             <ArrowLeft size={16} aria-hidden />
             Back to Tasks
           </Link>
-          <h1 className='mt-3 text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>
-            Task Media
+          <h1 className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>
+            Task Details
           </h1>
-          <p className='mt-1 text-sm text-slate-500'>
+        </div>
+        <div className='mx-auto max-w-4xl'>
+          <p className='mt-1 text-center text-sm text-slate-500'>
             Review task details and uploaded attachments.
           </p>
         </div>
@@ -263,70 +321,19 @@ export default function TaskMediaDetail() {
 
       <div className='overflow-y-auto overflow-x-hidden px-6 pb-10 lg:px-8'>
         <div className='mx-auto max-w-4xl'>
-          <div className='rounded-[2rem] border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
-            <section className='rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
-              <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
-                <div className='min-w-0 flex-1'>
-                  <div className='flex flex-wrap items-center gap-3'>
-                    {categoryLabel ? (
-                      <span className='inline-flex rounded-lg bg-amber-400/90 px-3 py-1 text-lg font-semibold text-black'>
-                        {categoryLabel}
-                      </span>
-                    ) : null}
-                    <h2 className='text-2xl font-bold tracking-tight text-black'>{headlineName}</h2>
-                  </div>
-
-                  <div className='mt-4 space-y-3 text-slate-900'>
-                    <div className='flex flex-wrap items-center gap-3'>
-                      <span className='w-28 text-2xl font-bold leading-none'>Assigned</span>
-                      <div className='flex flex-wrap gap-2'>
-                        {assigneeNames.map((name, idx) => (
-                          <span
-                            key={`assignee-${idx}-${name}`}
-                            className='inline-flex min-w-18 items-center justify-center rounded-md border border-slate-500 bg-white px-2.5 py-0.5 text-base'
-                          >
-                            {name}
-                          </span>
-                        ))}
-                        {assigneeNames.length === 0 ? (
-                          <span className='text-sm text-slate-500'>Unassigned</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div>
-                      <span className='text-2xl font-bold leading-none'>Description</span>
-                      <p className='mt-1 text-xl leading-snug text-slate-800'>{task.description}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className='w-full rounded-xl border border-slate-300 bg-white px-4 py-3 lg:w-52'>
-                  <p className='text-xs font-bold uppercase tracking-[0.14em] text-slate-500'>
-                    Deadline
-                  </p>
-                  <p className='mt-1 text-lg font-bold text-slate-900'>
-                    {dayjs(task.dueDate).format('MMM D, YYYY')}
-                  </p>
-                </div>
+          <div className='rounded-4xl border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
+            <div className='mb-5 flex flex-wrap items-start justify-between gap-3 px-1'>
+              <div className='flex min-w-0 flex-wrap items-center gap-3'>
+                {categoryLabel ? (
+                  <span className='inline-flex rounded-lg bg-amber-400/90 px-3 py-1 text-lg font-semibold text-black'>
+                    {categoryLabel}
+                  </span>
+                ) : null}
+                {outletHeadline ? (
+                  <h2 className='text-2xl font-bold tracking-tight text-black'>{outletHeadline}</h2>
+                ) : null}
               </div>
-
-              {ownerAudioItems.length > 0 ? (
-                <div className='mt-4 space-y-2'>
-                  <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>
-                    Owner audio
-                  </p>
-                  {ownerAudioItems.map((item) => (
-                    <WhatsAppAudioPlayer
-                      key={item.id}
-                      src={item.url}
-                      className='w-full max-w-[430px]'
-                      fitContainer
-                    />
-                  ))}
-                </div>
-              ) : null}
-
-              <div className='mt-4 flex flex-wrap items-center gap-2'>
+              <div className='flex flex-wrap items-center gap-2'>
                 <span
                   className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ring-1 ${badge.className}`}
                 >
@@ -338,19 +345,94 @@ export default function TaskMediaDetail() {
                   {task.priority}
                 </span>
               </div>
+            </div>
+
+            <section className='rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
+              <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+                <div className='min-w-0 flex-1'>
+                  <div className='space-y-3 text-slate-900'>
+                    <div className='flex flex-wrap items-center gap-3'>
+                      <span className='w-32 text-sm font-bold leading-none'>Deadline</span>
+                      <span className='text-sm font-medium leading-none text-slate-600'>
+                        {dayjs(task.dueDate).format('MMM D, YYYY')}
+                      </span>
+                    </div>
+                    <div className='flex flex-wrap items-center gap-3'>
+                      <span className='w-32 text-sm font-bold leading-none'>Assigned</span>
+                      {assigneeNames.length > 0 ? (
+                        <span className='text-sm text-slate-600'>{assigneeNames.join(', ')}</span>
+                      ) : (
+                        <span className='text-sm text-slate-500'>Unassigned</span>
+                      )}
+                    </div>
+                    <div className='flex items-start gap-3'>
+                      <span className='w-32 shrink-0 text-sm font-bold leading-none'>
+                        Description
+                      </span>
+                      <p className='leading-snug text-sm text-slate-600'>{task.description}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {adminAudioItems.length > 0 ? (
+                <div className='mt-4 space-y-2'>
+                  <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>
+                    Admin audio
+                  </p>
+                  {adminAudioItems.map((item) => (
+                    <WhatsAppAudioPlayer
+                      key={item.id}
+                      src={item.url}
+                      className='w-full max-w-107.5'
+                      fitContainer
+                    />
+                  ))}
+                </div>
+              ) : null}
+
+              {adminOtherItems.length > 0 ? (
+                <div className='mt-4'>
+                  <p className='mb-2 text-sm font-bold uppercase tracking-wide text-slate-600'>
+                    Admin Attachments
+                  </p>
+                  <div className='flex flex-wrap gap-3'>
+                    {adminOtherItems.map((item) => (
+                      <AttachmentTile
+                        key={item.id}
+                        item={item}
+                        onOpen={() => setSelectedMedia(item)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
 
             <section className='mt-5 rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
-              <h3 className='text-xl font-bold text-slate-900'>Attachments</h3>
-              <div className='mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'>
-                {managerAttachmentItems.map((item) => (
+              <h3 className='text-xl font-bold text-slate-900'>Manager Submission</h3>
+              {task.status === 'completed' && managerCompletedDate ? (
+                <p className='mt-2 text-xs font-semibold text-slate-600'>
+                  Completed on {dayjs(managerCompletedDate).format('MMM D, YYYY hh:mm A')}
+                </p>
+              ) : null}
+              {task.managerSubmission?.text && (
+                <div className='mt-2 flex items-start gap-2'>
+                  <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>
+                    Comments
+                  </p>
+                  <p className='text-slate-800'>{task.managerSubmission.text}</p>
+                </div>
+              )}
+              <div className='mt-3 flex flex-wrap gap-3'>
+                {managerOtherItems.map((item) => (
                   <AttachmentTile key={item.id} item={item} onOpen={() => setSelectedMedia(item)} />
                 ))}
-                {managerAttachmentItems.length === 0 ? (
+                {managerOtherItems.length === 0 && !managerAudioItems.length && (
                   <p className='col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500'>
                     No manager attachments available.
                   </p>
-                ) : null}
+                )}
               </div>
 
               {managerAudioItems.length > 0 ? (
@@ -360,7 +442,7 @@ export default function TaskMediaDetail() {
                     <WhatsAppAudioPlayer
                       key={item.id}
                       src={item.url}
-                      className='w-full max-w-[430px]'
+                      className='w-full max-w-107.5'
                       fitContainer
                     />
                   ))}
@@ -376,7 +458,7 @@ export default function TaskMediaDetail() {
         open={!!selectedMedia}
         onCancel={() => setSelectedMedia(null)}
         footer={null}
-        width={selectedMedia?.kind === 'audio' ? 420 : 720}
+        width={720}
         centered
         destroyOnHidden
       >
@@ -398,20 +480,6 @@ export default function TaskMediaDetail() {
             playsInline
             preload='metadata'
           />
-        )}
-        {selectedMedia?.kind === 'audio' && (
-          <div className='flex flex-col items-center gap-4 py-4'>
-            <div className='flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500'>
-              <Mic size={28} aria-hidden />
-            </div>
-            <audio
-              key={selectedMedia.url}
-              src={selectedMedia.url}
-              controls
-              className='w-full'
-              preload='metadata'
-            />
-          </div>
         )}
         {selectedMedia?.kind === 'pdf' && (
           <div className='space-y-3'>
