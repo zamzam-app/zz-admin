@@ -142,7 +142,6 @@ function PendingAudioAttachmentRow({ item, onRemove }: PendingAudioAttachmentRow
   return (
     <div className='flex items-start gap-2'>
       <div className='min-w-0 flex-1'>
-        <p className='mb-1 truncate text-sm font-medium text-slate-900'>{item.name}</p>
         <WhatsAppAudioPlayer src={sourceUrl} className='w-full' fitContainer />
       </div>
       <button
@@ -512,7 +511,7 @@ export function TaskFormModal({
                 <button
                   type='button'
                   onClick={() => attachmentInputRef.current?.click()}
-                  className='inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100'
+                  className='inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100'
                   aria-label='Upload attachments'
                 >
                   <Paperclip size={16} />
@@ -520,7 +519,7 @@ export function TaskFormModal({
                 <button
                   type='button'
                   onClick={mic.toggleRecording}
-                  className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
+                  className={`inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-colors ${
                     mic.isRecording
                       ? 'border-rose-300 bg-rose-50 text-rose-700'
                       : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
