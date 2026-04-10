@@ -39,6 +39,7 @@ export const TASKS = {
   BASE: '/tasks',
   BY_ID: (id: string) => `/tasks/${id}`,
   STATUS: (id: string) => `/tasks/${id}/status`,
+  BY_ASSIGNEE: (userId: string) => `/tasks/assignee/${userId}`,
 };
 
 export const TASK_CATEGORY = {

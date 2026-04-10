@@ -1,4 +1,10 @@
-import type { Task, TaskCategory, TaskPriority, TaskStatus } from '../../types/task';
+import type {
+  Task,
+  TaskCategory,
+  TaskPriority,
+  TaskStatus,
+  TaskSubmission,
+} from '../../types/task';
 
 /** Backend enum strings (NestJS class-validator / Swagger) */
 export type ApiTaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -36,6 +42,9 @@ export interface ApiTaskRaw {
   updatedAt?: string;
   completedAt?: string | null;
   completedBy?: string | null;
+
+  adminSubmission?: TaskSubmission;
+  managerSubmission?: TaskSubmission;
 }
 
 const PRIORITY_TO_API: Record<TaskPriority, ApiTaskPriority> = {
@@ -120,6 +129,19 @@ function extractOutletName(
   return undefined;
 }
 
+function normalizeSubmission(submission?: TaskSubmission): TaskSubmission | undefined {
+  if (!submission) return undefined;
+  return {
+    ...submission,
+    attachments: {
+      images: submission.attachments?.images ?? [],
+      videos: submission.attachments?.videos ?? [],
+      audios: submission.attachments?.audios ?? [],
+      files: submission.attachments?.files ?? [],
+    },
+  };
+}
+
 function normalizeAssigneeIds(ids: ApiTaskRaw['assigneeIds']): string[] {
   if (!Array.isArray(ids)) return [];
   return ids
@@ -186,16 +208,55 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
         ? raw.dueDate
         : new Date().toISOString();
 
-  const imgs = raw.imageUrls;
-  const firstImg = Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : undefined;
-
   const { ids: assigneeIds, names: assigneeNames } = extractAssignees(raw);
+
+  // Fallback Logic
+  const adminSubmission = normalizeSubmission(raw.adminSubmission);
+  const managerSubmission = normalizeSubmission(raw.managerSubmission);
+
+  const imageUrls =
+    adminSubmission || managerSubmission
+      ? [
+          ...(adminSubmission?.attachments?.images ?? []),
+          ...(managerSubmission?.attachments?.images ?? []),
+        ]
+      : raw.imageUrls;
+
+  const videoUrls =
+    adminSubmission || managerSubmission
+      ? [
+          ...(adminSubmission?.attachments?.videos ?? []),
+          ...(managerSubmission?.attachments?.videos ?? []),
+        ]
+      : raw.videoUrls;
+
+  const adminAudioUrl = adminSubmission
+    ? (adminSubmission.attachments?.audios ?? [])
+    : raw.adminAudioUrl;
+
+  const managerAudioUrl = managerSubmission
+    ? (managerSubmission.attachments?.audios ?? [])
+    : raw.managerAudioUrl;
+
+  const fileUrls =
+    adminSubmission || managerSubmission
+      ? [
+          ...(adminSubmission?.attachments?.files ?? []),
+          ...(managerSubmission?.attachments?.files ?? []),
+        ]
+      : [];
+
+  const managerComments = managerSubmission ? managerSubmission.text : raw.managerComments;
+
+  const comment = adminSubmission ? adminSubmission.text : raw.comment;
+
+  const firstImg = Array.isArray(imageUrls) && imageUrls.length > 0 ? imageUrls[0] : undefined;
 
   return {
     id,
     title,
     description,
-    comment: raw.comment,
+    comment,
     priority: parseApiPriority(raw.priority),
     dueDate: due,
     category: resolveTaskCategoryName(raw),
@@ -203,11 +264,12 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     outletId: resolveOutletId(raw),
     outletName: resolveOutletName(raw),
     imageUrl: firstImg,
-    imageUrls: imgs,
-    videoUrls: raw.videoUrls,
-    adminAudioUrl: raw.adminAudioUrl,
-    managerAudioUrl: raw.managerAudioUrl,
-    managerComments: raw.managerComments,
+    imageUrls,
+    videoUrls,
+    adminAudioUrl,
+    managerAudioUrl,
+    fileUrls,
+    managerComments,
     audioUrls: raw.audioUrls,
     status: parseApiStatus(raw.status),
     assigneeIds,
@@ -221,6 +283,8 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     updatedAt: raw.updatedAt,
     completedAt: raw.completedAt ?? null,
     completedBy: raw.completedBy ?? null,
+    adminSubmission,
+    managerSubmission,
   };
 }
 
