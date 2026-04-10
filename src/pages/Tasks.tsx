@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { Chip } from '@mui/material';
-import { Clock3, Plus } from 'lucide-react';
+import { Clock3, Plus, Tags } from 'lucide-react';
 import { useAuth } from '../lib/context/AuthContext';
 import { useImageUpload } from '../lib/hooks/useImageUpload';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
@@ -21,6 +21,7 @@ import { Button } from '../components/common/Button';
 import Card from '../components/common/Card';
 import { TaskFormModal, type TaskFormState } from '../components/tasks/TaskFormModal';
 import { TaskCard } from '../components/tasks/TaskCard';
+import { TaskCategoriesModal } from '../components/tasks/TaskCategoriesModal';
 
 const STATUS_BADGE: Record<'open' | 'completed', { label: string; color: string; bg: string }> = {
   open: { label: 'Open', color: '#1F2937', bg: '#F8FAFC' },
@@ -36,7 +37,7 @@ const EMPTY_FORM: TaskFormState = {
   priority: 'medium',
   dueDate: dayjs(),
   outletId: '',
-  category: '',
+  taskCategoryId: '',
   assigneeIds: [],
   adminAudioFiles: [],
 };
@@ -84,6 +85,7 @@ export default function Tasks() {
   );
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [taskCategoriesModalOpen, setTaskCategoriesModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<TaskFormState>(EMPTY_FORM);
   const {
@@ -247,7 +249,7 @@ export default function Tasks() {
       priority: task.priority,
       dueDate: dayjs(task.dueDate),
       outletId: task.outletId ? task.outletId : 'all',
-      category: task.category ?? '',
+      taskCategoryId: task.taskCategoryId ?? '',
       assigneeIds: task.assigneeIds,
       adminAudioFiles: [],
     });
@@ -271,7 +273,7 @@ export default function Tasks() {
       message.error('Please select a specific outlet. Each task must be tied to one outlet.');
       return;
     }
-    if (!form.category) {
+    if (!form.taskCategoryId) {
       message.error('Please select a task category.');
       return;
     }
@@ -298,7 +300,7 @@ export default function Tasks() {
           description: desc,
           priority: form.priority,
           dueDate,
-          category: form.category,
+          taskCategoryId: form.taskCategoryId,
           status: editing.status,
           assigneeIds,
         },
@@ -329,7 +331,7 @@ export default function Tasks() {
       description: desc,
       priority: form.priority,
       dueDate,
-      category: form.category,
+      taskCategoryId: form.taskCategoryId,
       outletId: outletMongoId,
       outletName: outlet?.name,
       status: 'open' as const,
@@ -435,13 +437,22 @@ export default function Tasks() {
               </p>
             </div>
             {role === 'admin' && (
-              <Button
-                variant='admin-primary'
-                onClick={handleOpenCreate}
-                className='shrink-0 rounded-xl px-5 py-3 font-semibold shadow-sm'
-              >
-                <Plus size={18} /> Assign Task
-              </Button>
+              <div className='flex shrink-0 items-center gap-3'>
+                <Button
+                  variant='outline'
+                  onClick={() => setTaskCategoriesModalOpen(true)}
+                  className='rounded-xl px-5 py-3 font-semibold shadow-sm'
+                >
+                  <Tags size={18} /> Task Categories
+                </Button>
+                <Button
+                  variant='admin-primary'
+                  onClick={handleOpenCreate}
+                  className='rounded-xl px-5 py-3 font-semibold shadow-sm'
+                >
+                  <Plus size={18} /> Assign Task
+                </Button>
+              </div>
             )}
           </div>
 
@@ -489,7 +500,7 @@ export default function Tasks() {
             <div className='scrollbar-hide overflow-x-auto overflow-y-hidden pb-2 [scrollbar-gutter:stable]'>
               <div className='flex min-w-max gap-4'>
                 {openTasks.map((task) => (
-                  <div key={task.id} className='w-[320px] shrink-0 md:w-[340px]'>
+                  <div key={task.id} className='w-[320px] shrink-0 md:w-85'>
                     <TaskCard
                       task={task}
                       isAdmin={role === 'admin'}
@@ -534,13 +545,6 @@ export default function Tasks() {
               </div>
             )}
           </div>
-
-          {boardTasks.length === 0 && (
-            <div className='rounded-2xl border border-slate-200 bg-white py-16 text-center text-slate-500 shadow-sm'>
-              <p className='text-lg font-medium'>No tasks found</p>
-              <p className='mt-1 text-sm'>Try adjusting your filters or assign a new task.</p>
-            </div>
-          )}
         </div>
       </section>
 
@@ -556,6 +560,10 @@ export default function Tasks() {
         }
         outlets={outlets}
         managers={managers}
+      />
+      <TaskCategoriesModal
+        open={taskCategoriesModalOpen}
+        onClose={() => setTaskCategoriesModalOpen(false)}
       />
     </div>
   );

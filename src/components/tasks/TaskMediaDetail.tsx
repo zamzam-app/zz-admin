@@ -263,7 +263,7 @@ export default function TaskMediaDetail() {
 
       <div className='overflow-y-auto overflow-x-hidden px-6 pb-10 lg:px-8'>
         <div className='mx-auto max-w-4xl'>
-          <div className='rounded-[2rem] border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
+          <div className='rounded-4xl border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
             <section className='rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
               <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
                 <div className='min-w-0 flex-1'>
@@ -319,7 +319,7 @@ export default function TaskMediaDetail() {
                     <WhatsAppAudioPlayer
                       key={item.id}
                       src={item.url}
-                      className='w-full max-w-[430px]'
+                      className='w-full max-w-107.5'
                       fitContainer
                     />
                   ))}
@@ -360,7 +360,7 @@ export default function TaskMediaDetail() {
                     <WhatsAppAudioPlayer
                       key={item.id}
                       src={item.url}
-                      className='w-full max-w-[430px]'
+                      className='w-full max-w-107.5'
                       fitContainer
                     />
                   ))}

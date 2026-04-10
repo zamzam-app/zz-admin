@@ -1,7 +1,6 @@
 import type { Task, TaskCategory, TaskPriority, TaskStatus } from '../../types/task';
 
 /** Backend enum strings (NestJS class-validator / Swagger) */
-export type ApiTaskCategory = 'HYGIENE' | 'MAINTENANCE' | 'INVENTORY' | 'STAFFING';
 export type ApiTaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type ApiTaskStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -11,6 +10,9 @@ export interface ApiTaskRaw {
   description?: string;
   comment?: string;
   category?: string;
+  taskCategoryId?: string | { _id?: string; id?: string; name?: string };
+  taskCategory?: string | { _id?: string; id?: string; name?: string };
+  taskCategoryName?: string;
   priority?: string;
   status?: string;
   dueDate?: string | Date;
@@ -36,13 +38,6 @@ export interface ApiTaskRaw {
   completedBy?: string | null;
 }
 
-const CATEGORY_TO_API: Record<TaskCategory, ApiTaskCategory> = {
-  hygiene: 'HYGIENE',
-  maintenance: 'MAINTENANCE',
-  inventory: 'INVENTORY',
-  staffing: 'STAFFING',
-};
-
 const PRIORITY_TO_API: Record<TaskPriority, ApiTaskPriority> = {
   low: 'LOW',
   medium: 'MEDIUM',
@@ -56,20 +51,27 @@ const STATUS_TO_API: Record<TaskStatus, ApiTaskStatus> = {
 };
 
 function parseApiCategory(v: string | undefined): TaskCategory | undefined {
-  if (!v) return undefined;
-  const u = v.toUpperCase();
-  const map: Record<string, TaskCategory> = {
-    HYGIENE: 'hygiene',
-    MAINTENANCE: 'maintenance',
-    INVENTORY: 'inventory',
-    STAFFING: 'staffing',
-  };
-  return (
-    map[u] ??
-    (['hygiene', 'maintenance', 'inventory', 'staffing'].includes(v.toLowerCase())
-      ? (v.toLowerCase() as TaskCategory)
-      : undefined)
-  );
+  return v?.trim() || undefined;
+}
+
+function extractEntityId(
+  input?: string | { _id?: string; id?: string; name?: string } | null,
+): string | undefined {
+  if (!input) return undefined;
+  if (typeof input === 'string') return input;
+  if (typeof input === 'object') {
+    if (input._id) return String(input._id);
+    if (input.id) return String(input.id);
+  }
+  return undefined;
+}
+
+function extractEntityName(
+  input?: string | { _id?: string; id?: string; name?: string } | null,
+): string | undefined {
+  if (!input || typeof input === 'string') return undefined;
+  if (typeof input.name === 'string' && input.name.trim()) return input.name.trim();
+  return undefined;
 }
 
 function parseApiPriority(v: string | undefined): TaskPriority {
@@ -160,6 +162,19 @@ function resolveOutletName(raw: ApiTaskRaw): string | undefined {
   return extractOutletName(raw.outletId);
 }
 
+function resolveTaskCategoryId(raw: ApiTaskRaw): string | undefined {
+  return extractEntityId(raw.taskCategoryId) ?? extractEntityId(raw.taskCategory);
+}
+
+function resolveTaskCategoryName(raw: ApiTaskRaw): string | undefined {
+  if (raw.taskCategoryName?.trim()) return raw.taskCategoryName.trim();
+  return (
+    extractEntityName(raw.taskCategoryId) ??
+    extractEntityName(raw.taskCategory) ??
+    parseApiCategory(raw.category)
+  );
+}
+
 export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
   const id = String(raw._id ?? raw.id ?? '');
   const description = String(raw.description ?? '');
@@ -183,7 +198,8 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     comment: raw.comment,
     priority: parseApiPriority(raw.priority),
     dueDate: due,
-    category: parseApiCategory(raw.category),
+    category: resolveTaskCategoryName(raw),
+    taskCategoryId: resolveTaskCategoryId(raw),
     outletId: resolveOutletId(raw),
     outletName: resolveOutletName(raw),
     imageUrl: firstImg,
@@ -206,10 +222,6 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
     completedAt: raw.completedAt ?? null,
     completedBy: raw.completedBy ?? null,
   };
-}
-
-export function toApiCategory(c: TaskCategory): ApiTaskCategory {
-  return CATEGORY_TO_API[c];
 }
 
 export function toApiPriority(p: TaskPriority): ApiTaskPriority {

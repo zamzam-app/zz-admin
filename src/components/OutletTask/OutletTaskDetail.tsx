@@ -428,7 +428,7 @@ function OutletTaskDetailContent({
 
       <div className='overflow-y-auto overflow-x-hidden px-6 pb-10 lg:px-8'>
         <div className='mx-auto max-w-4xl'>
-          <div className='rounded-[2rem] border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
+          <div className='rounded-4xl border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
             <section className='rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
               <div className='flex flex-wrap items-center gap-3'>
                 {categoryLabel ? (
@@ -472,7 +472,7 @@ function OutletTaskDetailContent({
                     <WhatsAppAudioPlayer
                       key={`owner-audio-${idx}-${url}`}
                       src={url}
-                      className='w-full max-w-[430px]'
+                      className='w-full max-w-107.5'
                       fitContainer
                     />
                   ))
@@ -575,7 +575,7 @@ function OutletTaskDetailContent({
                   <WhatsAppAudioPlayer
                     key={`manager-uploaded-audio-${idx}-${attachment.id}`}
                     src={attachment.url}
-                    className='w-full max-w-[430px]'
+                    className='w-full max-w-107.5'
                     fitContainer
                   />
                 ))}
@@ -585,7 +585,7 @@ function OutletTaskDetailContent({
                     <div key={attachment.id} className='flex items-start gap-2'>
                       <WhatsAppAudioPlayer
                         src={sourceUrl}
-                        className='w-full max-w-[430px]'
+                        className='w-full max-w-107.5'
                         fitContainer
                       />
                       <button
