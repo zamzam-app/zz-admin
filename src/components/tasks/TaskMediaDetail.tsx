@@ -352,24 +352,24 @@ export default function TaskMediaDetail() {
                 <div className='min-w-0 flex-1'>
                   <div className='space-y-3 text-slate-900'>
                     <div className='flex flex-wrap items-center gap-3'>
-                      <span className='w-32 text-2xl font-bold leading-none'>Deadline</span>
-                      <span className='text-xl font-medium leading-none text-slate-600'>
+                      <span className='w-32 text-sm font-bold leading-none'>Deadline</span>
+                      <span className='text-sm font-medium leading-none text-slate-600'>
                         {dayjs(task.dueDate).format('MMM D, YYYY')}
                       </span>
                     </div>
                     <div className='flex flex-wrap items-center gap-3'>
-                      <span className='w-32 text-2xl font-bold leading-none'>Assigned</span>
+                      <span className='w-32 text-sm font-bold leading-none'>Assigned</span>
                       {assigneeNames.length > 0 ? (
-                        <span className='text-xl text-slate-600'>{assigneeNames.join(', ')}</span>
+                        <span className='text-sm text-slate-600'>{assigneeNames.join(', ')}</span>
                       ) : (
                         <span className='text-sm text-slate-500'>Unassigned</span>
                       )}
                     </div>
                     <div className='flex items-start gap-3'>
-                      <span className='w-32 shrink-0 text-2xl font-bold leading-none'>
+                      <span className='w-32 shrink-0 text-sm font-bold leading-none'>
                         Description
                       </span>
-                      <p className='text-xl leading-snug text-slate-600'>{task.description}</p>
+                      <p className='leading-snug text-sm text-slate-600'>{task.description}</p>
                     </div>
                   </div>
                 </div>
