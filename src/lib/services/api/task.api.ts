@@ -52,6 +52,18 @@ interface CreateTaskDtoBody {
   managerSubmission?: TaskSubmission;
 }
 
+function sanitizeSubmission(submission: TaskSubmission): TaskSubmission {
+  return {
+    text: submission.text,
+    attachments: {
+      images: submission.attachments.images ?? [],
+      videos: submission.attachments.videos ?? [],
+      audios: submission.attachments.audios ?? [],
+      files: submission.attachments.files ?? [],
+    },
+  };
+}
+
 function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
   if (!payload.taskCategoryId) {
     throw new Error('taskCategoryId is required');
@@ -82,8 +94,10 @@ function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
   }
   if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
 
-  if (payload.adminSubmission) body.adminSubmission = payload.adminSubmission;
-  if (payload.managerSubmission) body.managerSubmission = payload.managerSubmission;
+  if (payload.adminSubmission) body.adminSubmission = sanitizeSubmission(payload.adminSubmission);
+  if (payload.managerSubmission) {
+    body.managerSubmission = sanitizeSubmission(payload.managerSubmission);
+  }
 
   return body;
 }
@@ -103,8 +117,12 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   if (payload.managerAudioUrl !== undefined) body.managerAudioUrl = payload.managerAudioUrl;
   if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
 
-  if (payload.adminSubmission !== undefined) body.adminSubmission = payload.adminSubmission;
-  if (payload.managerSubmission !== undefined) body.managerSubmission = payload.managerSubmission;
+  if (payload.adminSubmission !== undefined) {
+    body.adminSubmission = sanitizeSubmission(payload.adminSubmission);
+  }
+  if (payload.managerSubmission !== undefined) {
+    body.managerSubmission = sanitizeSubmission(payload.managerSubmission);
+  }
 
   return body;
 }
