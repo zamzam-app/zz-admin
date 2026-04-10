@@ -186,13 +186,12 @@ export function TaskFormModal({
       })),
   });
 
-  const outletSelectValue = form.outletId === '' ? '' : form.outletId;
+  const outletSelectValue = form.outletId === '' || form.outletId === 'all' ? '' : form.outletId;
 
   const assigneesDisabled = false;
 
   const assigneeOptions = useMemo(() => {
-    const outletId =
-      editing?.outletId ?? (form.outletId !== '' && form.outletId !== 'all' ? form.outletId : null);
+    const outletId = editing?.outletId ?? (form.outletId !== '' ? form.outletId : null);
     if (!outletId) return managers;
 
     const outlet =
@@ -374,19 +373,11 @@ export function TaskFormModal({
                   const v = String(e.target.value);
                   if (v === '') {
                     setForm({ ...form, outletId: '', assigneeIds: [] });
-                  } else if (v === 'all') {
-                    setForm({ ...form, outletId: 'all', assigneeIds: [] });
                   } else {
-                    const o = outlets.find((x) => x.id === v);
-                    const allowed = new Set(
-                      filterManagersForOutlet(o, managers)
-                        .map((m) => m._id ?? m.id ?? '')
-                        .filter(Boolean),
-                    );
                     setForm({
                       ...form,
                       outletId: v,
-                      assigneeIds: form.assigneeIds.filter((id) => allowed.has(id)),
+                      assigneeIds: [],
                     });
                   }
                 }}
@@ -396,7 +387,6 @@ export function TaskFormModal({
                   if (selected === '' || selected === undefined) {
                     return <span className='text-slate-400'>Choose outlet...</span>;
                   }
-                  if (selected === 'all') return 'All outlets';
                   const o = outlets.find((x) => x.id === selected);
                   return o?.name ?? selected;
                 }}
@@ -405,7 +395,6 @@ export function TaskFormModal({
                 <MenuItem value='' disabled>
                   Choose outlet...
                 </MenuItem>
-                <MenuItem value='all'>All outlets</MenuItem>
                 {outlets.map((outlet) => (
                   <MenuItem key={outlet.id} value={outlet.id}>
                     {outlet.name}
