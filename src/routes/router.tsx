@@ -101,6 +101,7 @@ const router = createBrowserRouter([
             ),
             children: [
               { index: true, element: <OutletTasks /> },
+              { path: 'completed/:taskId', element: <TaskMediaDetail /> },
               { path: ':taskId', element: <OutletTaskDetail /> },
             ],
           },

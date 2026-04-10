@@ -6,6 +6,7 @@ import {
   ChevronRight,
   FileText,
   Image as ImageIcon,
+  Loader2,
   Mic,
   Paperclip,
   Video,
@@ -52,10 +53,15 @@ const STATUS_BADGE: Record<TaskStatus, { label: string; className: string }> = {
 
 type CompletePayload = {
   id: string;
-  managerComments: string;
-  imageUrls: string[];
-  videoUrls: string[];
-  managerAudioUrl: string[];
+  managerSubmission: {
+    text: string;
+    attachments: {
+      images: string[];
+      videos: string[];
+      audios: string[];
+      files: string[];
+    };
+  };
 };
 
 function formatCategoryLabel(category: string | undefined) {
@@ -144,10 +150,7 @@ export default function OutletTaskDetail() {
       import('../../lib/services/api/task.api').then((m) =>
         m.tasksApi.update(payload.id, {
           status: 'completed',
-          managerComments: payload.managerComments,
-          imageUrls: payload.imageUrls,
-          videoUrls: payload.videoUrls,
-          managerAudioUrl: payload.managerAudioUrl,
+          managerSubmission: payload.managerSubmission,
         }),
       ),
     [TASK_KEYS, listQueryKey],
@@ -471,16 +474,29 @@ function OutletTaskDetailContent({
 
       const uploadedImages = uploaded.filter((x) => x.kind === 'image').map((x) => x.url);
       const uploadedVideos = uploaded.filter((x) => x.kind === 'video').map((x) => x.url);
-      const uploadedAudios = uploaded
-        .filter((x) => x.kind === 'audio' || x.kind === 'pdf' || x.kind === 'doc')
+      const uploadedAudios = uploaded.filter((x) => x.kind === 'audio').map((x) => x.url);
+      const uploadedFiles = uploaded
+        .filter((x) => x.kind === 'pdf' || x.kind === 'doc' || x.kind === 'file')
         .map((x) => x.url);
+
+      const existingManagerAttachments = task.managerSubmission?.attachments ?? {
+        images: [],
+        videos: [],
+        audios: [],
+        files: [],
+      };
 
       await completeMutation.mutateAsync({
         id: task.id,
-        managerComments: note.trim(),
-        imageUrls: [...(task.imageUrls ?? []), ...uploadedImages],
-        videoUrls: [...(task.videoUrls ?? []), ...uploadedVideos],
-        managerAudioUrl: [...(task.managerAudioUrl ?? []), ...uploadedAudios],
+        managerSubmission: {
+          text: note.trim(),
+          attachments: {
+            images: [...existingManagerAttachments.images, ...uploadedImages],
+            videos: [...existingManagerAttachments.videos, ...uploadedVideos],
+            audios: [...existingManagerAttachments.audios, ...uploadedAudios],
+            files: [...existingManagerAttachments.files, ...uploadedFiles],
+          },
+        },
       });
     } finally {
       setIsCompleting(false);
@@ -679,20 +695,11 @@ function OutletTaskDetailContent({
 
               <div className='mt-3 flex flex-wrap items-center justify-between gap-3'>
                 <div className='flex items-center gap-2'>
-                  {mic.isRecording ? (
-                    <span className='inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100'>
-                      <span className='relative flex h-2 w-2'>
-                        <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75' />
-                        <span className='relative inline-flex h-2 w-2 rounded-full bg-rose-600' />
-                      </span>
-                      Recording…
-                    </span>
-                  ) : null}
                   <button
                     type='button'
                     disabled={disableActions}
                     onClick={() => fileInputRef.current?.click()}
-                    className='rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40'
+                    className='cursor-pointer rounded-lg p-2 text-slate-500 transition-all hover:-translate-y-0.5 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40'
                     aria-label='Attach file'
                   >
                     <Paperclip size={20} aria-hidden />
@@ -703,10 +710,10 @@ function OutletTaskDetailContent({
                     onClick={mic.toggleRecording}
                     aria-pressed={mic.isRecording}
                     aria-label={mic.isRecording ? 'Stop recording' : 'Start voice recording'}
-                    className={`rounded-lg p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                    className={`cursor-pointer rounded-lg p-2 transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
                       mic.isRecording
-                        ? 'bg-rose-100 text-rose-600 ring-2 ring-rose-300 ring-offset-1'
-                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                        ? 'bg-rose-100 text-rose-600 ring-2 ring-rose-300 ring-offset-1 hover:-translate-y-0.5 hover:bg-rose-200'
+                        : 'text-slate-500 hover:-translate-y-0.5 hover:bg-slate-100 hover:text-slate-700'
                     }`}
                   >
                     <Mic size={20} aria-hidden />
@@ -718,9 +725,25 @@ function OutletTaskDetailContent({
                     variant='admin-primary'
                     disabled={completeDisabled}
                     onClick={() => void handleCompleteTask()}
-                    endIcon={<ChevronRight size={16} aria-hidden />}
+                    endIcon={isCompleting ? undefined : <ChevronRight size={16} aria-hidden />}
+                    sx={
+                      isCompleting
+                        ? {
+                            minWidth: 160,
+                            '&.Mui-disabled': {
+                              color: '#fff',
+                              bgcolor: '#1F2937',
+                              opacity: 1,
+                            },
+                          }
+                        : undefined
+                    }
                   >
-                    {isCompleting ? 'Uploading...' : 'Complete task'}
+                    {isCompleting ? (
+                      <Loader2 size={16} className='animate-spin text-white' />
+                    ) : (
+                      'Complete task'
+                    )}
                   </Button>
                 ) : null}
               </div>
@@ -772,7 +795,7 @@ function OutletTaskDetailContent({
                           <button
                             type='button'
                             onClick={() => removeAttachment(attachment.id)}
-                            className='absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
+                            className='absolute -right-2 -top-2 z-10 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-rose-50 text-rose-500 transition-colors hover:bg-rose-100 hover:text-rose-600'
                             aria-label='Remove attachment'
                           >
                             <X size={12} />
@@ -804,7 +827,7 @@ function OutletTaskDetailContent({
                           <button
                             type='button'
                             onClick={() => removeAttachment(attachment.id)}
-                            className='absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
+                            className='absolute -right-2 -top-2 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-rose-50 text-rose-500 transition-colors hover:bg-rose-100 hover:text-rose-600'
                             aria-label='Remove audio'
                           >
                             <X size={12} />

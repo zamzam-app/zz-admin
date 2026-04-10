@@ -294,6 +294,8 @@ export default function TaskMediaDetail() {
   const categoryLabel = formatCategoryLabel(task.category);
   const assigneeNames =
     task.assigneeNames && task.assigneeNames.length > 0 ? task.assigneeNames : [];
+  const managerCompletedDate =
+    task.managerSubmission?.updatedAt ?? task.completedAt ?? task.updatedAt ?? null;
 
   return (
     <div className='flex min-h-0 flex-col gap-6 -mx-6 -mb-6 bg-[#F8F9FA]'>
@@ -394,7 +396,7 @@ export default function TaskMediaDetail() {
                   <p className='mb-2 text-sm font-bold uppercase tracking-wide text-slate-600'>
                     Admin Attachments
                   </p>
-                  <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+                  <div className='flex flex-wrap gap-3'>
                     {adminOtherItems.map((item) => (
                       <AttachmentTile
                         key={item.id}
@@ -409,15 +411,20 @@ export default function TaskMediaDetail() {
 
             <section className='mt-5 rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
               <h3 className='text-xl font-bold text-slate-900'>Manager Submission</h3>
+              {task.status === 'completed' && managerCompletedDate ? (
+                <p className='mt-2 text-xs font-semibold text-slate-600'>
+                  Completed on {dayjs(managerCompletedDate).format('MMM D, YYYY hh:mm A')}
+                </p>
+              ) : null}
               {task.managerSubmission?.text && (
-                <div className='mt-2'>
+                <div className='mt-2 flex items-start gap-2'>
                   <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>
                     Comments
                   </p>
-                  <p className='mt-1 text-slate-800'>{task.managerSubmission.text}</p>
+                  <p className='text-slate-800'>{task.managerSubmission.text}</p>
                 </div>
               )}
-              <div className='mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+              <div className='mt-3 flex flex-wrap gap-3'>
                 {managerOtherItems.map((item) => (
                   <AttachmentTile key={item.id} item={item} onOpen={() => setSelectedMedia(item)} />
                 ))}
