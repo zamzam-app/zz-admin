@@ -219,13 +219,9 @@ export default function TaskMediaDetail() {
       );
       return items;
     }
-    // Fallback
-    return mediaItems.filter(
-      (item) =>
-        (task.adminAudioUrl ?? []).includes(item.url) ||
-        (!(task.managerAudioUrl ?? []).includes(item.url) &&
-          !(task.managerComments && task.description === item.url)), // rough heuristic
-    );
+    // Legacy fallback: if no submission objects exist, show available media in top box.
+    if (!task.managerSubmission) return mediaItems;
+    return [];
   }, [task, mediaItems]);
 
   const managerMedia = useMemo(() => {
@@ -252,10 +248,9 @@ export default function TaskMediaDetail() {
       );
       return items;
     }
-    // Fallback
-    const adminUrls = new Set(adminMedia.map((m) => m.url));
-    return mediaItems.filter((item) => !adminUrls.has(item.url));
-  }, [task, mediaItems, adminMedia]);
+    // Bottom box should only show managerSubmission attachments.
+    return [];
+  }, [task]);
 
   const adminAudioItems = adminMedia.filter((m) => m.kind === 'audio');
   const adminOtherItems = adminMedia.filter((m) => m.kind !== 'audio');

@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeft, ChevronRight, Mic, Paperclip } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronRight,
+  FileText,
+  Image as ImageIcon,
+  Mic,
+  Paperclip,
+  Video,
+  X,
+} from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/context/AuthContext';
 import { useImageUpload } from '../../lib/hooks/useImageUpload';
@@ -66,6 +75,13 @@ function getPriorityPillClass(priority: Task['priority']) {
   if (priority === 'high') return 'bg-rose-50 text-rose-700 ring-rose-200';
   if (priority === 'medium') return 'bg-amber-50 text-amber-700 ring-amber-200';
   return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+}
+
+function getAttachmentIcon(kind: AttachmentKind) {
+  if (kind === 'image') return ImageIcon;
+  if (kind === 'video') return Video;
+  if (kind === 'pdf' || kind === 'doc') return FileText;
+  return Paperclip;
 }
 
 export default function OutletTaskDetail() {
@@ -207,8 +223,10 @@ function OutletTaskDetailContent({
   clearUploadError: () => void;
 }) {
   const badge = STATUS_BADGE[task.status];
-  const headlineName = task.outletName?.trim() || task.title;
+  const outletHeadline = task.outletName?.trim() || task.outletId?.trim() || '';
   const categoryLabel = formatCategoryLabel(task.category);
+  const assigneeNames =
+    task.assigneeNames && task.assigneeNames.length > 0 ? task.assigneeNames : [];
 
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -216,8 +234,41 @@ function OutletTaskDetailContent({
   const uploadedAttachments = useMemo<UploadedAttachment[]>(() => {
     const items: UploadedAttachment[] = [];
     const seen = new Set<string>();
+    const adminAttachments = task.adminSubmission?.attachments ?? {
+      images: [],
+      videos: [],
+      audios: [],
+      files: [],
+    };
+    const managerAttachments = task.managerSubmission?.attachments ?? {
+      images: [],
+      videos: [],
+      audios: [],
+      files: [],
+    };
+    const hasManagerSubmissionAttachments =
+      managerAttachments.images.length > 0 ||
+      managerAttachments.videos.length > 0 ||
+      managerAttachments.audios.length > 0 ||
+      managerAttachments.files.length > 0;
 
-    (task.imageUrls ?? []).forEach((url, idx) => {
+    const managerImageUrls = hasManagerSubmissionAttachments
+      ? managerAttachments.images
+      : (task.imageUrls ?? []).filter((url) => !adminAttachments.images.includes(url));
+
+    const managerVideoUrls = hasManagerSubmissionAttachments
+      ? managerAttachments.videos
+      : (task.videoUrls ?? []).filter((url) => !adminAttachments.videos.includes(url));
+
+    const managerAudioUrls = hasManagerSubmissionAttachments
+      ? managerAttachments.audios
+      : (task.managerAudioUrl ?? []);
+
+    const managerFileUrls = hasManagerSubmissionAttachments
+      ? managerAttachments.files
+      : (task.fileUrls ?? []).filter((url) => !adminAttachments.files.includes(url));
+
+    managerImageUrls.forEach((url, idx) => {
       if (!url || seen.has(url)) return;
       seen.add(url);
       items.push({
@@ -228,7 +279,7 @@ function OutletTaskDetailContent({
       });
     });
 
-    (task.videoUrls ?? []).forEach((url, idx) => {
+    managerVideoUrls.forEach((url, idx) => {
       if (!url || seen.has(url)) return;
       seen.add(url);
       items.push({
@@ -239,7 +290,7 @@ function OutletTaskDetailContent({
       });
     });
 
-    (task.managerAudioUrl ?? []).forEach((url, idx) => {
+    managerAudioUrls.forEach((url, idx) => {
       if (!url || seen.has(url)) return;
       seen.add(url);
       items.push({
@@ -250,8 +301,68 @@ function OutletTaskDetailContent({
       });
     });
 
+    managerFileUrls.forEach((url, idx) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({
+        id: `uploaded-file-${idx}-${url}`,
+        url,
+        kind: inferAttachmentKind(undefined, url),
+        name: mediaNameFromUrl(url, `File ${idx + 1}`),
+      });
+    });
+
     return items;
-  }, [task.imageUrls, task.videoUrls, task.managerAudioUrl]);
+  }, [
+    task.adminSubmission?.attachments,
+    task.fileUrls,
+    task.imageUrls,
+    task.managerAudioUrl,
+    task.managerSubmission?.attachments,
+    task.videoUrls,
+  ]);
+
+  const ownerNonAudioAttachments = useMemo<UploadedAttachment[]>(() => {
+    const items: UploadedAttachment[] = [];
+    const seen = new Set<string>();
+    const ownerAttachments = task.adminSubmission?.attachments;
+    if (!ownerAttachments) return items;
+
+    ownerAttachments.images.forEach((url, idx) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({
+        id: `owner-image-${idx}-${url}`,
+        url,
+        kind: inferAttachmentKind(undefined, url),
+        name: mediaNameFromUrl(url, `Image ${idx + 1}`),
+      });
+    });
+
+    ownerAttachments.videos.forEach((url, idx) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({
+        id: `owner-video-${idx}-${url}`,
+        url,
+        kind: inferAttachmentKind(undefined, url),
+        name: mediaNameFromUrl(url, `Video ${idx + 1}`),
+      });
+    });
+
+    ownerAttachments.files.forEach((url, idx) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      items.push({
+        id: `owner-file-${idx}-${url}`,
+        url,
+        kind: inferAttachmentKind(undefined, url),
+        name: mediaNameFromUrl(url, `File ${idx + 1}`),
+      });
+    });
+
+    return items;
+  }, [task.adminSubmission?.attachments]);
 
   const mic = useMicRecording({
     onRecordingComplete: (file) => {
@@ -406,21 +517,28 @@ function OutletTaskDetailContent({
 
   const completeDisabled = completeMutation.isPending || isCompleting || mic.isRecording;
 
+  useEffect(() => {
+    setAttachments([]);
+    setPreview(null);
+  }, [task.id]);
+
   return (
     <div className='-mx-6 -mb-6 flex min-h-0 flex-col gap-6 bg-[#F8F9FA]'>
       <div className='shrink-0 bg-[#F8F9FA] px-6 pt-6 pb-1 lg:px-8'>
-        <div className='mx-auto max-w-4xl'>
+        <div className='relative mt-3 min-h-11'>
           <Link
             to='/outlet-tasks'
-            className='inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700'
+            className='absolute left-0 top-1/2 inline-flex -translate-y-1/2 items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700'
           >
             <ArrowLeft size={16} aria-hidden />
             Back to Tasks
           </Link>
-          <h1 className='mt-3 text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>
+          <h1 className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>
             Task Details
           </h1>
-          <p className='mt-1 text-sm text-slate-500'>
+        </div>
+        <div className='mx-auto max-w-4xl'>
+          <p className='mt-1 text-center text-sm text-slate-500'>
             Review owner instructions and submit manager updates with attachments.
           </p>
         </div>
@@ -429,37 +547,50 @@ function OutletTaskDetailContent({
       <div className='overflow-y-auto overflow-x-hidden px-6 pb-10 lg:px-8'>
         <div className='mx-auto max-w-4xl'>
           <div className='rounded-4xl border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
-            <section className='rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
-              <div className='flex flex-wrap items-center gap-3'>
+            <div className='mb-5 flex flex-wrap items-start justify-between gap-3 px-1'>
+              <div className='flex min-w-0 flex-wrap items-center gap-3'>
                 {categoryLabel ? (
                   <span className='inline-flex rounded-lg bg-amber-400/90 px-3 py-1 text-lg font-semibold text-black'>
                     {categoryLabel.charAt(0) + categoryLabel.slice(1).toLowerCase()}
                   </span>
                 ) : null}
-                <h2 className='text-2xl font-bold tracking-tight text-black'>{headlineName}</h2>
+                {outletHeadline ? (
+                  <h2 className='text-2xl font-bold tracking-tight text-black'>{outletHeadline}</h2>
+                ) : null}
               </div>
+              <div className='flex flex-wrap items-center gap-2'>
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ring-1 ${badge.className}`}
+                >
+                  {badge.label}
+                </span>
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ring-1 ${getPriorityPillClass(task.priority)}`}
+                >
+                  {task.priority}
+                </span>
+              </div>
+            </div>
 
-              <div className='mt-4 space-y-3 text-slate-900'>
+            <section className='rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
+              <div className='space-y-3 text-slate-900'>
                 <div className='flex flex-wrap items-center gap-3'>
-                  <span className='w-28 text-2xl font-bold leading-none'>Deadline</span>
-                  <span className='text-xl font-medium'>{formatDeadlineDate(task.dueDate)}</span>
+                  <span className='w-32 text-2xl font-bold leading-none'>Deadline</span>
+                  <span className='text-xl font-medium leading-none text-slate-600'>
+                    {formatDeadlineDate(task.dueDate)}
+                  </span>
                 </div>
                 <div className='flex flex-wrap items-center gap-3'>
-                  <span className='w-28 text-2xl font-bold leading-none'>Assigned</span>
-                  <div className='flex flex-wrap gap-2'>
-                    {(task.assigneeNames ?? []).map((name, idx) => (
-                      <span
-                        key={`assignee-${idx}-${name}`}
-                        className='inline-flex min-w-18 items-center justify-center rounded-md border border-slate-500 bg-white px-2.5 py-0.5 text-base'
-                      >
-                        {name}
-                      </span>
-                    ))}
-                  </div>
+                  <span className='w-32 text-2xl font-bold leading-none'>Assigned</span>
+                  {assigneeNames.length > 0 ? (
+                    <span className='text-xl text-slate-600'>{assigneeNames.join(', ')}</span>
+                  ) : (
+                    <span className='text-sm text-slate-500'>Unassigned</span>
+                  )}
                 </div>
-                <div className='flex gap-3'>
-                  <span className='w-28 pt-0.5 text-2xl font-bold leading-none'>Description</span>
-                  <p className='flex-1 text-xl leading-snug text-slate-800'>{task.description}</p>
+                <div className='flex items-start gap-3'>
+                  <span className='w-32 shrink-0 text-2xl font-bold leading-none'>Description</span>
+                  <p className='text-xl leading-snug text-slate-600'>{task.description}</p>
                 </div>
               </div>
 
@@ -481,18 +612,36 @@ function OutletTaskDetailContent({
                 )}
               </div>
 
-              <div className='mt-4 flex flex-wrap items-center gap-2'>
-                <span
-                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ring-1 ${badge.className}`}
-                >
-                  {badge.label}
-                </span>
-                <span
-                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ring-1 ${getPriorityPillClass(task.priority)}`}
-                >
-                  {task.priority}
-                </span>
-              </div>
+              {ownerNonAudioAttachments.length > 0 ? (
+                <div className='mt-4'>
+                  <p className='mb-2 text-sm font-bold uppercase tracking-wide text-slate-600'>
+                    Owner attachments
+                  </p>
+                  <div className='flex flex-wrap gap-3'>
+                    {ownerNonAudioAttachments.map((attachment) => {
+                      const Icon = getAttachmentIcon(attachment.kind);
+                      return (
+                        <button
+                          key={attachment.id}
+                          type='button'
+                          onClick={() =>
+                            setPreview({
+                              title: attachment.name,
+                              kind: attachment.kind,
+                              sourceUrl: attachment.url,
+                            })
+                          }
+                          className='aspect-square w-12.5 cursor-pointer rounded-2xl border border-slate-300 bg-white transition-colors hover:bg-slate-50'
+                        >
+                          <div className='flex h-full items-center justify-center'>
+                            <Icon size={20} className='text-slate-500' aria-hidden />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </section>
 
             <section className='mt-5 rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
@@ -517,93 +666,7 @@ function OutletTaskDetailContent({
                 }}
               />
 
-              <div className='mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'>
-                {uploadedNonAudioAttachments.map((attachment) => (
-                  <button
-                    key={attachment.id}
-                    type='button'
-                    onClick={() =>
-                      setPreview({
-                        title: attachment.name,
-                        kind: attachment.kind,
-                        sourceUrl: attachment.url,
-                      })
-                    }
-                    className='h-20 rounded-2xl border border-slate-300 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50'
-                  >
-                    {attachment.kind.toUpperCase()}
-                  </button>
-                ))}
-                {pendingNonAudioAttachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className='relative h-20 rounded-2xl border border-dashed border-slate-400 bg-white px-3 py-2'
-                  >
-                    <button
-                      type='button'
-                      onClick={() =>
-                        setPreview({
-                          title: attachment.file.name,
-                          kind: attachment.kind,
-                          sourceUrl: pendingObjectUrls[attachment.id] ?? null,
-                        })
-                      }
-                      className='text-left text-sm font-semibold text-slate-800'
-                    >
-                      {attachment.kind.toUpperCase()}
-                    </button>
-                    <button
-                      type='button'
-                      onClick={() => removeAttachment(attachment.id)}
-                      className='absolute right-2 top-2 rounded-md px-2 py-0.5 text-xs font-semibold text-rose-600 hover:bg-rose-50'
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                {uploadedNonAudioAttachments.length === 0 &&
-                pendingNonAudioAttachments.length === 0 ? (
-                  <p className='col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500'>
-                    No manager attachments yet.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className='mt-4 space-y-2'>
-                <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>Audio</p>
-                {uploadedAudioAttachments.map((attachment, idx) => (
-                  <WhatsAppAudioPlayer
-                    key={`manager-uploaded-audio-${idx}-${attachment.id}`}
-                    src={attachment.url}
-                    className='w-full max-w-107.5'
-                    fitContainer
-                  />
-                ))}
-                {pendingAudioAttachments.map((attachment) => {
-                  const sourceUrl = pendingObjectUrls[attachment.id] ?? null;
-                  return sourceUrl ? (
-                    <div key={attachment.id} className='flex items-start gap-2'>
-                      <WhatsAppAudioPlayer
-                        src={sourceUrl}
-                        className='w-full max-w-107.5'
-                        fitContainer
-                      />
-                      <button
-                        type='button'
-                        onClick={() => removeAttachment(attachment.id)}
-                        className='rounded-md px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50'
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : null;
-                })}
-                {uploadedAudioAttachments.length === 0 && pendingAudioAttachments.length === 0 ? (
-                  <p className='text-sm text-slate-500'>No manager audio attached.</p>
-                ) : null}
-              </div>
-
-              <div className='mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
+              <div className='mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -659,6 +722,97 @@ function OutletTaskDetailContent({
                   >
                     {isCompleting ? 'Uploading...' : 'Complete task'}
                   </Button>
+                ) : null}
+              </div>
+
+              <div className='mt-4 space-y-4'>
+                {uploadedNonAudioAttachments.length > 0 || pendingNonAudioAttachments.length > 0 ? (
+                  <div className='flex flex-wrap gap-3'>
+                    {uploadedNonAudioAttachments.map((attachment) => {
+                      const Icon = getAttachmentIcon(attachment.kind);
+                      return (
+                        <button
+                          key={attachment.id}
+                          type='button'
+                          onClick={() =>
+                            setPreview({
+                              title: attachment.name,
+                              kind: attachment.kind,
+                              sourceUrl: attachment.url,
+                            })
+                          }
+                          className='aspect-square w-12.5 cursor-pointer rounded-2xl border border-slate-300 bg-white transition-colors hover:bg-slate-50'
+                        >
+                          <div className='flex h-full items-center justify-center'>
+                            <Icon size={20} className='text-slate-500' aria-hidden />
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {pendingNonAudioAttachments.map((attachment) => {
+                      const Icon = getAttachmentIcon(attachment.kind);
+                      return (
+                        <div
+                          key={attachment.id}
+                          className='relative aspect-square w-12.5 rounded-2xl border border-slate-300 bg-white'
+                        >
+                          <button
+                            type='button'
+                            onClick={() =>
+                              setPreview({
+                                title: attachment.file.name,
+                                kind: attachment.kind,
+                                sourceUrl: pendingObjectUrls[attachment.id] ?? null,
+                              })
+                            }
+                            className='flex h-full w-full cursor-pointer items-center justify-center'
+                          >
+                            <Icon size={20} className='text-slate-500' aria-hidden />
+                          </button>
+                          <button
+                            type='button'
+                            onClick={() => removeAttachment(attachment.id)}
+                            className='absolute right-1 top-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
+                            aria-label='Remove attachment'
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                {uploadedAudioAttachments.length > 0 || pendingAudioAttachments.length > 0 ? (
+                  <div className='space-y-2'>
+                    <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>
+                      Audio
+                    </p>
+                    {uploadedAudioAttachments.map((attachment, idx) => (
+                      <WhatsAppAudioPlayer
+                        key={`manager-uploaded-audio-${idx}-${attachment.id}`}
+                        src={attachment.url}
+                        className='w-full max-w-107.5'
+                        fitContainer
+                      />
+                    ))}
+                    {pendingAudioAttachments.map((attachment) => {
+                      const sourceUrl = pendingObjectUrls[attachment.id] ?? null;
+                      return sourceUrl ? (
+                        <div key={attachment.id} className='relative w-full max-w-107.5'>
+                          <WhatsAppAudioPlayer src={sourceUrl} className='w-full' fitContainer />
+                          <button
+                            type='button'
+                            onClick={() => removeAttachment(attachment.id)}
+                            className='absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
+                            aria-label='Remove audio'
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
                 ) : null}
               </div>
             </section>
