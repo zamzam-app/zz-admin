@@ -129,6 +129,19 @@ function extractOutletName(
   return undefined;
 }
 
+function normalizeSubmission(submission?: TaskSubmission): TaskSubmission | undefined {
+  if (!submission) return undefined;
+  return {
+    ...submission,
+    attachments: {
+      images: submission.attachments?.images ?? [],
+      videos: submission.attachments?.videos ?? [],
+      audios: submission.attachments?.audios ?? [],
+      files: submission.attachments?.files ?? [],
+    },
+  };
+}
+
 function normalizeAssigneeIds(ids: ApiTaskRaw['assigneeIds']): string[] {
   if (!Array.isArray(ids)) return [];
   return ids
@@ -198,8 +211,8 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
   const { ids: assigneeIds, names: assigneeNames } = extractAssignees(raw);
 
   // Fallback Logic
-  const adminSubmission = raw.adminSubmission;
-  const managerSubmission = raw.managerSubmission;
+  const adminSubmission = normalizeSubmission(raw.adminSubmission);
+  const managerSubmission = normalizeSubmission(raw.managerSubmission);
 
   const imageUrls =
     adminSubmission || managerSubmission

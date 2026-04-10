@@ -197,7 +197,12 @@ export default function TaskMediaDetail() {
     if (!task) return [];
     if (task.adminSubmission) {
       const items: MediaItem[] = [];
-      const att = task.adminSubmission.attachments;
+      const att = task.adminSubmission.attachments ?? {
+        images: [],
+        videos: [],
+        audios: [],
+        files: [],
+      };
       att.images.forEach((url, i) =>
         items.push({ id: `admin-img-${i}`, url, kind: 'image', name: `Image ${i + 1}` }),
       );
@@ -230,7 +235,12 @@ export default function TaskMediaDetail() {
     if (!task) return [];
     if (task.managerSubmission) {
       const items: MediaItem[] = [];
-      const att = task.managerSubmission.attachments;
+      const att = task.managerSubmission.attachments ?? {
+        images: [],
+        videos: [],
+        audios: [],
+        files: [],
+      };
       att.images.forEach((url, i) =>
         items.push({ id: `mgr-img-${i}`, url, kind: 'image', name: `Image ${i + 1}` }),
       );
