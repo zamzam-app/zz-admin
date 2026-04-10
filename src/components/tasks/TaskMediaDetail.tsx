@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Modal } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeft, FileText, Image as ImageIcon, Mic, Paperclip, Video } from 'lucide-react';
+import { ArrowLeft, FileText, Image as ImageIcon, Paperclip, Video } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/context/AuthContext';
 import { useApiQuery } from '../../lib/react-query/use-api-hooks';
@@ -453,7 +453,7 @@ export default function TaskMediaDetail() {
         open={!!selectedMedia}
         onCancel={() => setSelectedMedia(null)}
         footer={null}
-        width={selectedMedia?.kind === 'audio' ? 420 : 720}
+        width={720}
         centered
         destroyOnHidden
       >
@@ -475,20 +475,6 @@ export default function TaskMediaDetail() {
             playsInline
             preload='metadata'
           />
-        )}
-        {selectedMedia?.kind === 'audio' && (
-          <div className='flex flex-col items-center gap-4 py-4'>
-            <div className='flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500'>
-              <Mic size={28} aria-hidden />
-            </div>
-            <audio
-              key={selectedMedia.url}
-              src={selectedMedia.url}
-              controls
-              className='w-full'
-              preload='metadata'
-            />
-          </div>
         )}
         {selectedMedia?.kind === 'pdf' && (
           <div className='space-y-3'>

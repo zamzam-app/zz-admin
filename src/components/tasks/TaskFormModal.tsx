@@ -15,6 +15,7 @@ import { Button } from '../common/Button';
 import { DateWheelPicker } from '../common/DateWheelPicker';
 import { AttachmentPreviewModal } from '../OutletTask/AttachmentPreviewModal';
 import type { AttachmentKind } from '../OutletTask/outletTaskAttachment.types';
+import { WhatsAppAudioPlayer } from '../common/WhatsAppAudioPlayer';
 
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high'];
 
@@ -95,6 +96,11 @@ type AttachmentPreviewState = {
   sourceUrl: string;
 };
 
+type PendingAudioAttachmentRowProps = {
+  item: PendingFormAttachment;
+  onRemove: () => void;
+};
+
 function inferAttachmentKind(file: File): AttachmentKind {
   if (file.type.startsWith('image/')) return 'image';
   if (file.type.startsWith('video/')) return 'video';
@@ -122,6 +128,33 @@ function getAttachmentButtonIcon(kind: AttachmentKind) {
   if (kind === 'video') return Video;
   if (kind === 'audio') return Mic;
   return FileText;
+}
+
+function PendingAudioAttachmentRow({ item, onRemove }: PendingAudioAttachmentRowProps) {
+  const sourceUrl = useMemo(() => URL.createObjectURL(item.file), [item.file]);
+
+  useEffect(() => {
+    return () => {
+      URL.revokeObjectURL(sourceUrl);
+    };
+  }, [sourceUrl]);
+
+  return (
+    <div className='flex items-start gap-2'>
+      <div className='min-w-0 flex-1'>
+        <p className='mb-1 truncate text-sm font-medium text-slate-900'>{item.name}</p>
+        <WhatsAppAudioPlayer src={sourceUrl} className='w-full' fitContainer />
+      </div>
+      <button
+        type='button'
+        onClick={onRemove}
+        className='mt-7 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
+        aria-label={`Remove ${item.name}`}
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
 }
 
 export function TaskFormModal({
@@ -196,6 +229,7 @@ export function TaskFormModal({
   };
 
   const openAttachmentPreview = (item: PendingFormAttachment) => {
+    if (item.kind === 'audio') return;
     const sourceUrl = URL.createObjectURL(item.file);
     setSelectedAttachment({
       name: item.name,
@@ -520,51 +554,62 @@ export function TaskFormModal({
                     <h4 className='text-xs font-bold uppercase tracking-[0.18em] text-slate-500'>
                       {section.title}
                     </h4>
-                    <div className='mt-2 space-y-2'>
-                      {section.items.map((item, index) => {
-                        const Icon = getAttachmentButtonIcon(item.kind);
-                        return (
-                          <div
+                    {section.key === 'voices' ? (
+                      <div className='mt-2 space-y-3'>
+                        {section.items.map((item, index) => (
+                          <PendingAudioAttachmentRow
                             key={item.id}
-                            className='flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2'
-                          >
-                            <button
-                              type='button'
-                              onClick={() => openAttachmentPreview(item)}
-                              className='flex min-w-0 flex-1 items-center gap-3 text-left'
+                            item={item}
+                            onRemove={() => removeFile(index, 'audio')}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className='mt-2 space-y-2'>
+                        {section.items.map((item, index) => {
+                          const Icon = getAttachmentButtonIcon(item.kind);
+                          return (
+                            <div
+                              key={item.id}
+                              className='flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2'
                             >
-                              <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-600'>
-                                <Icon size={16} />
-                              </span>
-                              <span className='min-w-0'>
-                                <span className='block truncate text-sm font-medium text-slate-900'>
-                                  {item.name}
+                              <button
+                                type='button'
+                                onClick={() => openAttachmentPreview(item)}
+                                className='flex min-w-0 flex-1 items-center gap-3 text-left'
+                              >
+                                <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-600'>
+                                  <Icon size={16} />
                                 </span>
-                                <span className='block text-xs text-slate-500'>
-                                  {section.title.slice(0, -1)} {index + 1}
+                                <span className='min-w-0'>
+                                  <span className='block truncate text-sm font-medium text-slate-900'>
+                                    {item.name}
+                                  </span>
+                                  <span className='block text-xs text-slate-500'>
+                                    {section.title.slice(0, -1)} {index + 1}
+                                  </span>
                                 </span>
-                              </span>
-                            </button>
-                            <button
-                              type='button'
-                              onClick={() => {
-                                if (section.key === 'images') removeFile(index, 'image');
-                                else if (section.key === 'videos') removeFile(index, 'video');
-                                else if (section.key === 'voices') removeFile(index, 'audio');
-                                else removeFile(index, 'other');
+                              </button>
+                              <button
+                                type='button'
+                                onClick={() => {
+                                  if (section.key === 'images') removeFile(index, 'image');
+                                  else if (section.key === 'videos') removeFile(index, 'video');
+                                  else removeFile(index, 'other');
 
-                                if (selectedAttachment?.name === item.name)
-                                  closeAttachmentPreview();
-                              }}
-                              className='inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
-                              aria-label={`Remove ${item.name}`}
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
+                                  if (selectedAttachment?.name === item.name)
+                                    closeAttachmentPreview();
+                                }}
+                                className='inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
+                                aria-label={`Remove ${item.name}`}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
