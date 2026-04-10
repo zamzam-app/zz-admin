@@ -1,8 +1,8 @@
-import { useMemo, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Autocomplete, MenuItem, Select as MuiSelect, TextField } from '@mui/material';
-import { Mic, Paperclip, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, Mic, Paperclip, Video, X } from 'lucide-react';
 import { useMicRecording } from '../../lib/hooks/useMicRecording';
 import type { Outlet } from '../../lib/types/outlet';
 import type { User } from '../../lib/types/manager';
@@ -13,6 +13,8 @@ import { TASK_CATEGORY_KEYS } from '../../lib/types/task-category';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { DateWheelPicker } from '../common/DateWheelPicker';
+import { AttachmentPreviewModal } from '../OutletTask/AttachmentPreviewModal';
+import type { AttachmentKind } from '../OutletTask/outletTaskAttachment.types';
 
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high'];
 
@@ -77,6 +79,51 @@ type TaskFormModalProps = {
   managers: User[];
 };
 
+type FormAttachmentSection = 'videos' | 'images' | 'voices' | 'files';
+
+type PendingFormAttachment = {
+  id: string;
+  name: string;
+  kind: AttachmentKind;
+  file: File;
+  section: FormAttachmentSection;
+};
+
+type AttachmentPreviewState = {
+  name: string;
+  kind: AttachmentKind;
+  sourceUrl: string;
+};
+
+function inferAttachmentKind(file: File): AttachmentKind {
+  if (file.type.startsWith('image/')) return 'image';
+  if (file.type.startsWith('video/')) return 'video';
+  if (file.type.startsWith('audio/')) return 'audio';
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf';
+  if (
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    file.type === 'application/msword' ||
+    /\.(doc|docx)$/i.test(file.name)
+  ) {
+    return 'doc';
+  }
+  return 'file';
+}
+
+function getAttachmentSection(kind: AttachmentKind): FormAttachmentSection {
+  if (kind === 'video') return 'videos';
+  if (kind === 'image') return 'images';
+  if (kind === 'audio') return 'voices';
+  return 'files';
+}
+
+function getAttachmentButtonIcon(kind: AttachmentKind) {
+  if (kind === 'image') return ImageIcon;
+  if (kind === 'video') return Video;
+  if (kind === 'audio') return Mic;
+  return FileText;
+}
+
 export function TaskFormModal({
   open,
   onClose,
@@ -88,16 +135,14 @@ export function TaskFormModal({
   outlets,
   managers,
 }: TaskFormModalProps) {
-  const audioInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const { data: taskCategoriesResponse } = useApiQuery(
     TASK_CATEGORY_KEYS,
     () => taskCategoryApi.getTaskCategories({ page: 1, limit: 100 }),
     { enabled: open },
   );
 
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
-  const otherFilesInputRef = useRef<HTMLInputElement>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<AttachmentPreviewState | null>(null);
 
   const mic = useMicRecording({
     fileNamePrefix: 'task-admin-audio',
@@ -138,24 +183,6 @@ export function TaskFormModal({
   const selectedCategory = categoryOptions.find((category) => category.id === form.taskCategoryId);
   const selectedCategoryMissing = Boolean(form.taskCategoryId) && !selectedCategory;
 
-  const addFiles = (files: FileList | null, type: 'image' | 'video' | 'audio' | 'other') => {
-    if (!files?.length) return;
-    const incoming: File[] = [];
-    for (let i = 0; i < files.length; i += 1) {
-      const file = files[i];
-      if (file) incoming.push(file);
-    }
-    if (!incoming.length) return;
-
-    setForm((prev) => {
-      if (type === 'image') return { ...prev, imageFiles: [...prev.imageFiles, ...incoming] };
-      if (type === 'video') return { ...prev, videoFiles: [...prev.videoFiles, ...incoming] };
-      if (type === 'audio')
-        return { ...prev, adminAudioFiles: [...prev.adminAudioFiles, ...incoming] };
-      return { ...prev, otherFiles: [...prev.otherFiles, ...incoming] };
-    });
-  };
-
   const removeFile = (index: number, type: 'image' | 'video' | 'audio' | 'other') => {
     setForm((prev) => {
       if (type === 'image')
@@ -167,6 +194,115 @@ export function TaskFormModal({
       return { ...prev, otherFiles: prev.otherFiles.filter((_, i) => i !== index) };
     });
   };
+
+  const openAttachmentPreview = (item: PendingFormAttachment) => {
+    const sourceUrl = URL.createObjectURL(item.file);
+    setSelectedAttachment({
+      name: item.name,
+      kind: item.kind,
+      sourceUrl,
+    });
+  };
+
+  const closeAttachmentPreview = () => setSelectedAttachment(null);
+
+  useEffect(() => {
+    if (!selectedAttachment?.sourceUrl) return;
+    return () => {
+      URL.revokeObjectURL(selectedAttachment.sourceUrl);
+    };
+  }, [selectedAttachment]);
+
+  const groupedAttachments = useMemo(() => {
+    const items: PendingFormAttachment[] = [
+      ...form.videoFiles.map((file, index) => ({
+        id: `video-${index}-${file.name}-${file.size}`,
+        name: file.name,
+        kind: 'video' as const,
+        file,
+        section: 'videos' as const,
+      })),
+      ...form.imageFiles.map((file, index) => ({
+        id: `image-${index}-${file.name}-${file.size}`,
+        name: file.name,
+        kind: 'image' as const,
+        file,
+        section: 'images' as const,
+      })),
+      ...form.adminAudioFiles.map((file, index) => ({
+        id: `voice-${index}-${file.name}-${file.size}`,
+        name: file.name,
+        kind: 'audio' as const,
+        file,
+        section: 'voices' as const,
+      })),
+      ...form.otherFiles.map((file, index) => ({
+        id: `file-${index}-${file.name}-${file.size}`,
+        name: file.name,
+        kind: inferAttachmentKind(file),
+        file,
+        section: getAttachmentSection(inferAttachmentKind(file)),
+      })),
+    ];
+
+    return {
+      videos: items.filter((item) => item.section === 'videos'),
+      images: items.filter((item) => item.section === 'images'),
+      voices: items.filter((item) => item.section === 'voices'),
+      files: items.filter((item) => item.section === 'files'),
+    };
+  }, [form.adminAudioFiles, form.imageFiles, form.otherFiles, form.videoFiles]);
+
+  const totalAttachmentCount =
+    groupedAttachments.videos.length +
+    groupedAttachments.images.length +
+    groupedAttachments.voices.length +
+    groupedAttachments.files.length;
+
+  const handleAttachmentImport = (files: FileList | null) => {
+    if (!files?.length) return;
+
+    const images: File[] = [];
+    const videos: File[] = [];
+    const others: File[] = [];
+
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      if (!file) continue;
+
+      const kind = inferAttachmentKind(file);
+      if (kind === 'image') {
+        images.push(file);
+        continue;
+      }
+      if (kind === 'video') {
+        videos.push(file);
+        continue;
+      }
+      others.push(file);
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      imageFiles: [...prev.imageFiles, ...images],
+      videoFiles: [...prev.videoFiles, ...videos],
+      otherFiles: [...prev.otherFiles, ...others],
+    }));
+  };
+
+  const attachmentSections: Array<{
+    key: FormAttachmentSection;
+    title: string;
+    items: PendingFormAttachment[];
+  }> = [
+    { key: 'videos', title: 'Videos', items: groupedAttachments.videos },
+    { key: 'images', title: 'Images', items: groupedAttachments.images },
+    { key: 'voices', title: 'Voices', items: groupedAttachments.voices },
+    { key: 'files', title: 'Files', items: groupedAttachments.files },
+  ];
+  const visibleAttachmentSections = attachmentSections.filter(
+    (section) => section.items.length > 0,
+  );
 
   return (
     <Modal
@@ -329,170 +465,110 @@ export function TaskFormModal({
 
         <div>
           <label className={fieldLabelClass}>Attachments</label>
-          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-            {/* Images */}
-            <div className='rounded-xl border border-slate-200 bg-white p-3'>
-              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
-                Images
-              </p>
-              <input
-                ref={imageInputRef}
-                type='file'
-                accept='image/*'
-                multiple
-                className='hidden'
-                onChange={(e) => {
-                  addFiles(e.target.files, 'image');
-                  e.target.value = '';
-                }}
-              />
-              <button
-                type='button'
-                onClick={() => imageInputRef.current?.click()}
-                className='inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
-              >
-                <Paperclip size={16} /> Import images
-              </button>
-              <div className='mt-2 flex flex-wrap gap-2'>
-                {form.imageFiles.map((file, idx) => (
-                  <div
-                    key={`img-${idx}`}
-                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700'
-                  >
-                    <span className='truncate'>{file.name}</span>
-                    <button type='button' onClick={() => removeFile(idx, 'image')}>
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className='rounded-3xl border border-slate-200 bg-white p-4 sm:p-5'>
+            <input
+              ref={attachmentInputRef}
+              type='file'
+              accept='image/*,video/*,.pdf,.doc,.docx'
+              multiple
+              className='hidden'
+              onChange={(e) => {
+                handleAttachmentImport(e.target.files);
+                e.target.value = '';
+              }}
+            />
 
-            {/* Videos */}
-            <div className='rounded-xl border border-slate-200 bg-white p-3'>
-              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
-                Videos
-              </p>
-              <input
-                ref={videoInputRef}
-                type='file'
-                accept='video/*'
-                multiple
-                className='hidden'
-                onChange={(e) => {
-                  addFiles(e.target.files, 'video');
-                  e.target.value = '';
-                }}
-              />
-              <button
-                type='button'
-                onClick={() => videoInputRef.current?.click()}
-                className='inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
-              >
-                <Paperclip size={16} /> Import videos
-              </button>
-              <div className='mt-2 flex flex-wrap gap-2'>
-                {form.videoFiles.map((file, idx) => (
-                  <div
-                    key={`vid-${idx}`}
-                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-purple-50 px-3 py-1 text-xs text-purple-700'
-                  >
-                    <span className='truncate'>{file.name}</span>
-                    <button type='button' onClick={() => removeFile(idx, 'video')}>
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
+            <div className='flex items-start justify-between gap-3'>
+              <div>
+                <p className='text-sm font-semibold text-slate-900'>Media attachments</p>
+                <p className='mt-1 text-sm text-slate-500'>
+                  Upload images, videos, PDFs, and Word documents or record voice notes.
+                </p>
               </div>
-            </div>
-
-            {/* Audio */}
-            <div className='rounded-xl border border-slate-200 bg-white p-3'>
-              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
-                Audio
-              </p>
-              <input
-                ref={audioInputRef}
-                type='file'
-                accept='audio/*'
-                multiple
-                className='hidden'
-                onChange={(e) => {
-                  addFiles(e.target.files, 'audio');
-                  e.target.value = '';
-                }}
-              />
-              <div className='flex gap-2'>
+              <div className='flex items-center gap-2'>
+                <button
+                  type='button'
+                  onClick={() => attachmentInputRef.current?.click()}
+                  className='inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100'
+                  aria-label='Upload attachments'
+                >
+                  <Paperclip size={16} />
+                </button>
                 <button
                   type='button'
                   onClick={mic.toggleRecording}
-                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
                     mic.isRecording
                       ? 'border-rose-300 bg-rose-50 text-rose-700'
                       : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
                   }`}
+                  aria-label={mic.isRecording ? 'Stop recording' : 'Start recording'}
                 >
-                  <Mic size={16} /> {mic.isRecording ? 'Stop' : 'Record'}
+                  <Mic size={16} />
                 </button>
-                <button
-                  type='button'
-                  onClick={() => audioInputRef.current?.click()}
-                  className='inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
-                >
-                  <Paperclip size={16} /> Import
-                </button>
-              </div>
-              <div className='mt-2 flex flex-wrap gap-2'>
-                {form.adminAudioFiles.map((file, idx) => (
-                  <div
-                    key={`aud-${idx}`}
-                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-700'
-                  >
-                    <span className='truncate'>{file.name}</span>
-                    <button type='button' onClick={() => removeFile(idx, 'audio')}>
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
               </div>
             </div>
 
-            {/* Files */}
-            <div className='rounded-xl border border-slate-200 bg-white p-3'>
-              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
-                Files
-              </p>
-              <input
-                ref={otherFilesInputRef}
-                type='file'
-                multiple
-                className='hidden'
-                onChange={(e) => {
-                  addFiles(e.target.files, 'other');
-                  e.target.value = '';
-                }}
-              />
-              <button
-                type='button'
-                onClick={() => otherFilesInputRef.current?.click()}
-                className='inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
-              >
-                <Paperclip size={16} /> Import files
-              </button>
-              <div className='mt-2 flex flex-wrap gap-2'>
-                {form.otherFiles.map((file, idx) => (
-                  <div
-                    key={`file-${idx}`}
-                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700'
-                  >
-                    <span className='truncate'>{file.name}</span>
-                    <button type='button' onClick={() => removeFile(idx, 'other')}>
-                      <X size={12} />
-                    </button>
+            {totalAttachmentCount === 0 ? (
+              <div className='mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500'>
+                Add attachments with the paper clip or record a voice note with the microphone.
+              </div>
+            ) : (
+              <div className='mt-5 space-y-4'>
+                {visibleAttachmentSections.map((section) => (
+                  <div key={section.key}>
+                    <h4 className='text-xs font-bold uppercase tracking-[0.18em] text-slate-500'>
+                      {section.title}
+                    </h4>
+                    <div className='mt-2 space-y-2'>
+                      {section.items.map((item, index) => {
+                        const Icon = getAttachmentButtonIcon(item.kind);
+                        return (
+                          <div
+                            key={item.id}
+                            className='flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2'
+                          >
+                            <button
+                              type='button'
+                              onClick={() => openAttachmentPreview(item)}
+                              className='flex min-w-0 flex-1 items-center gap-3 text-left'
+                            >
+                              <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-600'>
+                                <Icon size={16} />
+                              </span>
+                              <span className='min-w-0'>
+                                <span className='block truncate text-sm font-medium text-slate-900'>
+                                  {item.name}
+                                </span>
+                                <span className='block text-xs text-slate-500'>
+                                  {section.title.slice(0, -1)} {index + 1}
+                                </span>
+                              </span>
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                if (section.key === 'images') removeFile(index, 'image');
+                                else if (section.key === 'videos') removeFile(index, 'video');
+                                else if (section.key === 'voices') removeFile(index, 'audio');
+                                else removeFile(index, 'other');
+
+                                if (selectedAttachment?.name === item.name)
+                                  closeAttachmentPreview();
+                              }}
+                              className='inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white hover:text-slate-600'
+                              aria-label={`Remove ${item.name}`}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -548,6 +624,14 @@ export function TaskFormModal({
           </Button>
         </div>
       </div>
+
+      <AttachmentPreviewModal
+        title={selectedAttachment?.name ?? ''}
+        open={!!selectedAttachment}
+        onClose={closeAttachmentPreview}
+        kind={selectedAttachment?.kind ?? 'file'}
+        sourceUrl={selectedAttachment?.sourceUrl ?? null}
+      />
     </Modal>
   );
 }

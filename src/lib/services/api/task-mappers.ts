@@ -218,11 +218,11 @@ export function mapApiTaskToTask(raw: ApiTaskRaw): Task {
       : raw.videoUrls;
 
   const adminAudioUrl = adminSubmission
-    ? adminSubmission.attachments?.audios ?? []
+    ? (adminSubmission.attachments?.audios ?? [])
     : raw.adminAudioUrl;
 
   const managerAudioUrl = managerSubmission
-    ? managerSubmission.attachments?.audios ?? []
+    ? (managerSubmission.attachments?.audios ?? [])
     : raw.managerAudioUrl;
 
   const fileUrls =

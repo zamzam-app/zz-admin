@@ -208,7 +208,12 @@ export default function TaskMediaDetail() {
         items.push({ id: `admin-aud-${i}`, url, kind: 'audio', name: `Audio ${i + 1}` }),
       );
       att.files.forEach((url, i) =>
-        items.push({ id: `admin-file-${i}`, url, kind: inferMediaKind(url), name: `File ${i + 1}` }),
+        items.push({
+          id: `admin-file-${i}`,
+          url,
+          kind: inferMediaKind(url),
+          name: `File ${i + 1}`,
+        }),
       );
       return items;
     }

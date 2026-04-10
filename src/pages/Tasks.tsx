@@ -297,7 +297,14 @@ export default function Tasks() {
 
     let adminSubmission = editing?.adminSubmission;
 
-    if (!editing || form.adminAudioFiles.length > 0 || form.imageFiles.length > 0 || form.videoFiles.length > 0 || form.otherFiles.length > 0 || desc !== editing.description) {
+    if (
+      !editing ||
+      form.adminAudioFiles.length > 0 ||
+      form.imageFiles.length > 0 ||
+      form.videoFiles.length > 0 ||
+      form.otherFiles.length > 0 ||
+      desc !== editing.description
+    ) {
       clearUploadError();
       try {
         const [audios, images, videos, files] = await Promise.all([
