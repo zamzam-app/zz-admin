@@ -7,15 +7,10 @@ import type {
   Task,
   TaskPriority,
   TaskStatus,
+  TaskSubmission,
   UpdateTaskPayload,
 } from '../../types/task';
-import {
-  mapApiTaskToTask,
-  toApiCategory,
-  toApiPriority,
-  toApiStatus,
-  type ApiTaskRaw,
-} from './task-mappers';
+import { mapApiTaskToTask, toApiPriority, toApiStatus, type ApiTaskRaw } from './task-mappers';
 
 function unwrapTaskList(data: unknown): ApiTaskRaw[] {
   if (Array.isArray(data)) return data as ApiTaskRaw[];
@@ -42,32 +37,45 @@ function cleanQueryParams(q: QueryTaskDto): Record<string, string | number> {
 interface CreateTaskDtoBody {
   description: string;
   comment?: string;
-  category: string;
+  taskCategoryId: string;
   priority?: string;
   status?: string;
   dueDate: string;
-  outletId: string;
+  outletId?: string;
   assigneeIds?: string[];
   imageUrls?: string[];
   videoUrls?: string[];
   adminAudioUrl?: string[];
   managerAudioUrl?: string[];
   managerComments?: string;
+  adminSubmission?: TaskSubmission;
+  managerSubmission?: TaskSubmission;
+}
+
+function sanitizeSubmission(submission: TaskSubmission): TaskSubmission {
+  return {
+    text: submission.text,
+    attachments: {
+      images: submission.attachments.images ?? [],
+      videos: submission.attachments.videos ?? [],
+      audios: submission.attachments.audios ?? [],
+      files: submission.attachments.files ?? [],
+    },
+  };
 }
 
 function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
-  if (!payload.outletId) {
-    throw new Error('outletId is required');
-  }
-  if (!payload.category) {
-    throw new Error('category is required');
+  if (!payload.taskCategoryId) {
+    throw new Error('taskCategoryId is required');
   }
   const body: CreateTaskDtoBody = {
     description: payload.description.trim(),
-    category: toApiCategory(payload.category),
+    taskCategoryId: payload.taskCategoryId.trim(),
     dueDate: payload.dueDate,
-    outletId: payload.outletId,
   };
+  if (payload.outletId) {
+    body.outletId = payload.outletId;
+  }
   body.priority = toApiPriority(payload.priority);
   if (payload.status) {
     body.status = toApiStatus(payload.status);
@@ -85,6 +93,12 @@ function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
     body.managerAudioUrl = payload.managerAudioUrl;
   }
   if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
+
+  if (payload.adminSubmission) body.adminSubmission = sanitizeSubmission(payload.adminSubmission);
+  if (payload.managerSubmission) {
+    body.managerSubmission = sanitizeSubmission(payload.managerSubmission);
+  }
+
   return body;
 }
 
@@ -92,7 +106,7 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   if (payload.description !== undefined) body.description = payload.description.trim();
   if (payload.comment !== undefined) body.comment = payload.comment.trim();
-  if (payload.category !== undefined) body.category = toApiCategory(payload.category);
+  if (payload.taskCategoryId !== undefined) body.taskCategoryId = payload.taskCategoryId.trim();
   if (payload.priority !== undefined) body.priority = toApiPriority(payload.priority);
   if (payload.status !== undefined) body.status = toApiStatus(payload.status);
   if (payload.dueDate !== undefined) body.dueDate = payload.dueDate;
@@ -102,6 +116,14 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   if (payload.adminAudioUrl !== undefined) body.adminAudioUrl = payload.adminAudioUrl;
   if (payload.managerAudioUrl !== undefined) body.managerAudioUrl = payload.managerAudioUrl;
   if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
+
+  if (payload.adminSubmission !== undefined) {
+    body.adminSubmission = sanitizeSubmission(payload.adminSubmission);
+  }
+  if (payload.managerSubmission !== undefined) {
+    body.managerSubmission = sanitizeSubmission(payload.managerSubmission);
+  }
+
   return body;
 }
 
@@ -160,8 +182,11 @@ export const tasksApi = {
     return tasksApi.findAll({ page: 1, limit: 100 });
   },
 
-  getByAssignee: async (assigneeId: string): Promise<Task[]> => {
-    return tasksApi.findAll({ assigneeId, page: 1, limit: 100 });
+  getByAssignee: async (userId: string, query: QueryTaskDto = {}): Promise<Task[]> => {
+    const params = cleanQueryParams({ page: 1, limit: 100, ...query });
+    const res = await api.get<unknown>(TASKS.BY_ASSIGNEE(userId), { params });
+    const list = unwrapTaskList(res.data);
+    return list.map((item) => mapApiTaskToTask(item));
   },
 
   create: async (payload: CreateTaskPayload & { createdBy?: string }): Promise<Task> => {

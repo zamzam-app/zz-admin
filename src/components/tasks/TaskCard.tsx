@@ -73,6 +73,12 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
     [rawMediaUrls, task.adminAudioUrl, task.audioUrls, task.managerAudioUrl],
   );
   const fileUrls = useMemo(() => {
+    const fromSubmissions = [
+      ...(task.adminSubmission?.attachments?.files ?? []),
+      ...(task.managerSubmission?.attachments?.files ?? []),
+    ];
+    if (fromSubmissions.length > 0) return Array.from(new Set(fromSubmissions));
+
     const files =
       (task as Task & { fileUrls?: string[]; attachmentUrls?: string[]; files?: string[] })
         .fileUrls ??

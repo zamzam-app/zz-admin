@@ -27,6 +27,7 @@ export default function Analytics() {
 
   const { data: outlets, isLoading } = useApiQuery(OUTLET_KEYS, () => outletApi.getOutletsList());
   const store = outlets?.find((s) => s.id === id || s.outletId === id) ?? null;
+
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const sortedReviews = useMemo(() => {

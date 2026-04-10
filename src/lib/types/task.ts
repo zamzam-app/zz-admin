@@ -2,7 +2,22 @@ export const TASK_KEYS = ['tasks'];
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type TaskStatus = 'open' | 'in_progress' | 'completed';
-export type TaskCategory = 'hygiene' | 'maintenance' | 'inventory' | 'staffing';
+export type TaskCategory = string;
+
+export type TaskAttachmentGroup = {
+  images: string[];
+  videos: string[];
+  audios: string[];
+  files: string[];
+};
+
+export type TaskSubmission = {
+  text?: string;
+  attachments: TaskAttachmentGroup;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 export interface Task {
   id: string;
@@ -12,6 +27,7 @@ export interface Task {
   priority: TaskPriority;
   dueDate: string;
   category?: TaskCategory;
+  taskCategoryId?: string;
   outletId?: string;
   outletName?: string;
   imageUrl?: string;
@@ -19,6 +35,7 @@ export interface Task {
   videoUrls?: string[];
   adminAudioUrl?: string[];
   managerAudioUrl?: string[];
+  fileUrls?: string[];
   managerComments?: string;
   /** @deprecated Use adminAudioUrl / managerAudioUrl */
   audioUrls?: string[];
@@ -30,6 +47,10 @@ export interface Task {
   updatedAt?: string;
   completedAt?: string | null;
   completedBy?: string | null;
+
+  // New fields
+  adminSubmission?: TaskSubmission;
+  managerSubmission?: TaskSubmission;
 }
 
 export interface CreateTaskPayload {
@@ -38,7 +59,7 @@ export interface CreateTaskPayload {
   comment?: string;
   priority: TaskPriority;
   dueDate: string;
-  category?: TaskCategory;
+  taskCategoryId?: string;
   outletId?: string;
   outletName?: string;
   status?: TaskStatus;
@@ -48,7 +69,12 @@ export interface CreateTaskPayload {
   videoUrls?: string[];
   adminAudioUrl?: string[];
   managerAudioUrl?: string[];
+  fileUrls?: string[];
   managerComments?: string;
+
+  // New fields
+  adminSubmission?: TaskSubmission;
+  managerSubmission?: TaskSubmission;
 }
 
 export interface UpdateTaskPayload {
@@ -56,12 +82,17 @@ export interface UpdateTaskPayload {
   comment?: string;
   priority?: TaskPriority;
   dueDate?: string;
-  category?: TaskCategory;
+  taskCategoryId?: string;
   status?: TaskStatus;
   assigneeIds?: string[];
   imageUrls?: string[];
   videoUrls?: string[];
   adminAudioUrl?: string[];
   managerAudioUrl?: string[];
+  fileUrls?: string[];
   managerComments?: string;
+
+  // New fields
+  adminSubmission?: TaskSubmission;
+  managerSubmission?: TaskSubmission;
 }
