@@ -135,13 +135,10 @@ function AttachmentTile({ item, onOpen }: { item: MediaItem; onOpen: () => void 
     <button
       type='button'
       onClick={onOpen}
-      className='h-20 rounded-2xl border border-slate-300 bg-white px-3 py-2 text-left transition-colors hover:bg-slate-50'
+      className='aspect-square w-12.5 cursor-pointer rounded-2xl border border-slate-300 bg-white transition-colors hover:bg-slate-50'
     >
-      <div className='flex h-full items-start justify-between'>
-        <span className='text-sm font-bold uppercase text-slate-900'>
-          {item.kind === 'doc' ? 'DOC' : item.kind.toUpperCase()}
-        </span>
-        <Icon size={16} className='text-slate-500' aria-hidden />
+      <div className='flex h-full items-center justify-center'>
+        <Icon size={20} className='text-slate-500' aria-hidden />
       </div>
     </button>
   );
@@ -298,7 +295,7 @@ export default function TaskMediaDetail() {
   }
 
   const badge = STATUS_BADGE[task.status];
-  const headlineName = task.outletName?.trim() || task.title;
+  const outletHeadline = task.outletName?.trim() || task.outletId?.trim() || '';
   const categoryLabel = formatCategoryLabel(task.category);
   const assigneeNames =
     task.assigneeNames && task.assigneeNames.length > 0 ? task.assigneeNames : [];
@@ -306,18 +303,20 @@ export default function TaskMediaDetail() {
   return (
     <div className='flex min-h-0 flex-col gap-6 -mx-6 -mb-6 bg-[#F8F9FA]'>
       <div className='shrink-0 bg-[#F8F9FA] px-6 pt-6 pb-1 lg:px-8'>
-        <div className='mx-auto max-w-4xl'>
+        <div className='relative mt-3 min-h-11'>
           <Link
             to='/tasks'
-            className='inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700'
+            className='absolute left-0 top-1/2 inline-flex -translate-y-1/2 items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700'
           >
             <ArrowLeft size={16} aria-hidden />
             Back to Tasks
           </Link>
-          <h1 className='mt-3 text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>
-            Task Media
+          <h1 className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-extrabold text-[#1F2937] sm:text-[2.125rem]'>
+            Task Details
           </h1>
-          <p className='mt-1 text-sm text-slate-500'>
+        </div>
+        <div className='mx-auto max-w-4xl'>
+          <p className='mt-1 text-center text-sm text-slate-500'>
             Review task details and uploaded attachments.
           </p>
         </div>
@@ -326,49 +325,56 @@ export default function TaskMediaDetail() {
       <div className='overflow-y-auto overflow-x-hidden px-6 pb-10 lg:px-8'>
         <div className='mx-auto max-w-4xl'>
           <div className='rounded-4xl border border-slate-300/80 bg-white p-4 shadow-sm sm:p-6'>
+            <div className='mb-5 flex flex-wrap items-start justify-between gap-3 px-1'>
+              <div className='flex min-w-0 flex-wrap items-center gap-3'>
+                {categoryLabel ? (
+                  <span className='inline-flex rounded-lg bg-amber-400/90 px-3 py-1 text-lg font-semibold text-black'>
+                    {categoryLabel}
+                  </span>
+                ) : null}
+                {outletHeadline ? (
+                  <h2 className='text-2xl font-bold tracking-tight text-black'>{outletHeadline}</h2>
+                ) : null}
+              </div>
+              <div className='flex flex-wrap items-center gap-2'>
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ring-1 ${badge.className}`}
+                >
+                  {badge.label}
+                </span>
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ring-1 ${getPriorityPillClass(task.priority)}`}
+                >
+                  {task.priority}
+                </span>
+              </div>
+            </div>
+
             <section className='rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
               <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
                 <div className='min-w-0 flex-1'>
-                  <div className='flex flex-wrap items-center gap-3'>
-                    {categoryLabel ? (
-                      <span className='inline-flex rounded-lg bg-amber-400/90 px-3 py-1 text-lg font-semibold text-black'>
-                        {categoryLabel}
-                      </span>
-                    ) : null}
-                    <h2 className='text-2xl font-bold tracking-tight text-black'>{headlineName}</h2>
-                  </div>
-
-                  <div className='mt-4 space-y-3 text-slate-900'>
+                  <div className='space-y-3 text-slate-900'>
                     <div className='flex flex-wrap items-center gap-3'>
-                      <span className='w-28 text-2xl font-bold leading-none'>Assigned</span>
-                      <div className='flex flex-wrap gap-2'>
-                        {assigneeNames.map((name, idx) => (
-                          <span
-                            key={`assignee-${idx}-${name}`}
-                            className='inline-flex min-w-18 items-center justify-center rounded-md border border-slate-500 bg-white px-2.5 py-0.5 text-base'
-                          >
-                            {name}
-                          </span>
-                        ))}
-                        {assigneeNames.length === 0 ? (
-                          <span className='text-sm text-slate-500'>Unassigned</span>
-                        ) : null}
-                      </div>
+                      <span className='w-32 text-2xl font-bold leading-none'>Deadline</span>
+                      <span className='text-xl font-medium leading-none text-slate-600'>
+                        {dayjs(task.dueDate).format('MMM D, YYYY')}
+                      </span>
                     </div>
-                    <div>
-                      <span className='text-2xl font-bold leading-none'>Description</span>
-                      <p className='mt-1 text-xl leading-snug text-slate-800'>{task.description}</p>
+                    <div className='flex flex-wrap items-center gap-3'>
+                      <span className='w-32 text-2xl font-bold leading-none'>Assigned</span>
+                      {assigneeNames.length > 0 ? (
+                        <span className='text-xl text-slate-600'>{assigneeNames.join(', ')}</span>
+                      ) : (
+                        <span className='text-sm text-slate-500'>Unassigned</span>
+                      )}
+                    </div>
+                    <div className='flex items-start gap-3'>
+                      <span className='w-32 shrink-0 text-2xl font-bold leading-none'>
+                        Description
+                      </span>
+                      <p className='text-xl leading-snug text-slate-600'>{task.description}</p>
                     </div>
                   </div>
-                </div>
-
-                <div className='w-full rounded-xl border border-slate-300 bg-white px-4 py-3 lg:w-52'>
-                  <p className='text-xs font-bold uppercase tracking-[0.14em] text-slate-500'>
-                    Deadline
-                  </p>
-                  <p className='mt-1 text-lg font-bold text-slate-900'>
-                    {dayjs(task.dueDate).format('MMM D, YYYY')}
-                  </p>
                 </div>
               </div>
 
@@ -404,19 +410,6 @@ export default function TaskMediaDetail() {
                   </div>
                 </div>
               ) : null}
-
-              <div className='mt-4 flex flex-wrap items-center gap-2'>
-                <span
-                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ring-1 ${badge.className}`}
-                >
-                  {badge.label}
-                </span>
-                <span
-                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ring-1 ${getPriorityPillClass(task.priority)}`}
-                >
-                  {task.priority}
-                </span>
-              </div>
             </section>
 
             <section className='mt-5 rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
