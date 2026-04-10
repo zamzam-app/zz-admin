@@ -7,7 +7,8 @@ export interface QueryTaskDto {
   limit?: number;
   outletId?: string;
   status?: string;
-  category?: string;
+  taskCategoryId?: string;
+  category?: string; // alias
   priority?: string;
   assigneeId?: string;
   search?: string;

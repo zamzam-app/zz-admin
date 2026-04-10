@@ -3,15 +3,23 @@ import { Calendar, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import type { Task, TaskStatus } from '../../lib/types/task';
 
 const STATUS_ROW: Record<TaskStatus, { label: string; className: string }> = {
-  open: {
+  OPEN: {
     label: 'Open',
     className: 'border border-slate-200 bg-slate-100 text-slate-700',
   },
-  in_progress: {
+  ASSIGNED: {
+    label: 'Assigned',
+    className: 'border border-slate-200 bg-slate-100 text-slate-700',
+  },
+  IN_PROGRESS: {
+    label: 'In Progress',
+    className: 'border border-sky-200/90 bg-sky-100 text-sky-900',
+  },
+  READY_FOR_REVIEW: {
     label: 'Ready for review',
     className: 'border border-sky-200/90 bg-sky-100 text-sky-900',
   },
-  completed: {
+  COMPLETED: {
     label: 'Completed',
     className: 'border border-emerald-200 bg-emerald-50 text-emerald-900',
   },
@@ -29,13 +37,15 @@ type Props = {
 };
 
 export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }: Props) {
-  const showComplete = !isAdmin && task.status !== 'completed' && onComplete;
-  const statusCfg = STATUS_ROW[task.status];
-  const headlineName = task.outletName?.trim() || task.title;
+  const showComplete = !isAdmin && task.status !== 'COMPLETED' && onComplete;
+  const statusCfg = STATUS_ROW[task.status] || STATUS_ROW.OPEN;
+  const headlineName = task.outlet?.name?.trim() || task.title;
   const assigneeLabel =
-    task.assigneeNames && task.assigneeNames.length > 0
-      ? task.assigneeNames.join(', ')
+    task.assignees && task.assignees.length > 0
+      ? task.assignees.map((a) => a.name).join(', ')
       : 'Unassigned';
+
+  const firstImageUrl = task.adminSubmission?.attachments?.images?.[0];
 
   return (
     <div
@@ -68,11 +78,11 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
       </div>
 
       <div className='flex flex-wrap items-center gap-2'>
-        {task.category && (
+        {task.taskCategory?.name && (
           <span
             className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize leading-none ${CATEGORY_PILL}`}
           >
-            {task.category}
+            {task.taskCategory.name}
           </span>
         )}
         <span className='text-base font-bold leading-snug text-slate-900'>{headlineName}</span>
@@ -80,10 +90,10 @@ export function TaskCard({ task, isAdmin, onEdit, onDelete, onComplete, onOpen }
 
       <p className='text-sm leading-relaxed text-slate-600'>{task.description}</p>
 
-      {(task.imageUrls?.[0] ?? task.imageUrl) ? (
+      {firstImageUrl ? (
         <div className='overflow-hidden rounded-lg'>
           <img
-            src={task.imageUrls?.[0] ?? task.imageUrl}
+            src={firstImageUrl}
             alt=''
             className='aspect-video w-full object-cover'
             loading='lazy'

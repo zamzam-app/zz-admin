@@ -1,67 +1,86 @@
 export const TASK_KEYS = ['tasks'];
 
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type TaskStatus = 'open' | 'in_progress' | 'completed';
-export type TaskCategory = 'hygiene' | 'maintenance' | 'inventory' | 'staffing';
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type TaskStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'READY_FOR_REVIEW' | 'COMPLETED';
+
+export interface TaskAttachmentGroup {
+  images: string[];
+  videos: string[];
+  audios: string[];
+  files: string[];
+}
+
+export interface TaskUserRef {
+  _id: string;
+  name?: string;
+}
+
+export interface TaskSubmission {
+  text?: string;
+  attachments: TaskAttachmentGroup;
+  createdBy: TaskUserRef;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskCategory {
+  _id: string;
+  name: string;
+  description?: string;
+}
 
 export interface Task {
   id: string;
-  title: string;
   description: string;
-  comment?: string;
+  taskCategory: TaskCategory;
   priority: TaskPriority;
-  dueDate: string;
-  category?: TaskCategory;
-  outletId?: string;
-  outletName?: string;
-  imageUrl?: string;
-  imageUrls?: string[];
-  videoUrls?: string[];
-  adminAudioUrl?: string[];
-  managerAudioUrl?: string[];
-  managerComments?: string;
-  /** @deprecated Use adminAudioUrl / managerAudioUrl */
-  audioUrls?: string[];
   status: TaskStatus;
-  assigneeIds: string[];
-  assigneeNames?: string[];
-  createdAt: string;
-  createdBy?: string;
-  updatedAt?: string;
+  dueDate: string;
   completedAt?: string | null;
-  completedBy?: string | null;
+  adminSubmission?: TaskSubmission;
+  managerSubmission?: TaskSubmission;
+  outlet: { _id: string; name: string } | null;
+  assignees: TaskUserRef[];
+  createdBy: TaskUserRef;
+  createdAt: string;
+  updatedAt: string;
+
+  // Computed / UI helper fields (not from backend directly but often used in frontend)
+  title: string;
 }
 
 export interface CreateTaskPayload {
-  title: string;
   description: string;
-  comment?: string;
-  priority: TaskPriority;
+  taskCategoryId: string;
   dueDate: string;
-  category?: TaskCategory;
-  outletId?: string;
-  outletName?: string;
+  priority?: TaskPriority;
   status?: TaskStatus;
-  assigneeIds: string[];
-  assigneeNames?: string[];
-  imageUrls?: string[];
-  videoUrls?: string[];
-  adminAudioUrl?: string[];
-  managerAudioUrl?: string[];
-  managerComments?: string;
+  outletId?: string;
+  assigneeIds?: string[];
+  adminSubmission?: {
+    text?: string;
+    attachments?: Partial<TaskAttachmentGroup>;
+  };
+  managerSubmission?: {
+    text?: string;
+    attachments?: Partial<TaskAttachmentGroup>;
+  };
 }
 
 export interface UpdateTaskPayload {
   description?: string;
-  comment?: string;
-  priority?: TaskPriority;
+  taskCategoryId?: string;
   dueDate?: string;
-  category?: TaskCategory;
+  priority?: TaskPriority;
   status?: TaskStatus;
+  outletId?: string;
   assigneeIds?: string[];
-  imageUrls?: string[];
-  videoUrls?: string[];
-  adminAudioUrl?: string[];
-  managerAudioUrl?: string[];
-  managerComments?: string;
+  adminSubmission?: {
+    text?: string;
+    attachments?: Partial<TaskAttachmentGroup>;
+  };
+  managerSubmission?: {
+    text?: string;
+    attachments?: Partial<TaskAttachmentGroup>;
+  };
 }

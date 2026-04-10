@@ -8,6 +8,7 @@ import { useAuth } from '../lib/context/AuthContext';
 import { useImageUpload } from '../lib/hooks/useImageUpload';
 import { useApiQuery, useApiMutation } from '../lib/react-query/use-api-hooks';
 import { usersApi } from '../lib/services/api/users.api';
+import { taskCategoryApi } from '../lib/services/api/task-category.api';
 import {
   TASK_KEYS,
   type CreateTaskPayload,
@@ -23,17 +24,19 @@ import { TaskFormModal, type TaskFormState } from '../components/tasks/TaskFormM
 import { TaskCard } from '../components/tasks/TaskCard';
 
 const STATUS_BADGE: Record<TaskStatus, { label: string; color: string; bg: string }> = {
-  open: { label: 'Open', color: '#1F2937', bg: '#F8FAFC' },
-  in_progress: { label: 'In Progress', color: '#9A3412', bg: '#FFF7ED' },
-  completed: { label: 'Completed', color: '#065F46', bg: '#ECFDF3' },
+  OPEN: { label: 'Open', color: '#1F2937', bg: '#F8FAFC' },
+  ASSIGNED: { label: 'Assigned', color: '#1F2937', bg: '#F8FAFC' },
+  IN_PROGRESS: { label: 'In Progress', color: '#9A3412', bg: '#FFF7ED' },
+  READY_FOR_REVIEW: { label: 'Ready for review', color: '#9A3412', bg: '#FFF7ED' },
+  COMPLETED: { label: 'Completed', color: '#065F46', bg: '#ECFDF3' },
 };
 
 const EMPTY_FORM: TaskFormState = {
   description: '',
-  priority: 'medium',
+  priority: 'MEDIUM',
   dueDate: dayjs(),
   outletId: '',
-  category: '',
+  taskCategoryId: '',
   assigneeIds: [],
   adminAudioFiles: [],
 };
@@ -66,6 +69,7 @@ export default function Tasks() {
   const { data: outlets = [] } = useApiQuery(OUTLET_KEYS, () =>
     import('../lib/services/api/outlet.api').then((m) => m.outletApi.getOutletsList()),
   );
+  const { data: taskCategories = [] } = useApiQuery(['task-categories'], taskCategoryApi.findAll);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -89,22 +93,22 @@ export default function Tasks() {
   const boardTasks = useMemo(() => {
     let filtered = tasks;
     if (role !== 'admin' && assignedOutletIds && assignedOutletIds.length > 0) {
-      filtered = tasks.filter((t) => !t.outletId || assignedOutletIds.includes(t.outletId));
+      filtered = tasks.filter((t) => !t.outlet?._id || assignedOutletIds.includes(t.outlet?._id));
     }
-    return filtered.filter((t) => t.status !== 'in_progress');
+    return filtered.filter((t) => t.status !== 'IN_PROGRESS' && t.status !== 'READY_FOR_REVIEW');
   }, [tasks, role, assignedOutletIds]);
 
   const openTasks = useMemo(() => {
-    return boardTasks.filter((t) => t.status === 'open');
+    return boardTasks.filter((t) => t.status === 'OPEN' || t.status === 'ASSIGNED');
   }, [boardTasks]);
 
   const completedTasks = useMemo(() => {
-    return boardTasks.filter((t) => t.status === 'completed');
+    return boardTasks.filter((t) => t.status === 'COMPLETED');
   }, [boardTasks]);
 
   const pendingTasks = useMemo(() => {
     if (role === 'admin' || !userId) return [];
-    return boardTasks.filter((task) => task.status !== 'completed');
+    return boardTasks.filter((task) => task.status !== 'COMPLETED');
   }, [boardTasks, role, userId]);
 
   useEffect(() => {
@@ -115,7 +119,7 @@ export default function Tasks() {
   }, [role, userId]);
 
   const createMutation = useApiMutation(
-    (payload: CreateTaskPayload & { createdBy?: string }) =>
+    (payload: CreateTaskPayload) =>
       import('../lib/services/api/task.api').then((m) => m.tasksApi.create(payload)),
     [TASK_KEYS, ['tasks', 'unread', userId]],
     {
@@ -188,9 +192,9 @@ export default function Tasks() {
       description: task.description,
       priority: task.priority,
       dueDate: dayjs(task.dueDate),
-      outletId: task.outletId ? task.outletId : 'all',
-      category: task.category ?? '',
-      assigneeIds: task.assigneeIds,
+      outletId: task.outlet?._id ? task.outlet._id : 'all',
+      taskCategoryId: task.taskCategory?._id ?? '',
+      assigneeIds: task.assignees.map(a => a._id),
       adminAudioFiles: [],
     });
     setModalOpen(true);
@@ -210,10 +214,13 @@ export default function Tasks() {
       return;
     }
     if (!editing && (form.outletId === '' || form.outletId === 'all')) {
+      // In new backend, outletId is optional, but frontend logic might still want it.
+      // The handoff said "outletId is optional in create/update", so I'll relax this check if needed,
+      // but for now I'll keep it if it's a business requirement.
       message.error('Please select a specific outlet. Each task must be tied to one outlet.');
       return;
     }
-    if (!form.category) {
+    if (!form.taskCategoryId) {
       message.error('Please select a task category.');
       return;
     }
@@ -233,21 +240,6 @@ export default function Tasks() {
 
     const desc = form.description.trim();
 
-    if (editing) {
-      updateMutation.mutate({
-        id: editing.id,
-        data: {
-          description: desc,
-          priority: form.priority,
-          dueDate,
-          category: form.category,
-          status: editing.status,
-          assigneeIds,
-        },
-      });
-      return;
-    }
-
     let adminAudioUrl: string[] = [];
     if (form.adminAudioFiles.length > 0) {
       clearUploadError();
@@ -263,22 +255,41 @@ export default function Tasks() {
       }
     }
 
+    const adminSubmission = {
+      text: desc,
+      attachments: {
+        audios: adminAudioUrl
+      }
+    };
+
+    if (editing) {
+      updateMutation.mutate({
+        id: editing.id,
+        data: {
+          description: desc,
+          priority: form.priority,
+          dueDate,
+          taskCategoryId: form.taskCategoryId,
+          status: editing.status,
+          assigneeIds,
+          adminSubmission
+        },
+      });
+      return;
+    }
+
     const outlet = outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
-    const titleFromDescription = desc.split('\n')[0].trim().slice(0, 120) || 'Task';
-    const outletMongoId = outlet?.id ?? form.outletId;
-    const payload = {
-      title: titleFromDescription,
+    const outletMongoId = outlet?.id ?? (form.outletId === 'all' ? undefined : form.outletId);
+
+    const payload: CreateTaskPayload = {
       description: desc,
       priority: form.priority,
       dueDate,
-      category: form.category,
+      taskCategoryId: form.taskCategoryId,
       outletId: outletMongoId,
-      outletName: outlet?.name,
-      status: 'open' as const,
+      status: 'OPEN',
       assigneeIds,
-      assigneeNames: selectedManagers.map((m) => m.name).filter(Boolean),
-      adminAudioUrl,
-      createdBy: userId || undefined,
+      adminSubmission
     };
 
     createMutation.mutate(payload);
@@ -345,11 +356,11 @@ export default function Tasks() {
                       </p>
                     </div>
                     <Chip
-                      label={STATUS_BADGE[task.status].label}
+                      label={STATUS_BADGE[task.status]?.label || task.status}
                       size='small'
                       sx={{
-                        bgcolor: STATUS_BADGE[task.status].bg,
-                        color: STATUS_BADGE[task.status].color,
+                        bgcolor: STATUS_BADGE[task.status]?.bg || '#F8FAFC',
+                        color: STATUS_BADGE[task.status]?.color || '#1F2937',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         fontSize: 10,
@@ -470,6 +481,7 @@ export default function Tasks() {
         }
         outlets={outlets}
         managers={managers}
+        taskCategories={taskCategories}
       />
     </div>
   );

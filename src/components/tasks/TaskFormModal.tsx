@@ -11,14 +11,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { DateWheelPicker } from '../common/DateWheelPicker';
 
-const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
-
-const TASK_CATEGORY_OPTIONS: { value: TaskCategory; label: string }[] = [
-  { value: 'hygiene', label: 'Hygiene' },
-  { value: 'maintenance', label: 'Maintenance' },
-  { value: 'inventory', label: 'Inventory' },
-  { value: 'staffing', label: 'Staffing' },
-];
+const PRIORITY_OPTIONS: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
 
 /** Same label style as “Select outlet” (uppercase via CSS) */
 const fieldLabelClass =
@@ -60,7 +53,7 @@ export type TaskFormState = {
   dueDate: Dayjs | null;
   /** '' = not selected yet, 'all' = all outlets, else outlet id */
   outletId: '' | 'all' | string;
-  category: TaskCategory | '';
+  taskCategoryId: string;
   assigneeIds: string[];
   /** Uploaded to Cloudinary only when user clicks Assign Task */
   adminAudioFiles: File[];
@@ -76,6 +69,7 @@ type TaskFormModalProps = {
   isSubmitting?: boolean;
   outlets: Outlet[];
   managers: User[];
+  taskCategories: TaskCategory[];
 };
 
 export function TaskFormModal({
@@ -88,6 +82,7 @@ export function TaskFormModal({
   isSubmitting,
   outlets,
   managers,
+  taskCategories,
 }: TaskFormModalProps) {
   const audioInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,7 +101,7 @@ export function TaskFormModal({
 
   const assigneeOptions = useMemo(() => {
     const outletId =
-      editing?.outletId ?? (form.outletId !== '' && form.outletId !== 'all' ? form.outletId : null);
+      editing?.outlet?._id ?? (form.outletId !== '' && form.outletId !== 'all' ? form.outletId : null);
     if (!outletId) return [];
 
     const outlet =
@@ -114,7 +109,7 @@ export function TaskFormModal({
     if (outlet) return filterManagersForOutlet(outlet, managers);
 
     return managers.filter((m) => (m.outletId ?? []).includes(outletId));
-  }, [editing?.outletId, form.outletId, outlets, managers]);
+  }, [editing?.outlet?._id, form.outletId, outlets, managers]);
 
   const addAudioFiles = (files: FileList | null) => {
     if (!files?.length) return;
@@ -159,9 +154,9 @@ export function TaskFormModal({
                 id='task-outlet-readonly'
                 className='flex min-h-10 items-center rounded-3xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800'
               >
-                {editing.outletName?.trim() ||
-                  outlets.find((o) => o.id === editing.outletId)?.name ||
-                  editing.outletId ||
+                {editing.outlet?.name?.trim() ||
+                  outlets.find((o) => o.id === editing.outlet?._id)?.name ||
+                  editing.outlet?._id ||
                   '—'}
               </div>
             ) : (
@@ -227,7 +222,7 @@ export function TaskFormModal({
             >
               {PRIORITY_OPTIONS.map((priority) => (
                 <MenuItem key={priority} value={priority}>
-                  {priority.toUpperCase()}
+                  {priority}
                 </MenuItem>
               ))}
             </MuiSelect>
@@ -237,20 +232,20 @@ export function TaskFormModal({
         <div>
           <label className={fieldLabelClass}>Task category</label>
           <div className='flex flex-wrap gap-2'>
-            {TASK_CATEGORY_OPTIONS.map(({ value, label }) => {
-              const selected = form.category === value;
+            {taskCategories.map((cat) => {
+              const selected = form.taskCategoryId === cat._id;
               return (
                 <button
-                  key={value}
+                  key={cat._id}
                   type='button'
-                  onClick={() => setForm({ ...form, category: value })}
+                  onClick={() => setForm({ ...form, taskCategoryId: cat._id })}
                   className={`rounded-full border px-4 py-2 text-sm font-bold transition-colors ${
                     selected
                       ? 'border-[#D4AF37] bg-[#FFFBF5] text-[#0F172A]'
                       : 'border-slate-200 bg-white text-[#0F172A] hover:border-slate-300'
                   }`}
                 >
-                  {label}
+                  {cat.name}
                 </button>
               );
             })}
