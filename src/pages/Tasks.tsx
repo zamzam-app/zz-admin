@@ -40,6 +40,9 @@ const EMPTY_FORM: TaskFormState = {
   taskCategoryId: '',
   assigneeIds: [],
   adminAudioFiles: [],
+  imageFiles: [],
+  videoFiles: [],
+  otherFiles: [],
 };
 
 export default function Tasks() {
@@ -252,6 +255,9 @@ export default function Tasks() {
       taskCategoryId: task.taskCategoryId ?? '',
       assigneeIds: task.assigneeIds,
       adminAudioFiles: [],
+      imageFiles: [],
+      videoFiles: [],
+      otherFiles: [],
     });
     setModalOpen(true);
   };
@@ -267,10 +273,6 @@ export default function Tasks() {
   const handleSubmit = async () => {
     if (!form.description.trim()) {
       message.error('Please add a description.');
-      return;
-    }
-    if (!editing && (form.outletId === '' || form.outletId === 'all')) {
-      message.error('Please select a specific outlet. Each task must be tied to one outlet.');
       return;
     }
     if (!form.taskCategoryId) {
@@ -293,6 +295,38 @@ export default function Tasks() {
 
     const desc = form.description.trim();
 
+    let adminSubmission = editing?.adminSubmission;
+
+    if (!editing || form.adminAudioFiles.length > 0 || form.imageFiles.length > 0 || form.videoFiles.length > 0 || form.otherFiles.length > 0 || desc !== editing.description) {
+      clearUploadError();
+      try {
+        const [audios, images, videos, files] = await Promise.all([
+          Promise.all(form.adminAudioFiles.map((file) => uploadTaskMedia(file))),
+          Promise.all(form.imageFiles.map((file) => uploadTaskMedia(file))),
+          Promise.all(form.videoFiles.map((file) => uploadTaskMedia(file))),
+          Promise.all(form.otherFiles.map((file) => uploadTaskMedia(file))),
+        ]);
+
+        adminSubmission = {
+          text: desc,
+          attachments: {
+            images: [...(editing?.adminSubmission?.attachments?.images ?? []), ...images],
+            videos: [...(editing?.adminSubmission?.attachments?.videos ?? []), ...videos],
+            audios: [...(editing?.adminSubmission?.attachments?.audios ?? []), ...audios],
+            files: [...(editing?.adminSubmission?.attachments?.files ?? []), ...files],
+          },
+          createdBy: userId || undefined,
+          createdAt: editing?.adminSubmission?.createdAt ?? new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      } catch (error) {
+        message.error(
+          error instanceof Error ? error.message : 'Failed to upload media. Please try again.',
+        );
+        return;
+      }
+    }
+
     if (editing) {
       updateMutation.mutate({
         id: editing.id,
@@ -303,41 +337,28 @@ export default function Tasks() {
           taskCategoryId: form.taskCategoryId,
           status: editing.status,
           assigneeIds,
+          adminSubmission,
         },
       });
       return;
     }
 
-    let adminAudioUrl: string[] = [];
-    if (form.adminAudioFiles.length > 0) {
-      clearUploadError();
-      try {
-        adminAudioUrl = await Promise.all(
-          form.adminAudioFiles.map((file) => uploadTaskMedia(file)),
-        );
-      } catch (error) {
-        message.error(
-          error instanceof Error ? error.message : 'Failed to upload audio. Please try again.',
-        );
-        return;
-      }
-    }
-
     const outlet = outlets.find((o) => o.id === form.outletId || o.outletId === form.outletId);
     const titleFromDescription = desc.split('\n')[0].trim().slice(0, 120) || 'Task';
-    const outletMongoId = outlet?.id ?? form.outletId;
+    const outletMongoId = form.outletId === 'all' ? undefined : (outlet?.id ?? form.outletId);
+
     const payload = {
       title: titleFromDescription,
       description: desc,
       priority: form.priority,
       dueDate,
       taskCategoryId: form.taskCategoryId,
-      outletId: outletMongoId,
+      outletId: outletMongoId || undefined,
       outletName: outlet?.name,
       status: 'open' as const,
       assigneeIds,
       assigneeNames: selectedManagers.map((m) => m.name).filter(Boolean),
-      adminAudioUrl,
+      adminSubmission,
       createdBy: userId || undefined,
     };
 

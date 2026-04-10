@@ -193,6 +193,63 @@ export default function TaskMediaDetail() {
   const task = useMemo(() => boardTasks.find((t) => t.id === taskId), [boardTasks, taskId]);
   const mediaItems = useMemo(() => (task ? buildMediaItems(task) : []), [task]);
 
+  const adminMedia = useMemo(() => {
+    if (!task) return [];
+    if (task.adminSubmission) {
+      const items: MediaItem[] = [];
+      const att = task.adminSubmission.attachments;
+      att.images.forEach((url, i) =>
+        items.push({ id: `admin-img-${i}`, url, kind: 'image', name: `Image ${i + 1}` }),
+      );
+      att.videos.forEach((url, i) =>
+        items.push({ id: `admin-vid-${i}`, url, kind: 'video', name: `Video ${i + 1}` }),
+      );
+      att.audios.forEach((url, i) =>
+        items.push({ id: `admin-aud-${i}`, url, kind: 'audio', name: `Audio ${i + 1}` }),
+      );
+      att.files.forEach((url, i) =>
+        items.push({ id: `admin-file-${i}`, url, kind: inferMediaKind(url), name: `File ${i + 1}` }),
+      );
+      return items;
+    }
+    // Fallback
+    return mediaItems.filter(
+      (item) =>
+        (task.adminAudioUrl ?? []).includes(item.url) ||
+        (!(task.managerAudioUrl ?? []).includes(item.url) &&
+          !(task.managerComments && task.description === item.url)), // rough heuristic
+    );
+  }, [task, mediaItems]);
+
+  const managerMedia = useMemo(() => {
+    if (!task) return [];
+    if (task.managerSubmission) {
+      const items: MediaItem[] = [];
+      const att = task.managerSubmission.attachments;
+      att.images.forEach((url, i) =>
+        items.push({ id: `mgr-img-${i}`, url, kind: 'image', name: `Image ${i + 1}` }),
+      );
+      att.videos.forEach((url, i) =>
+        items.push({ id: `mgr-vid-${i}`, url, kind: 'video', name: `Video ${i + 1}` }),
+      );
+      att.audios.forEach((url, i) =>
+        items.push({ id: `mgr-aud-${i}`, url, kind: 'audio', name: `Audio ${i + 1}` }),
+      );
+      att.files.forEach((url, i) =>
+        items.push({ id: `mgr-file-${i}`, url, kind: inferMediaKind(url), name: `File ${i + 1}` }),
+      );
+      return items;
+    }
+    // Fallback
+    const adminUrls = new Set(adminMedia.map((m) => m.url));
+    return mediaItems.filter((item) => !adminUrls.has(item.url));
+  }, [task, mediaItems, adminMedia]);
+
+  const adminAudioItems = adminMedia.filter((m) => m.kind === 'audio');
+  const adminOtherItems = adminMedia.filter((m) => m.kind !== 'audio');
+  const managerAudioItems = managerMedia.filter((m) => m.kind === 'audio');
+  const managerOtherItems = managerMedia.filter((m) => m.kind !== 'audio');
+
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
   if (!taskId) return null;
@@ -230,16 +287,6 @@ export default function TaskMediaDetail() {
   const categoryLabel = formatCategoryLabel(task.category);
   const assigneeNames =
     task.assigneeNames && task.assigneeNames.length > 0 ? task.assigneeNames : [];
-  const ownerAudioItems = mediaItems.filter(
-    (item) => (task.adminAudioUrl ?? []).includes(item.url) && item.kind === 'audio',
-  );
-  const ownerAudioSet = new Set(ownerAudioItems.map((item) => item.url));
-  const managerAttachmentItems = mediaItems.filter(
-    (item) => item.kind !== 'audio' && !ownerAudioSet.has(item.url),
-  );
-  const managerAudioItems = mediaItems.filter(
-    (item) => item.kind === 'audio' && !ownerAudioSet.has(item.url),
-  );
 
   return (
     <div className='flex min-h-0 flex-col gap-6 -mx-6 -mb-6 bg-[#F8F9FA]'>
@@ -310,12 +357,12 @@ export default function TaskMediaDetail() {
                 </div>
               </div>
 
-              {ownerAudioItems.length > 0 ? (
+              {adminAudioItems.length > 0 ? (
                 <div className='mt-4 space-y-2'>
                   <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>
-                    Owner audio
+                    Admin audio
                   </p>
-                  {ownerAudioItems.map((item) => (
+                  {adminAudioItems.map((item) => (
                     <WhatsAppAudioPlayer
                       key={item.id}
                       src={item.url}
@@ -323,6 +370,23 @@ export default function TaskMediaDetail() {
                       fitContainer
                     />
                   ))}
+                </div>
+              ) : null}
+
+              {adminOtherItems.length > 0 ? (
+                <div className='mt-4'>
+                  <p className='mb-2 text-sm font-bold uppercase tracking-wide text-slate-600'>
+                    Admin Attachments
+                  </p>
+                  <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+                    {adminOtherItems.map((item) => (
+                      <AttachmentTile
+                        key={item.id}
+                        item={item}
+                        onOpen={() => setSelectedMedia(item)}
+                      />
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
@@ -341,16 +405,24 @@ export default function TaskMediaDetail() {
             </section>
 
             <section className='mt-5 rounded-3xl border border-slate-300 bg-[#FAFAFA] p-4 sm:p-5'>
-              <h3 className='text-xl font-bold text-slate-900'>Attachments</h3>
+              <h3 className='text-xl font-bold text-slate-900'>Manager Submission</h3>
+              {task.managerSubmission?.text && (
+                <div className='mt-2'>
+                  <p className='text-sm font-bold uppercase tracking-wide text-slate-600'>
+                    Comments
+                  </p>
+                  <p className='mt-1 text-slate-800'>{task.managerSubmission.text}</p>
+                </div>
+              )}
               <div className='mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'>
-                {managerAttachmentItems.map((item) => (
+                {managerOtherItems.map((item) => (
                   <AttachmentTile key={item.id} item={item} onOpen={() => setSelectedMedia(item)} />
                 ))}
-                {managerAttachmentItems.length === 0 ? (
+                {managerOtherItems.length === 0 && !managerAudioItems.length && (
                   <p className='col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500'>
                     No manager attachments available.
                   </p>
-                ) : null}
+                )}
               </div>
 
               {managerAudioItems.length > 0 ? (

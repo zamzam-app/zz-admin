@@ -60,6 +60,9 @@ export type TaskFormState = {
   assigneeIds: string[];
   /** Uploaded to Cloudinary only when user clicks Assign Task */
   adminAudioFiles: File[];
+  imageFiles: File[];
+  videoFiles: File[];
+  otherFiles: File[];
 };
 
 type TaskFormModalProps = {
@@ -92,6 +95,10 @@ export function TaskFormModal({
     { enabled: open },
   );
 
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const otherFilesInputRef = useRef<HTMLInputElement>(null);
+
   const mic = useMicRecording({
     fileNamePrefix: 'task-admin-audio',
     onRecordingComplete: (file) =>
@@ -103,12 +110,12 @@ export function TaskFormModal({
 
   const outletSelectValue = form.outletId === '' ? '' : form.outletId;
 
-  const assigneesDisabled = !editing && (form.outletId === '' || form.outletId === 'all');
+  const assigneesDisabled = false;
 
   const assigneeOptions = useMemo(() => {
     const outletId =
       editing?.outletId ?? (form.outletId !== '' && form.outletId !== 'all' ? form.outletId : null);
-    if (!outletId) return [];
+    if (!outletId) return managers;
 
     const outlet =
       outlets.find((o) => o.id === outletId) ?? outlets.find((o) => o.outletId === outletId);
@@ -131,7 +138,7 @@ export function TaskFormModal({
   const selectedCategory = categoryOptions.find((category) => category.id === form.taskCategoryId);
   const selectedCategoryMissing = Boolean(form.taskCategoryId) && !selectedCategory;
 
-  const addAudioFiles = (files: FileList | null) => {
+  const addFiles = (files: FileList | null, type: 'image' | 'video' | 'audio' | 'other') => {
     if (!files?.length) return;
     const incoming: File[] = [];
     for (let i = 0; i < files.length; i += 1) {
@@ -139,17 +146,26 @@ export function TaskFormModal({
       if (file) incoming.push(file);
     }
     if (!incoming.length) return;
-    setForm((prev) => ({
-      ...prev,
-      adminAudioFiles: [...prev.adminAudioFiles, ...incoming],
-    }));
+
+    setForm((prev) => {
+      if (type === 'image') return { ...prev, imageFiles: [...prev.imageFiles, ...incoming] };
+      if (type === 'video') return { ...prev, videoFiles: [...prev.videoFiles, ...incoming] };
+      if (type === 'audio')
+        return { ...prev, adminAudioFiles: [...prev.adminAudioFiles, ...incoming] };
+      return { ...prev, otherFiles: [...prev.otherFiles, ...incoming] };
+    });
   };
 
-  const removeAudioFile = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      adminAudioFiles: prev.adminAudioFiles.filter((_, i) => i !== index),
-    }));
+  const removeFile = (index: number, type: 'image' | 'video' | 'audio' | 'other') => {
+    setForm((prev) => {
+      if (type === 'image')
+        return { ...prev, imageFiles: prev.imageFiles.filter((_, i) => i !== index) };
+      if (type === 'video')
+        return { ...prev, videoFiles: prev.videoFiles.filter((_, i) => i !== index) };
+      if (type === 'audio')
+        return { ...prev, adminAudioFiles: prev.adminAudioFiles.filter((_, i) => i !== index) };
+      return { ...prev, otherFiles: prev.otherFiles.filter((_, i) => i !== index) };
+    });
   };
 
   return (
@@ -312,67 +328,171 @@ export function TaskFormModal({
         </div>
 
         <div>
-          <label className={fieldLabelClass}>Admin audio</label>
-          <input
-            ref={audioInputRef}
-            type='file'
-            accept='audio/*'
-            multiple
-            className='hidden'
-            onChange={(e) => {
-              addAudioFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-          <div className='rounded-xl border border-slate-200 bg-white p-3'>
-            <div className='flex flex-wrap items-center gap-2'>
+          <label className={fieldLabelClass}>Attachments</label>
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+            {/* Images */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
+                Images
+              </p>
+              <input
+                ref={imageInputRef}
+                type='file'
+                accept='image/*'
+                multiple
+                className='hidden'
+                onChange={(e) => {
+                  addFiles(e.target.files, 'image');
+                  e.target.value = '';
+                }}
+              />
               <button
                 type='button'
-                onClick={mic.toggleRecording}
-                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
-                  mic.isRecording
-                    ? 'border-rose-300 bg-rose-50 text-rose-700'
-                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                }`}
+                onClick={() => imageInputRef.current?.click()}
+                className='inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
               >
-                <Mic size={16} aria-hidden />
-                {mic.isRecording ? 'Stop recording' : 'Record audio'}
+                <Paperclip size={16} /> Import images
               </button>
-              <button
-                type='button'
-                onClick={() => audioInputRef.current?.click()}
-                className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
-              >
-                <Paperclip size={16} aria-hidden />
-                Import audio
-              </button>
-            </div>
-            {form.adminAudioFiles.length > 0 ? (
-              <div className='mt-3 flex flex-wrap gap-2'>
-                {form.adminAudioFiles.map((file, idx) => (
+              <div className='mt-2 flex flex-wrap gap-2'>
+                {form.imageFiles.map((file, idx) => (
                   <div
-                    key={`${file.name}-${file.size}-${idx}`}
-                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700'
+                    key={`img-${idx}`}
+                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700'
                   >
-                    <span className='truncate' title={file.name}>
-                      {file.name}
-                    </span>
-                    <button
-                      type='button'
-                      onClick={() => removeAudioFile(idx)}
-                      className='rounded-full p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
-                      aria-label={`Remove ${file.name}`}
-                    >
-                      <X size={12} aria-hidden />
+                    <span className='truncate'>{file.name}</span>
+                    <button type='button' onClick={() => removeFile(idx, 'image')}>
+                      <X size={12} />
                     </button>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className='mt-3 text-xs text-slate-500'>
-                Record or import audio files. They will be uploaded when you click Assign Task.
+            </div>
+
+            {/* Videos */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
+                Videos
               </p>
-            )}
+              <input
+                ref={videoInputRef}
+                type='file'
+                accept='video/*'
+                multiple
+                className='hidden'
+                onChange={(e) => {
+                  addFiles(e.target.files, 'video');
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type='button'
+                onClick={() => videoInputRef.current?.click()}
+                className='inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
+              >
+                <Paperclip size={16} /> Import videos
+              </button>
+              <div className='mt-2 flex flex-wrap gap-2'>
+                {form.videoFiles.map((file, idx) => (
+                  <div
+                    key={`vid-${idx}`}
+                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-purple-50 px-3 py-1 text-xs text-purple-700'
+                  >
+                    <span className='truncate'>{file.name}</span>
+                    <button type='button' onClick={() => removeFile(idx, 'video')}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Audio */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
+                Audio
+              </p>
+              <input
+                ref={audioInputRef}
+                type='file'
+                accept='audio/*'
+                multiple
+                className='hidden'
+                onChange={(e) => {
+                  addFiles(e.target.files, 'audio');
+                  e.target.value = '';
+                }}
+              />
+              <div className='flex gap-2'>
+                <button
+                  type='button'
+                  onClick={mic.toggleRecording}
+                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                    mic.isRecording
+                      ? 'border-rose-300 bg-rose-50 text-rose-700'
+                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Mic size={16} /> {mic.isRecording ? 'Stop' : 'Record'}
+                </button>
+                <button
+                  type='button'
+                  onClick={() => audioInputRef.current?.click()}
+                  className='inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
+                >
+                  <Paperclip size={16} /> Import
+                </button>
+              </div>
+              <div className='mt-2 flex flex-wrap gap-2'>
+                {form.adminAudioFiles.map((file, idx) => (
+                  <div
+                    key={`aud-${idx}`}
+                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-700'
+                  >
+                    <span className='truncate'>{file.name}</span>
+                    <button type='button' onClick={() => removeFile(idx, 'audio')}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Files */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <p className='mb-2 text-xs font-bold uppercase tracking-wider text-slate-500'>
+                Files
+              </p>
+              <input
+                ref={otherFilesInputRef}
+                type='file'
+                multiple
+                className='hidden'
+                onChange={(e) => {
+                  addFiles(e.target.files, 'other');
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type='button'
+                onClick={() => otherFilesInputRef.current?.click()}
+                className='inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100'
+              >
+                <Paperclip size={16} /> Import files
+              </button>
+              <div className='mt-2 flex flex-wrap gap-2'>
+                {form.otherFiles.map((file, idx) => (
+                  <div
+                    key={`file-${idx}`}
+                    className='inline-flex max-w-full items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700'
+                  >
+                    <span className='truncate'>{file.name}</span>
+                    <button type='button' onClick={() => removeFile(idx, 'other')}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -400,12 +520,12 @@ export function TaskFormModal({
               <TextField
                 {...params}
                 hiddenLabel
-                placeholder={assigneesDisabled ? 'Select an outlet first' : 'Select managers'}
+                placeholder='Select managers'
                 sx={{
                   ...muiFieldSx,
                   '& .MuiOutlinedInput-root': {
                     ...muiFieldSx['& .MuiOutlinedInput-root'],
-                    bgcolor: assigneesDisabled ? '#F3F4F6' : '#F9FAFB',
+                    bgcolor: '#F9FAFB',
                   },
                 }}
               />

@@ -7,6 +7,7 @@ import type {
   Task,
   TaskPriority,
   TaskStatus,
+  TaskSubmission,
   UpdateTaskPayload,
 } from '../../types/task';
 import { mapApiTaskToTask, toApiPriority, toApiStatus, type ApiTaskRaw } from './task-mappers';
@@ -40,19 +41,18 @@ interface CreateTaskDtoBody {
   priority?: string;
   status?: string;
   dueDate: string;
-  outletId: string;
+  outletId?: string;
   assigneeIds?: string[];
   imageUrls?: string[];
   videoUrls?: string[];
   adminAudioUrl?: string[];
   managerAudioUrl?: string[];
   managerComments?: string;
+  adminSubmission?: TaskSubmission;
+  managerSubmission?: TaskSubmission;
 }
 
 function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
-  if (!payload.outletId) {
-    throw new Error('outletId is required');
-  }
   if (!payload.taskCategoryId) {
     throw new Error('taskCategoryId is required');
   }
@@ -60,8 +60,10 @@ function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
     description: payload.description.trim(),
     taskCategoryId: payload.taskCategoryId.trim(),
     dueDate: payload.dueDate,
-    outletId: payload.outletId,
   };
+  if (payload.outletId) {
+    body.outletId = payload.outletId;
+  }
   body.priority = toApiPriority(payload.priority);
   if (payload.status) {
     body.status = toApiStatus(payload.status);
@@ -79,6 +81,10 @@ function buildCreateBody(payload: CreateTaskPayload): CreateTaskDtoBody {
     body.managerAudioUrl = payload.managerAudioUrl;
   }
   if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
+
+  if (payload.adminSubmission) body.adminSubmission = payload.adminSubmission;
+  if (payload.managerSubmission) body.managerSubmission = payload.managerSubmission;
+
   return body;
 }
 
@@ -96,6 +102,10 @@ function buildUpdateBody(payload: UpdateTaskPayload): Record<string, unknown> {
   if (payload.adminAudioUrl !== undefined) body.adminAudioUrl = payload.adminAudioUrl;
   if (payload.managerAudioUrl !== undefined) body.managerAudioUrl = payload.managerAudioUrl;
   if (payload.managerComments !== undefined) body.managerComments = payload.managerComments;
+
+  if (payload.adminSubmission !== undefined) body.adminSubmission = payload.adminSubmission;
+  if (payload.managerSubmission !== undefined) body.managerSubmission = payload.managerSubmission;
+
   return body;
 }
 
@@ -154,8 +164,11 @@ export const tasksApi = {
     return tasksApi.findAll({ page: 1, limit: 100 });
   },
 
-  getByAssignee: async (assigneeId: string): Promise<Task[]> => {
-    return tasksApi.findAll({ assigneeId, page: 1, limit: 100 });
+  getByAssignee: async (userId: string, query: QueryTaskDto = {}): Promise<Task[]> => {
+    const params = cleanQueryParams({ page: 1, limit: 100, ...query });
+    const res = await api.get<unknown>(TASKS.BY_ASSIGNEE(userId), { params });
+    const list = unwrapTaskList(res.data);
+    return list.map((item) => mapApiTaskToTask(item));
   },
 
   create: async (payload: CreateTaskPayload & { createdBy?: string }): Promise<Task> => {
