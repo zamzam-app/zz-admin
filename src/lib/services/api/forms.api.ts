@@ -8,7 +8,7 @@ function questionsForApi(questions: Form['questions']) {
     title: q.title,
     isRequired: q.isRequired ?? false,
     ...(q.hint != null && { hint: q.hint }),
-    ...(q.options != null && { options: q.options }),
+    ...(q.options != null && { options: q.options.map((opt) => ({ text: opt.text })) }),
     ...(q.maxRatings != null && { maxRatings: q.maxRatings }),
     ...(q.starStep != null && { starStep: q.starStep }),
   }));
