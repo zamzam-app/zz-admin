@@ -4,7 +4,6 @@ export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'c
 
 export interface Option {
   text: string;
-  selected?: boolean;
 }
 
 export interface Question {
